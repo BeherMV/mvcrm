@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MVCRM — Corretora de Plano de Saúde</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --teal:#00C9A7;--blue:#2563EB;--mid:#1DA4D4;
+      --teal-soft:#E0FAF5;--blue-soft:#EFF6FF;
+      --bg:#F8FAFC;--card:#fff;--border:#E2E8F0;
+      --text1:#0F172A;--text2:#64748B;--text3:#94A3B8;
+      --green:#10B981;--red:#EF4444;--amber:#F59E0B;
+      --purple:#8B5CF6;--orange:#F97316;
+    }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text1);min-height:100vh}
+
+    /* LOGIN */
+    .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    .login-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+    .brand{text-align:center;margin-bottom:32px}
+    .brand-logo{display:flex;align-items:center;justify-content:center;gap:1px;margin-bottom:6px}
+    .bm{font-size:38px;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bv{font-size:38px;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,#1DA4D4,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bcrm{font-size:14px;font-weight:600;color:var(--blue);margin-left:2px;align-self:flex-end;padding-bottom:7px}
+    .brand-sub{font-size:12px;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    .field label{font-size:13px;font-weight:500;color:var(--text2)}
+    .field input{height:42px;padding:0 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text1);background:var(--bg);outline:none;transition:border-color .15s}
+    .field input:focus{border-color:var(--mid);box-shadow:0 0 0 3px rgba(29,164,212,.1)}
+    .btn-login{width:100%;height:42px;background:linear-gradient(90deg,#00C9A7,#2563EB);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s}
+    .btn-login:hover{opacity:.9}
+    .btn-login:disabled{opacity:.6;cursor:not-allowed}
+    .err-msg{background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991B1B;margin-top:10px;display:none}
+
+    /* TOPBAR */
+    .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+    .tb-brand{display:flex;align-items:center;gap:1px}
+    .tb-m{font-size:20px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .tb-v{font-size:20px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#1DA4D4,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .tb-crm{font-size:12px;font-weight:600;color:var(--blue);margin-left:1px}
+    .tb-sep{font-size:12px;color:var(--text3);margin-left:10px;padding-left:10px;border-left:1px solid var(--border)}
+    .tb-right{display:flex;align-items:center;gap:10px}
+    .tb-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+    .tb-name{font-size:13px;color:var(--text2)}
+    .btn-sair{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:none;cursor:pointer;color:var(--text2)}
+    .btn-sair:hover{background:var(--bg)}
+
+    /* NAV */
+    .nav{display:flex;padding:0 24px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto;gap:0}
+    .nav-btn{font-size:13px;padding:12px 16px;background:none;border:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+    .nav-btn.active{color:var(--mid);border-bottom-color:var(--mid);font-weight:600}
+    .nav-btn:hover:not(.active){color:var(--text1)}
+
+    /* LAYOUT */
+    .page{display:none;padding:24px;flex-direction:column;gap:18px;max-width:1400px;margin:0 auto;width:100%}
+    .page.active{display:flex}
+    .page-wrap{padding:0 0}
+
+    /* CARDS */
+    .metrics{display:grid;gap:12px}
+    .m4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .m3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .m2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+    .metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .metric-val{font-size:24px;font-weight:700;color:var(--text1)}
+    .metric-sub{font-size:12px;color:var(--text2);margin-top:4px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+    .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+    .card-title{font-size:14px;font-weight:600;color:var(--text1)}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+    /* BOTÕES */
+    .btn-pri{background:var(--mid);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background .15s}
+    .btn-pri:hover{background:#1691BB}
+    .btn-sec{background:none;border:1px solid var(--border);color:var(--text2);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px}
+    .btn-sec:hover{background:var(--bg)}
+    .btn-sm{font-size:12px;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text2)}
+    .btn-sm:hover{background:var(--bg)}
+
+    /* PILLS */
+    .pill{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:600;white-space:nowrap}
+    .p-ok{background:#D1FAE5;color:#065F46}
+    .p-wn{background:#FEF3C7;color:#92400E}
+    .p-lw{background:#FEE2E2;color:#991B1B}
+    .p-info{background:#EFF6FF;color:#1E40AF}
+    .p-tl{background:#E0FAF5;color:#065F46}
+    .p-master{background:linear-gradient(135deg,#00C9A7,#2563EB);color:#fff}
+
+    /* ROWS */
+    .row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px;transition:background .1s}
+    .row:hover{background:var(--bg);padding-left:8px}
+    .row:last-child{border-bottom:none}
+    .av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+    .ri{flex:1;min-width:0}
+    .rn{font-size:13px;font-weight:600;color:var(--text1)}
+    .rm{font-size:11px;color:var(--text2);margin-top:2px}
+    .pw{flex:1;min-width:60px}
+    .pl{display:flex;justify-content:space-between;margin-bottom:4px}
+    .pt{height:5px;background:var(--border);border-radius:3px}
+    .pf{height:100%;border-radius:3px;transition:width .6s}
+
+    /* FUNIL */
+    .fg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+    .fsl{font-size:11px;font-weight:600;padding:0 4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+    .fsc{font-size:10px;padding:2px 7px;border-radius:8px}
+    .fc{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--card)}
+    .fon{font-size:12px;font-weight:600;margin-bottom:5px;color:var(--text1)}
+    .fs{font-size:11px;color:var(--text2);display:flex;justify-content:space-between;padding:2px 0}
+    .fs span:last-child{color:var(--text1);font-weight:500}
+
+    /* TABELA */
+    .op-table{width:100%;border-collapse:collapse}
+    .op-table th{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left}
+    .op-table th:not(:first-child){text-align:right}
+    .op-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
+    .op-table tr:last-child td{border-bottom:none}
+    .op-table tr:hover td{background:var(--bg)}
+    .op-table td:not(:first-child){text-align:right}
+
+    /* NOTIF */
+    .ni-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+    .ni-item:last-child{border-bottom:none}
+    .ni{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+    /* MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:var(--card);border-radius:16px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+    .modal-box h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--text1)}
+    .mfield{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+    .mfield label{font-size:12px;font-weight:500;color:var(--text2)}
+    .mfield input,.mfield select,.mfield textarea{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text1);font-size:13px;outline:none;font-family:inherit}
+    .mfield input,.mfield select{height:40px}
+    .mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--mid);box-shadow:0 0 0 3px rgba(29,164,212,.1)}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+    .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+    .legi{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+    .legdot{width:10px;height:10px;border-radius:50%}
+    .back-btn{background:none;border:none;color:var(--mid);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;font-weight:500}
+    .banner{border-radius:12px;padding:14px 18px;display:flex;align-items:flex-start;gap:14px}
+    .alert-ok{display:none;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;font-size:13px;color:#065F46;margin-bottom:12px}
+    .alert-err{display:none;background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991B1B;margin-bottom:12px}
+    .loading{text-align:center;padding:30px;color:var(--text3);font-size:14px}
+    .empty{text-align:center;padding:24px;color:var(--text3);font-size:13px}
+    .task-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .task-row:last-child{border-bottom:none}
+    .tcb{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .tcb.done{background:var(--mid);border-color:var(--mid)}
+    .metas-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+    .metas-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .metas-title{font-size:13px;font-weight:600;color:var(--text1);display:flex;align-items:center;gap:7px}
+    .mtrack{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:8px}
+    .mfill{height:100%;border-radius:4px;transition:width .6s}
+    .mfoot{display:flex;justify-content:space-between}
+    .mfoot span{font-size:12px;color:var(--text2)}
+    .du-bars{display:flex;gap:3px;align-items:flex-end}
+    .du-bar{flex:1;border-radius:2px 2px 0 0;min-width:0}
+    .sv-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .15s}
+    .sv-card:hover{border-color:var(--mid)}
+    @media(max-width:768px){.m4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.fg{grid-template-columns:repeat(2,1fr)}.metrics.m3{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.m4{grid-template-columns:1fr}.m2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-logo"><span class="bm">M</span><span class="bv">V</span><span class="bcrm">CRM</span></div>
+        <div class="brand-sub">Corretora de plano de saúde</div>
+      </div>
+      <div class="field"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="err-msg" id="l-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="s-app" style="display:none">
+  <div class="topbar">
+    <div style="display:flex;align-items:center">
+      <div class="tb-brand"><span class="tb-m">M</span><span class="tb-v">V</span><span class="tb-crm">CRM</span></div>
+      <span class="tb-sep" id="tb-perfil">Master</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-name" id="tb-nome"></span>
+      <div class="tb-av" id="tb-av" style="background:#E0FAF5;color:#065F46"></div>
+      <button class="btn-sair" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="nav" id="app-nav"></div>
+
+  <div class="page-wrap">
+    <div id="pages-container"></div>
+  </div>
+</div>
+
+<!-- MODAIS -->
+<div class="modal-overlay" id="mod-cliente">
+  <div class="modal-box">
+    <h3>Novo cliente</h3>
+    <div class="mfield"><label>Nome da empresa</label><input type="text" id="mc-nome" placeholder="Ex: Empresa Ltda"></div>
+    <div class="mfield"><label>Setor</label><input type="text" id="mc-setor" placeholder="Ex: Saúde"></div>
+    <div class="mfield"><label>Telefone</label><input type="text" id="mc-tel" placeholder="(41) 99999-9999"></div>
+    <div class="mfield"><label>Operadora de interesse</label><select id="mc-op"><option value="">Carregando...</option></select></div>
+    <div class="mfield"><label>Etapa</label><select id="mc-etapa"><option>Prospecção</option><option>Qualificação</option><option>Proposta</option><option>Negociação</option></select></div>
+    <div class="mfield"><label>Valor estimado (R$)</label><input type="number" id="mc-val" placeholder="Ex: 15000" min="0"></div>
+    <div class="mfield"><label>Temperatura</label><select id="mc-temp"><option>Quente</option><option selected>Morno</option><option>Frio</option></select></div>
+    <div class="alert-ok" id="mc-ok"></div>
+    <div class="alert-err" id="mc-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-cliente')">Cancelar</button><button class="btn-pri" onclick="salvarCliente()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-contrato">
+  <div class="modal-box">
+    <h3>Registrar contrato</h3>
+    <div class="mfield"><label>Cliente</label><select id="mct-cli"><option value="">Selecione...</option></select></div>
+    <div class="mfield"><label>Operadora</label><select id="mct-op"><option value="">Selecione...</option></select></div>
+    <div class="mfield"><label>Número de vidas</label><input type="number" id="mct-vidas" placeholder="Ex: 5" min="1" value="1"></div>
+    <div class="mfield"><label>Valor total (R$)</label><input type="number" id="mct-val" placeholder="Ex: 18000" min="0"></div>
+    <div class="mfield"><label>Observação</label><textarea id="mct-obs" rows="2" placeholder="Detalhes do contrato..."></textarea></div>
+    <div class="alert-ok" id="mct-ok"></div>
+    <div class="alert-err" id="mct-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-contrato')">Cancelar</button><button class="btn-pri" onclick="salvarContrato()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-cotacao">
+  <div class="modal-box">
+    <h3>Registrar cotação</h3>
+    <div class="mfield"><label>Cliente</label><select id="mcot-cli"><option value="">Selecione...</option></select></div>
+    <div class="mfield"><label>Operadora</label><select id="mcot-op"><option value="">Selecione...</option></select></div>
+    <div class="mfield"><label>Número de vidas</label><input type="number" id="mcot-vidas" placeholder="Ex: 5" min="1" value="1"></div>
+    <div class="mfield"><label>Valor estimado (R$)</label><input type="number" id="mcot-val" placeholder="Ex: 5000" min="0"></div>
+    <div class="alert-ok" id="mcot-ok"></div>
+    <div class="alert-err" id="mcot-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-cotacao')">Cancelar</button><button class="btn-pri" onclick="salvarCotacao()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-tarefa">
+  <div class="modal-box">
+    <h3>Nova tarefa</h3>
+    <div class="mfield"><label>Descrição</label><input type="text" id="mt-desc" placeholder="Ex: Ligar para cliente X"></div>
+    <div class="mfield"><label>Cliente relacionado</label><select id="mt-cli"><option value="">Nenhum</option></select></div>
+    <div class="mfield"><label>Data limite</label><input type="date" id="mt-dt"></div>
+    <div class="mfield"><label>Prioridade</label><select id="mt-prior"><option>Alta</option><option selected>Normal</option><option>Baixa</option></select></div>
+    <div class="alert-ok" id="mt-ok"></div>
+    <div class="alert-err" id="mt-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-tarefa')">Cancelar</button><button class="btn-pri" onclick="salvarTarefa()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-historico">
+  <div class="modal-box">
+    <h3>Registrar interação</h3>
+    <div class="mfield"><label>Cliente</label><select id="mh-cli"><option value="">Selecione...</option></select></div>
+    <div class="mfield"><label>Tipo</label><select id="mh-tipo"><option>Ligação</option><option>E-mail</option><option>Reunião</option><option>Proposta</option><option>Fechamento</option><option>Nota</option></select></div>
+    <div class="mfield"><label>Observação</label><textarea id="mh-obs" rows="3" placeholder="Descreva o que aconteceu..."></textarea></div>
+    <div class="alert-ok" id="mh-ok"></div>
+    <div class="alert-err" id="mh-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-historico')">Cancelar</button><button class="btn-pri" onclick="salvarHistorico()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-consultor">
+  <div class="modal-box">
+    <h3>Cadastrar consultor</h3>
+    <div class="mfield"><label>Nome completo</label><input type="text" id="mco-nome" placeholder="Ex: Ana Lima"></div>
+    <div class="mfield"><label>E-mail</label><input type="email" id="mco-email" placeholder="ana@mvcrm.com.br"></div>
+    <div class="mfield"><label>Senha temporária</label><input type="password" id="mco-senha" placeholder="Mín. 6 caracteres"></div>
+    <div class="mfield"><label>Meta de cotações / mês</label><input type="number" id="mco-mcot" placeholder="Ex: 70" min="1"></div>
+    <div class="mfield"><label>Meta de vendas / mês (R$)</label><input type="number" id="mco-mvnd" placeholder="Ex: 60000" min="1"></div>
+    <div class="alert-ok" id="mco-ok"></div>
+    <div class="alert-err" id="mco-err"></div>
+    <div class="modal-btns"><button class="btn-sec" onclick="closeModal('mod-consultor')">Cancelar</button><button class="btn-pri" onclick="salvarConsultor()">Salvar</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const SB_URL = 'https://nfldasoaverzplbowjdn.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGRhc29hdmVyenBsYm93amRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzM4MDUsImV4cCI6MjA5MDE0OTgwNX0.i17swv-ExxKis9yCNQsnFGv8gWrFtYs8XqbM_9VkI_k'
+const sb = createClient(SB_URL, SB_KEY)
+
+let CU = null // usuário atual
+let OPERADORAS = []
+let CLIENTES = []
+let chartInstances = {}
+
+// ── UTILITÁRIOS ──
+const $ = id => document.getElementById(id)
+const fmt = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR')
+const mes = () => new Date().getMonth() + 1
+const ano = () => new Date().getFullYear()
+window.openModal = id => $(id).classList.add('open')
+window.closeModal = id => $(id).classList.remove('open')
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open') })
+)
+function destroyChart(id) {
+  if(chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id] }
+}
+function newChart(id, cfg) {
+  destroyChart(id)
+  const ctx = $(id)
+  if(!ctx) return
+  chartInstances[id] = new Chart(ctx, cfg)
+}
+function initials(nome) {
+  return nome?.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() || '?'
+}
+
+// ── AUTH ──
+async function doLogin() {
+  window.doLogin = doLogin
+  const email = $('l-email').value.trim()
+  const senha = $('l-senha').value
+  $('l-err').style.display = 'none'
+  $('btn-login').disabled = true
+  $('btn-login').textContent = 'Entrando...'
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha })
+    if(error) throw error
+    await carregarApp()
+  } catch(e) {
+    $('l-err').textContent = 'E-mail ou senha incorretos.'
+    $('l-err').style.display = 'block'
+    $('btn-login').disabled = false
+    $('btn-login').textContent = 'Entrar'
+  }
+}
+window.doLogin = doLogin
+
+async function doLogout() {
+  await sb.auth.signOut()
+  CU = null
+  $('s-login').style.display = ''
+  $('s-app').style.display = 'none'
+  $('l-email').value = ''
+  $('l-senha').value = ''
+  $('btn-login').disabled = false
+  $('btn-login').textContent = 'Entrar'
+}
+window.doLogout = doLogout
+
+async function carregarApp() {
+  const { data: { user } } = await sb.auth.getUser()
+  if(!user) return
+  const { data: usuario } = await sb.from('usuarios').select('*').eq('id', user.id).single()
+  if(!usuario) { await sb.auth.signOut(); return }
+  CU = usuario
+
+  // Topbar
+  $('tb-nome').textContent = CU.nome
+  $('tb-av').textContent = initials(CU.nome)
+  $('tb-perfil').textContent = CU.perfil === 'master' ? 'Master' : CU.perfil === 'supervisor' ? 'Supervisor' : 'Consultor(a)'
+
+  // Carregar operadoras
+  const { data: ops } = await sb.from('operadoras').select('*').eq('ativa', true).order('nome')
+  OPERADORAS = ops || []
+
+  $('s-login').style.display = 'none'
+  $('s-app').style.display = 'block'
+
+  if(CU.perfil === 'master') renderMaster()
+  else if(CU.perfil === 'supervisor') renderSupervisor()
+  else renderConsultor()
+}
+
+// ── VERIFICAR SESSÃO ATIVA ──
+sb.auth.onAuthStateChange(async (event, session) => {
+  if(event === 'SIGNED_IN' && !CU) await carregarApp()
+})
+
+// ══════════════════════════════════════
+// CONSULTOR
+// ══════════════════════════════════════
+async function renderConsultor() {
+  const nav = $('app-nav')
+  const pages = $('pages-container')
+  nav.innerHTML = `
+    <button class="nav-btn active" onclick="coPage('co-home',this)">Meu painel</button>
+    <button class="nav-btn" onclick="coPage('co-clientes',this)">Clientes</button>
+    <button class="nav-btn" onclick="coPage('co-funil',this)">Funil</button>
+    <button class="nav-btn" onclick="coPage('co-tarefas',this)">Tarefas</button>
+    <button class="nav-btn" onclick="coPage('co-historico',this)">Histórico</button>
+  `
+  pages.innerHTML = `
+    <div id="co-home" class="page active"></div>
+    <div id="co-clientes" class="page"></div>
+    <div id="co-funil" class="page"></div>
+    <div id="co-tarefas" class="page"></div>
+    <div id="co-historico" class="page"></div>
+  `
+  window.coPage = (id, btn) => {
+    document.querySelectorAll('#app-nav .nav-btn').forEach(b=>b.classList.remove('active'))
+    document.querySelectorAll('#pages-container .page').forEach(p=>p.classList.remove('active'))
+    $(id).classList.add('active')
+    btn.classList.add('active')
+    if(id==='co-home') loadCoHome()
+    else if(id==='co-clientes') loadCoClientes()
+    else if(id==='co-funil') loadCoFunil()
+    else if(id==='co-tarefas') loadCoTarefas()
+    else if(id==='co-historico') loadCoHistorico()
+  }
+  await loadCoHome()
+}
+
+async function loadCoHome() {
+  const el = $('co-home')
+  el.innerHTML = '<div class="loading">Carregando...</div>'
+
+  const m = mes(), a = ano()
+  const DU_TOTAL = 22
+  const DU_HOJE = new Date().getDate() > DU_TOTAL ? DU_TOTAL : Math.min(new Date().getDate(), DU_TOTAL)
+  const pctDU = Math.round(DU_HOJE/DU_TOTAL*100)
+
+  const [cotRes, ctRes, cliRes, metaRes] = await Promise.all([
+    sb.from('cotacoes').select('*',{count:'exact',head:true}).eq('consultor_id',CU.id).eq('mes',m).eq('ano',a),
+    sb.from('contratos').select('valor,vidas').eq('consultor_id',CU.id).eq('mes',m).eq('ano',a),
+    sb.from('clientes').select('*',{count:'exact',head:true}).eq('consultor_id',CU.id),
+    sb.from('metas_mensais').select('*').eq('consultor_id',CU.id).eq('mes',m).eq('ano',a).maybeSingle()
+  ])
+
+  const cotReal = cotRes.count || 0
+  const contratos = ctRes.data || []
+  const receita = contratos.reduce((s,c)=>s+Number(c.valor),0)
+  const vidas = contratos.reduce((s,c)=>s+c.vidas,0)
+  const metaCot = metaRes.data?.meta_cotacoes || CU.meta_cotacoes || 0
+  const metaVnd = metaRes.data?.meta_vendas || CU.meta_vendas || 0
+  const cotEsp = Math.round(metaCot*DU_HOJE/DU_TOTAL)
+  const vndEsp = Math.round(metaVnd*DU_HOJE/DU_TOTAL)
+  const cotPct = metaCot > 0 ? Math.round(cotReal/metaCot*100) : 0
+  const vndPct = metaVnd > 0 ? Math.round(receita/metaVnd*100) : 0
+  const cotOk = cotReal >= cotEsp
+  const vndOk = receita >= vndEsp
+
+  el.innerHTML = `
+    <div class="banner" style="background:#EFF6FF;border:1px solid #93C5FD">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <div>
+        <div style="font-size:14px;font-weight:600">Olá, ${CU.nome.split(' ')[0]}!</div>
+        <div style="font-size:12px;color:#1E40AF;margin-top:2px">Hoje é o dia útil ${DU_HOJE} de ${DU_TOTAL} de ${new Date().toLocaleString('pt-BR',{month:'long'})} — você deveria estar em ${pctDU}% da meta.</div>
+      </div>
+    </div>
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-label">Meus clientes</div><div class="metric-val">${cliRes.count||0}</div></div>
+      <div class="metric"><div class="metric-label">Contratos (mês)</div><div class="metric-val">${contratos.length}</div><div class="metric-sub">${vidas} vidas</div></div>
+      <div class="metric"><div class="metric-label">Cotações (mês)</div><div class="metric-val">${cotReal}</div><div class="metric-sub">de ${metaCot} na meta</div></div>
+      <div class="metric"><div class="metric-label">Receita (mês)</div><div class="metric-val">${fmt(receita)}</div><div class="metric-sub">${vndPct}% da meta</div></div>
+    </div>
+    <div class="g2">
+      <div>
+        <div class="metas-card">
+          <div class="metas-head">
+            <div class="metas-title">Meta de cotações</div>
+            <span style="font-size:15px;font-weight:700;color:${cotOk?'#059669':'#DC2626'}">${cotPct}%</span>
+          </div>
+          <div class="mtrack"><div class="mfill" style="width:${Math.min(cotPct,100)}%;background:${cotOk?'#1DA4D4':'#EF4444'}"></div></div>
+          <div class="mfoot"><span>${cotReal} de ${metaCot} cotações</span><span style="color:${cotOk?'#059669':'#DC2626'}">${cotOk?'acima':'abaixo'} do esperado (${cotEsp})</span></div>
+        </div>
+        <div class="metas-card">
+          <div class="metas-head">
+            <div class="metas-title">Meta de vendas</div>
+            <span style="font-size:15px;font-weight:700;color:${vndOk?'#059669':'#DC2626'}">${vndPct}%</span>
+          </div>
+          <div class="mtrack"><div class="mfill" style="width:${Math.min(vndPct,100)}%;background:${vndOk?'#00C9A7':'#EF4444'}"></div></div>
+          <div class="mfoot"><span>${fmt(receita)} de ${fmt(metaVnd)}</span><span style="color:${vndOk?'#059669':'#DC2626'}">${vndOk?'acima':'abaixo'} do esperado (${fmt(vndEsp)})</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Dias úteis — ${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</span><span style="font-size:12px;color:#64748B">dia ${DU_HOJE} de ${DU_TOTAL}</span></div>
+        <div class="du-bars" id="du-bars" style="height:60px;align-items:flex-end;margin-bottom:6px"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px"><span style="font-size:11px;color:#94A3B8">1</span><span style="font-size:12px;font-weight:600;color:#1DA4D4">${pctDU}% concluído</span><span style="font-size:11px;color:#94A3B8">${DU_TOTAL}</span></div>
+        <div style="position:relative;height:140px"><canvas id="c-co-prod"></canvas></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Ações rápidas</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn-pri" style="width:100%" onclick="openModal('mod-cliente')">+ Novo cliente</button>
+          <button class="btn-pri" style="width:100%;background:#00C9A7" onclick="openModal('mod-cotacao')">+ Registrar cotação</button>
+          <button class="btn-pri" style="width:100%;background:#8B5CF6" onclick="openModal('mod-contrato')">+ Registrar contrato</button>
+          <button class="btn-sec" style="width:100%" onclick="openModal('mod-tarefa')">+ Nova tarefa</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Histórico recente</span></div>
+        <div id="co-hist-recente"><div class="loading">Carregando...</div></div>
+      </div>
+    </div>
+  `
+
+  // DU bars
+  const wrap = $('du-bars')
+  if(wrap) {
+    for(let i=1;i<=DU_TOTAL;i++){
+      const h = Math.round(56*i/DU_TOTAL)
+      const d = document.createElement('div')
+      d.className='du-bar'
+      d.style.cssText=`height:${h}px;background:${i===DU_HOJE?'#1DA4D4':i<DU_HOJE?'#5DCAA5':'#E2E8F0'};opacity:${i===DU_HOJE?1:i<DU_HOJE?.75:.4}`
+      wrap.appendChild(d)
+    }
+  }
+
+  // Gráfico produtividade
+  const dias = Array.from({length:DU_HOJE},(_,i)=>i+1)
+  newChart('c-co-prod',{type:'line',data:{labels:dias,datasets:[
+    {label:'Cotações',data:dias.map(d=>Math.round(metaCot*d/DU_TOTAL*0.9)),borderColor:'#1DA4D4',backgroundColor:'transparent',tension:.35,pointRadius:0,borderWidth:2},
+    {label:'Meta',data:dias.map(d=>Math.round(metaCot*d/DU_TOTAL)),borderColor:'#E2E8F0',backgroundColor:'transparent',tension:0,pointRadius:0,borderWidth:1.5,borderDash:[4,4]}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:10},maxTicksLimit:6}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:10}}}}}})
+
+  // Histórico recente
+  const { data: hist } = await sb.from('historico').select('*,clientes(nome)').eq('consultor_id',CU.id).order('data_hora',{ascending:false}).limit(5)
+  const hEl = $('co-hist-recente')
+  const cores = {Ligação:'#2563EB','E-mail':'#F59E0B',Reunião:'#8B5CF6',Proposta:'#F97316',Fechamento:'#00C9A7',Nota:'#94A3B8'}
+  if(hEl) hEl.innerHTML = hist?.length ? hist.map(h=>`
+    <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #E2E8F0;align-items:flex-start">
+      <div class="dot" style="background:${cores[h.tipo]||'#94A3B8'};margin-top:5px"></div>
+      <div><div style="font-size:12px;font-weight:500">${h.clientes?.nome||'—'}</div><div style="font-size:11px;color:#64748B">${h.tipo} · ${new Date(h.data_hora).toLocaleDateString('pt-BR')}</div></div>
+    </div>`).join('') : '<div class="empty">Nenhuma interação registrada</div>'
+
+  await popularSelectsConsultor()
+}
+
+async function popularSelectsConsultor() {
+  const { data: cls } = await sb.from('clientes').select('id,nome').eq('consultor_id',CU.id).order('nome')
+  CLIENTES = cls || []
+  const opOpts = OPERADORAS.map(o=>`<option value="${o.id}">${o.nome}</option>`).join('')
+  const cliOpts = '<option value="">Selecione...</option>'+CLIENTES.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')
+  const cliOptsOpt = '<option value="">Nenhum</option>'+CLIENTES.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')
+  ;['mc-op','mct-op','mcot-op'].forEach(id=>{ if($(id)) $(id).innerHTML=opOpts })
+  ;['mct-cli','mcot-cli','mh-cli'].forEach(id=>{ if($(id)) $(id).innerHTML=cliOpts })
+  if($('mt-cli')) $('mt-cli').innerHTML=cliOptsOpt
+}
+
+async function loadCoClientes() {
+  const el = $('co-clientes')
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600">Meus clientes</span>
+      <button class="btn-pri" onclick="openModal('mod-cliente')">+ Novo cliente</button>
+    </div>
+    <div class="card"><div id="cli-list"><div class="loading">Carregando...</div></div></div>
+  `
+  const { data } = await sb.from('clientes').select('*,operadoras(nome)').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
+  const etapaColor = {Prospecção:'p-info',Qualificação:'p-wn',Proposta:'p-tl',Negociação:'p-wn',Fechado:'p-ok'}
+  const el2 = $('cli-list')
+  if(el2) el2.innerHTML = data?.length ? data.map(c=>`
+    <div class="row">
+      <div class="av" style="background:#EFF6FF;color:#1E40AF">${initials(c.nome)}</div>
+      <div class="ri"><div class="rn">${c.nome}</div><div class="rm">${c.setor||'—'} · ${c.operadoras?.nome||'Sem operadora'}</div></div>
+      <span class="pill ${etapaColor[c.etapa_funil]||'p-info'}">${c.etapa_funil}</span>
+      <span style="font-size:13px;font-weight:600;min-width:70px;text-align:right">${fmt(c.valor_estimado)}</span>
+    </div>`).join('') : '<div class="empty">Nenhum cliente cadastrado ainda</div>'
+}
+
+async function loadCoFunil() {
+  const el = $('co-funil')
+  el.innerHTML = '<div class="loading">Carregando...</div>'
+  const { data } = await sb.from('clientes').select('*,operadoras(nome)').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
+  const etapas = ['Prospecção','Qualificação','Proposta','Negociação','Fechado']
+  const cores = {'Prospecção':'#2563EB','Qualificação':'#8B5CF6','Proposta':'#F59E0B','Negociação':'#F97316','Fechado':'#10B981'}
+  const bgCores = {'Prospecção':'#EFF6FF','Qualificação':'#EDE9FE','Proposta':'#FEF3C7','Negociação':'#FFF7ED','Fechado':'#D1FAE5'}
+  const txtCores = {'Prospecção':'#1E40AF','Qualificação':'#4C1D95','Proposta':'#92400E','Negociação':'#C2410C','Fechado':'#065F46'}
+  el.innerHTML = `
+    <div class="fg">${etapas.map(et=>{
+      const items = (data||[]).filter(c=>c.etapa_funil===et)
+      return `<div>
+        <div class="fsl" style="color:${cores[et]}">
+          ${et}<span class="fsc" style="background:${bgCores[et]};color:${txtCores[et]}">${items.length}</span>
+        </div>
+        ${items.map(c=>`<div class="fc" style="border-top:2px solid ${cores[et]}">
+          <div class="fon">${c.nome}</div>
+          <div class="fs"><span>Operadora</span><span>${c.operadoras?.nome||'—'}</span></div>
+          <div class="fs"><span>Valor</span><span>${fmt(c.valor_estimado)}</span></div>
+          <div class="fs"><span>Temp.</span><span>${c.temperatura||'—'}</span></div>
+        </div>`).join('')}
+      </div>`}).join('')}
+    </div>`
+}
+
+async function loadCoTarefas() {
+  const el = $('co-tarefas')
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600">Minhas tarefas</span>
+      <button class="btn-pri" onclick="openModal('mod-tarefa')">+ Nova tarefa</button>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Pendentes</div>
+      <div id="tasks-pend"><div class="loading">Carregando...</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Concluídas</div>
+      <div id="tasks-done"></div>
+    </div>
+  `
+  await renderTarefas()
+  await popularSelectsConsultor()
+}
+
+async function renderTarefas() {
+  const { data } = await sb.from('tarefas').select('*,clientes(nome)').eq('consultor_id',CU.id).order('prazo',{ascending:true})
+  const pend = (data||[]).filter(t=>!t.concluida)
+  const done = (data||[]).filter(t=>t.concluida)
+  const priPill = {Alta:'p-lw',Normal:'p-wn',Baixa:''}
+  const row = t => `<div class="task-row">
+    <div class="tcb${t.concluida?' done':''}" onclick="toggleTarefa('${t.id}',${!t.concluida})">
+      ${t.concluida?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}
+    </div>
+    <div style="flex:1">
+      <div style="font-size:13px${t.concluida?';text-decoration:line-through;color:#94A3B8':''}">${t.descricao}</div>
+      <div style="font-size:11px;color:#64748B;margin-top:2px">${t.clientes?.nome||'—'} · ${t.prazo?new Date(t.prazo+'T12:00:00').toLocaleDateString('pt-BR'):'Sem data'}</div>
+    </div>
+    <span class="pill ${priPill[t.prioridade]||''}" style="${!priPill[t.prioridade]?'background:#F1F5F9;color:#64748B':''}">${t.prioridade}</span>
+  </div>`
+  const pe = $('tasks-pend'), de = $('tasks-done')
+  if(pe) pe.innerHTML = pend.length ? pend.map(row).join('') : '<div class="empty">Nenhuma tarefa pendente</div>'
+  if(de) de.innerHTML = done.length ? done.map(row).join('') : '<div class="empty">Nenhuma tarefa concluída</div>'
+}
+
+window.toggleTarefa = async (id, val) => {
+  await sb.from('tarefas').update({concluida:val}).eq('id',id)
+  renderTarefas()
+}
+
+async function loadCoHistorico() {
+  const el = $('co-historico')
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600">Histórico de interações</span>
+      <button class="btn-pri" onclick="openModal('mod-historico')">+ Registrar</button>
+    </div>
+    <div class="card" id="hist-full"><div class="loading">Carregando...</div></div>
+  `
+  const { data } = await sb.from('historico').select('*,clientes(nome)').eq('consultor_id',CU.id).order('data_hora',{ascending:false})
+  const cores = {Ligação:'#2563EB','E-mail':'#F59E0B',Reunião:'#8B5CF6',Proposta:'#F97316',Fechamento:'#00C9A7',Nota:'#94A3B8'}
+  const el2 = $('hist-full')
+  if(el2) el2.innerHTML = data?.length ? data.map(h=>`
+    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #E2E8F0;align-items:flex-start">
+      <div class="dot" style="background:${cores[h.tipo]||'#94A3B8'};margin-top:5px;width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${h.clientes?.nome||'—'} <span style="font-size:11px;color:#64748B;font-weight:400">· ${h.tipo}</span></div>
+        <div style="font-size:12px;color:#64748B;margin-top:3px">${h.observacao||''}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:2px">${new Date(h.data_hora).toLocaleString('pt-BR')}</div>
+      </div>
+    </div>`).join('') : '<div class="empty">Nenhuma interação registrada</div>'
+  await popularSelectsConsultor()
+}
+
+// ── SALVAR DADOS ──
+window.salvarCliente = async () => {
+  const nome=$('mc-nome').value.trim(),setor=$('mc-setor').value.trim(),tel=$('mc-tel').value.trim()
+  const op=$('mc-op').value,etapa=$('mc-etapa').value,val=Number($('mc-val').value)||0,temp=$('mc-temp').value
+  $('mc-err').style.display='none'
+  if(!nome){$('mc-err').textContent='Informe o nome da empresa.';$('mc-err').style.display='block';return}
+  const { error } = await sb.from('clientes').insert({nome,setor,telefone:tel,operadora_id:op||null,etapa_funil:etapa,valor_estimado:val,temperatura:temp,consultor_id:CU.id})
+  if(error){$('mc-err').textContent='Erro ao salvar: '+error.message;$('mc-err').style.display='block';return}
+  $('mc-ok').textContent='Cliente salvo com sucesso!';$('mc-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-cliente');$('mc-ok').style.display='none';$('mc-nome').value='';$('mc-setor').value='';$('mc-tel').value='';$('mc-val').value=''},1500)
+}
+
+window.salvarContrato = async () => {
+  const cli=$('mct-cli').value,op=$('mct-op').value,vidas=Number($('mct-vidas').value)||1,val=Number($('mct-val').value)||0,obs=$('mct-obs').value
+  $('mct-err').style.display='none'
+  if(!cli||!op||!val){$('mct-err').textContent='Preencha cliente, operadora e valor.';$('mct-err').style.display='block';return}
+  const { error } = await sb.from('contratos').insert({cliente_id:cli,operadora_id:op,vidas,valor:val,observacao:obs,consultor_id:CU.id,data_fechamento:new Date().toISOString().split('T')[0]})
+  if(error){$('mct-err').textContent='Erro: '+error.message;$('mct-err').style.display='block';return}
+  $('mct-ok').textContent='Contrato registrado!';$('mct-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-contrato');$('mct-ok').style.display='none';$('mct-cli').value='';$('mct-op').value='';$('mct-vidas').value='1';$('mct-val').value='';$('mct-obs').value=''},1500)
+}
+
+window.salvarCotacao = async () => {
+  const cli=$('mcot-cli').value,op=$('mcot-op').value,vidas=Number($('mcot-vidas').value)||1,val=Number($('mcot-val').value)||0
+  $('mcot-err').style.display='none'
+  if(!op){$('mcot-err').textContent='Selecione a operadora.';$('mcot-err').style.display='block';return}
+  const { error } = await sb.from('cotacoes').insert({cliente_id:cli||null,operadora_id:op,vidas,valor_estimado:val,consultor_id:CU.id,data:new Date().toISOString().split('T')[0]})
+  if(error){$('mcot-err').textContent='Erro: '+error.message;$('mcot-err').style.display='block';return}
+  $('mcot-ok').textContent='Cotação registrada!';$('mcot-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-cotacao');$('mcot-ok').style.display='none'},1500)
+}
+
+window.salvarTarefa = async () => {
+  const desc=$('mt-desc').value.trim(),cli=$('mt-cli').value,dt=$('mt-dt').value,prior=$('mt-prior').value
+  $('mt-err').style.display='none'
+  if(!desc){$('mt-err').textContent='Informe a descrição.';$('mt-err').style.display='block';return}
+  const { error } = await sb.from('tarefas').insert({descricao:desc,cliente_id:cli||null,prazo:dt||null,prioridade:prior,consultor_id:CU.id})
+  if(error){$('mt-err').textContent='Erro: '+error.message;$('mt-err').style.display='block';return}
+  $('mt-ok').textContent='Tarefa criada!';$('mt-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-tarefa');$('mt-ok').style.display='none';$('mt-desc').value='';$('mt-dt').value='';renderTarefas()},1500)
+}
+
+window.salvarHistorico = async () => {
+  const cli=$('mh-cli').value,tipo=$('mh-tipo').value,obs=$('mh-obs').value.trim()
+  $('mh-err').style.display='none'
+  if(!cli){$('mh-err').textContent='Selecione o cliente.';$('mh-err').style.display='block';return}
+  const { error } = await sb.from('historico').insert({cliente_id:cli,tipo,observacao:obs,consultor_id:CU.id})
+  if(error){$('mh-err').textContent='Erro: '+error.message;$('mh-err').style.display='block';return}
+  $('mh-ok').textContent='Interação registrada!';$('mh-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-historico');$('mh-ok').style.display='none';$('mh-obs').value=''},1500)
+}
+
+// ══════════════════════════════════════
+// SUPERVISOR
+// ══════════════════════════════════════
+async function renderSupervisor() {
+  const nav = $('app-nav')
+  const pages = $('pages-container')
+  nav.innerHTML = `
+    <button class="nav-btn active" onclick="svPage('sv-home',this)">Visão geral</button>
+    <button class="nav-btn" onclick="svPage('sv-consultores',this)">Consultores</button>
+    <button class="nav-btn" onclick="svPage('sv-funil',this)">Funil</button>
+    <button class="nav-btn" onclick="svPage('sv-operadoras',this)">Por operadora</button>
+    <button class="nav-btn" onclick="svPage('sv-cadastro',this)">+ Consultor</button>
+  `
+  pages.innerHTML = `
+    <div id="sv-home" class="page active"></div>
+    <div id="sv-consultores" class="page"></div>
+    <div id="sv-funil" class="page"></div>
+    <div id="sv-operadoras" class="page"></div>
+    <div id="sv-cadastro" class="page"></div>
+  `
+  window.svPage = (id,btn) => {
+    document.querySelectorAll('#app-nav .nav-btn').forEach(b=>b.classList.remove('active'))
+    document.querySelectorAll('#pages-container .page').forEach(p=>p.classList.remove('active'))
+    $(id).classList.add('active');btn.classList.add('active')
+    if(id==='sv-home') loadSvHome()
+    else if(id==='sv-consultores') loadSvConsultores()
+    else if(id==='sv-funil') loadSvFunil()
+    else if(id==='sv-operadoras') loadSvOperadoras()
+    else if(id==='sv-cadastro') loadSvCadastro()
+  }
+  await loadSvHome()
+}
+
+async function loadSvHome() {
+  const el = $('sv-home')
+  el.innerHTML = '<div class="loading">Carregando...</div>'
+  const m=mes(),a=ano()
+  const { data: cons } = await sb.from('usuarios').select('id,nome,meta_cotacoes,meta_vendas').eq('perfil','consultor').eq('equipe_id',CU.equipe_id)
+  const ids = (cons||[]).map(c=>c.id)
+  const [ctRes,cotRes] = await Promise.all([
+    ids.length ? sb.from('contratos').select('valor,vidas,consultor_id').in('consultor_id',ids).eq('mes',m).eq('ano',a) : {data:[]},
+    ids.length ? sb.from('cotacoes').select('consultor_id',{count:'exact'}).in('consultor_id',ids).eq('mes',m).eq('ano',a) : {count:0}
+  ])
+  const contratos = ctRes.data||[]
+  const receita = contratos.reduce((s,c)=>s+Number(c.valor),0)
+  const vidas = contratos.reduce((s,c)=>s+c.vidas,0)
+
+  el.innerHTML = `
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-label">Consultores</div><div class="metric-val">${cons?.length||0}</div></div>
+      <div class="metric"><div class="metric-label">Contratos (mês)</div><div class="metric-val">${contratos.length}</div><div class="metric-sub">${vidas} vidas</div></div>
+      <div class="metric"><div class="metric-label">Cotações (mês)</div><div class="metric-val">${cotRes.count||0}</div></div>
+      <div class="metric"><div class="metric-label">Receita (mês)</div><div class="metric-val">${fmt(receita)}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Desempenho da equipe</span><span style="font-size:12px;color:#64748B">esperado: 64% · dia útil 14/22</span></div>
+      <div id="sv-cons-rows"><div class="loading">Carregando...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Ranking de vendas</span></div>
+      <div style="position:relative;height:200px"><canvas id="c-sv-rank"></canvas></div>
+    </div>
+  `
+
+  // Montar linhas de consultores
+  const rows = await Promise.all((cons||[]).map(async c => {
+    const { data: cts } = await sb.from('contratos').select('valor').eq('consultor_id',c.id).eq('mes',m).eq('ano',a)
+    const rv = (cts||[]).reduce((s,x)=>s+Number(x.valor),0)
+    const pct = c.meta_vendas > 0 ? Math.round(rv/c.meta_vendas*100) : 0
+    const st = pct >= 64 ? 'ok' : pct >= 40 ? 'wn' : 'lw'
+    return {c, rv, pct, st}
+  }))
+
+  const rowsEl = $('sv-cons-rows')
+  if(rowsEl) rowsEl.innerHTML = rows.length ? rows.map(({c,rv,pct,st})=>`
+    <div class="row">
+      <div class="av" style="background:#E0FAF5;color:#065F46">${initials(c.nome)}</div>
+      <div class="ri"><div class="rn">${c.nome}</div><div class="rm">${fmt(rv)} · meta ${fmt(c.meta_vendas)}</div></div>
+      <div class="pw">
+        <div class="pl"><span style="font-size:11px;color:#64748B">Vendas</span><span style="font-size:11px;font-weight:600;color:${st==='ok'?'#059669':st==='wn'?'#D97706':'#DC2626'}">${pct}%</span></div>
+        <div class="pt"><div class="pf" style="width:${Math.min(pct,100)}%;background:${st==='ok'?'#00C9A7':st==='wn'?'#F59E0B':'#EF4444'}"></div></div>
+      </div>
+      <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+    </div>`).join('') : '<div class="empty">Nenhum consultor nesta equipe</div>'
+
+  newChart('c-sv-rank',{type:'bar',data:{labels:rows.map(r=>r.c.nome.split(' ')[0]),datasets:[{data:rows.map(r=>r.rv),backgroundColor:rows.map(r=>r.st==='ok'?'#00C9A7':r.st==='wn'?'#F59E0B':'#EF4444'),borderRadius:6,barPercentage:.55}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+}
+
+async function loadSvConsultores() {
+  const el = $('sv-consultores')
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600">Consultores da equipe</span>
+      <button class="btn-pri" onclick="svPage('sv-cadastro',document.querySelectorAll('#app-nav .nav-btn')[4])">+ Novo consultor</button>
+    </div>
+    <div class="card"><div id="sv-cons-list"><div class="loading">Carregando...</div></div></div>
+  `
+  const m=mes(),a=ano()
+  const { data: cons } = await sb.from('usuarios').select('*').eq('perfil','consultor').eq('equipe_id',CU.equipe_id).order('nome')
+  const el2 = $('sv-cons-list')
+  if(!cons?.length){if(el2)el2.innerHTML='<div class="empty">Nenhum consultor cadastrado</div>';return}
+  const rows = await Promise.all(cons.map(async c=>{
+    const [{data:cts},{count:cotC}] = await Promise.all([
+      sb.from('contratos').select('valor').eq('consultor_id',c.id).eq('mes',m).eq('ano',a),
+      sb.from('cotacoes').select('*',{count:'exact',head:true}).eq('consultor_id',c.id).eq('mes',m).eq('ano',a)
+    ])
+    const rv=(cts||[]).reduce((s,x)=>s+Number(x.valor),0)
+    const vndPct=c.meta_vendas>0?Math.round(rv/c.meta_vendas*100):0
+    const cotPct=c.meta_cotacoes>0?Math.round((cotC||0)/c.meta_cotacoes*100):0
+    const st=vndPct>=64?'ok':vndPct>=40?'wn':'lw'
+    return {c,rv,vndPct,cotPct,cotC,st}
+  }))
+  if(el2) el2.innerHTML = rows.map(({c,rv,vndPct,cotPct,cotC,st})=>`
+    <div class="row">
+      <div class="av" style="background:#E0FAF5;color:#065F46">${initials(c.nome)}</div>
+      <div class="ri"><div class="rn">${c.nome}</div><div class="rm">${c.email}</div></div>
+      <div class="pw">
+        <div class="pl"><span style="font-size:10px;color:#64748B">Cotações ${cotC}/${c.meta_cotacoes}</span><span style="font-size:10px;font-weight:600;color:#1DA4D4">${cotPct}%</span></div>
+        <div class="pt"><div class="pf" style="width:${Math.min(cotPct,100)}%;background:#1DA4D4"></div></div>
+      </div>
+      <div class="pw">
+        <div class="pl"><span style="font-size:10px;color:#64748B">Vendas ${fmt(rv)}</span><span style="font-size:10px;font-weight:600;color:${st==='ok'?'#059669':st==='wn'?'#D97706':'#DC2626'}">${vndPct}%</span></div>
+        <div class="pt"><div class="pf" style="width:${Math.min(vndPct,100)}%;background:${st==='ok'?'#00C9A7':st==='wn'?'#F59E0B':'#EF4444'}"></div></div>
+      </div>
+      <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+    </div>`).join('')
+}
+
+async function loadSvFunil() {
+  const el = $('sv-funil')
+  el.innerHTML = '<div class="loading">Carregando...</div>'
+  const { data: cons } = await sb.from('usuarios').select('id').eq('perfil','consultor').eq('equipe_id',CU.equipe_id)
+  const ids = (cons||[]).map(c=>c.id)
+  const { data } = ids.length ? await sb.from('clientes').select('*,operadoras(nome),usuarios(nome)').in('consultor_id',ids) : {data:[]}
+  const etapas = ['Prospecção','Qualificação','Proposta','Negociação','Fechado']
+  const cores = {'Prospecção':'#2563EB','Qualificação':'#8B5CF6','Proposta':'#F59E0B','Negociação':'#F97316','Fechado':'#10B981'}
+  const bgCores = {'Prospecção':'#EFF6FF','Qualificação':'#EDE9FE','Proposta':'#FEF3C7','Negociação':'#FFF7ED','Fechado':'#D1FAE5'}
+  const txtCores = {'Prospecção':'#1E40AF','Qualificação':'#4C1D95','Proposta':'#92400E','Negociação':'#C2410C','Fechado':'#065F46'}
+  const totalFunil = (data||[]).reduce((s,c)=>s+Number(c.valor_estimado||0),0)
+  el.innerHTML = `
+    <div class="metrics m3">
+      <div class="metric"><div class="metric-label">Total no funil</div><div class="metric-val">${fmt(totalFunil)}</div><div class="metric-sub">${data?.length||0} negócios</div></div>
+      <div class="metric"><div class="metric-label">Fechados no mês</div><div class="metric-val">${(data||[]).filter(c=>c.etapa_funil==='Fechado').length}</div></div>
+      <div class="metric"><div class="metric-label">Em negociação</div><div class="metric-val">${(data||[]).filter(c=>c.etapa_funil==='Negociação').length}</div></div>
+    </div>
+    <div class="fg">${etapas.map(et=>{
+      const items=(data||[]).filter(c=>c.etapa_funil===et)
+      return `<div>
+        <div class="fsl" style="color:${cores[et]}">${et}<span class="fsc" style="background:${bgCores[et]};color:${txtCores[et]}">${items.length}</span></div>
+        ${items.map(c=>`<div class="fc" style="border-top:2px solid ${cores[et]}">
+          <div class="fon">${c.nome}</div>
+          <div class="fs"><span>Consultor</span><span>${c.usuarios?.nome?.split(' ')[0]||'—'}</span></div>
+          <div class="fs"><span>Operadora</span><span>${c.operadoras?.nome||'—'}</span></div>
+          <div class="fs"><span>Valor</span><span>${fmt(c.valor_estimado)}</span></div>
+        </div>`).join('')}
+      </div>`}).join('')}
+    </div>`
+}
+
+async function loadSvOperadoras() {
+  const el = $('sv-operadoras')
+  el.innerHTML = '<div class="loading">Carregando...</div>'
+  const m=mes(),a=ano()
+  const { data: cons } = await sb.from('usuarios').select('id').eq('perfil','consultor').eq('equipe_id',CU.equipe_id)
+  const ids = (cons||[]).map(c=>c.id)
+  const { data: cts } = ids.length ? await sb.from('contratos').select('valor,vidas,operadoras(nome,id)').in('consultor_id',ids).eq('mes',m).eq('ano',a) : {data:[]}
+  const agrupado = {}
+  ;(cts||[]).forEach(c=>{
+    const n=c.operadoras?.nome||'Sem operadora'
+    if(!agrupado[n]) agrupado[n]={contratos:0,vidas:0,valor:0}
+    agrupado[n].contratos++; agrupado[n].vidas+=c.vidas; agrupado[n].valor+=Number(c.valor)
+  })
+  const sorted = Object.entries(agrupado).sort((a,b)=>b[1].contratos-a[1].contratos)
+  const cores = ['#00C9A7','#2563EB','#1DA4D4','#8B5CF6','#F59E0B','#10B981','#F97316','#EF4444','#EC4899','#6366F1','#84CC16']
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-head"><span class="card-title">Contratos por operadora — ${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</span></div>
+      ${sorted.length ? `
+        <div style="overflow-x:auto">
+          <table class="op-table">
+            <thead><tr><th>Operadora</th><th>Contratos</th><th>Vidas</th><th>Valor total</th></tr></thead>
+            <tbody>${sorted.map(([n,d],i)=>`
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${cores[i%cores.length]}"></span>${n}</div></td>
+                <td>${d.contratos}</td><td>${d.vidas}</td><td>${fmt(d.valor)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="position:relative;height:220px;margin-top:16px"><canvas id="c-sv-op"></canvas></div>
+      ` : '<div class="empty">Nenhum contrato registrado neste mês</div>'}
+    </div>
+  `
+  if(sorted.length) {
+    newChart('c-sv-op',{type:'bar',data:{labels:sorted.map(([n])=>n),datasets:[{data:sorted.map(([,d])=>d.contratos),backgroundColor:sorted.map((_,i)=>cores[i%cores.length]),borderRadius:6,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}}}}})
+  }
+}
+
+async function loadSvCadastro() {
+  const el = $('sv-cadastro')
+  el.innerHTML = `
+    <div class="card" style="max-width:500px">
+      <div class="card-head"><span class="card-title">Cadastrar novo consultor</span></div>
+      <div class="mfield"><label>Nome completo</label><input type="text" id="mco-nome" placeholder="Ex: Ana Lima"></div>
+      <div class="mfield"><label>E-mail</label><input type="email" id="mco-email" placeholder="ana@mvcrm.com.br"></div>
+      <div class="mfield"><label>Senha temporária</label><input type="password" id="mco-senha" placeholder="Mín. 6 caracteres"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="mfield"><label>Meta de cotações / mês</label><input type="number" id="mco-mcot" placeholder="Ex: 70" min="1"></div>
+        <div class="mfield"><label>Meta de vendas / mês (R$)</label><input type="number" id="mco-mvnd" placeholder="Ex: 60000" min="1"></div>
+      </div>
+      <div class="alert-ok" id="mco-ok"></div>
+      <div class="alert-err" id="mco-err"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-sec" onclick="$('mco-nome').value='';$('mco-email').value='';$('mco-senha').value=''">Limpar</button>
+        <button class="btn-pri" onclick="salvarConsultor()">Cadastrar</button>
+      </div>
+    </div>
+  `
+}
+
+window.salvarConsultor = async () => {
+  const nome=$('mco-nome').value.trim(),email=$('mco-email').value.trim(),senha=$('mco-senha').value
+  const mcot=Number($('mco-mcot').value)||0,mvnd=Number($('mco-mvnd').value)||0
+  $('mco-err').style.display='none'
+  if(!nome||!email||!senha){$('mco-err').textContent='Preencha nome, e-mail e senha.';$('mco-err').style.display='block';return}
+  if(senha.length<6){$('mco-err').textContent='Senha mínima de 6 caracteres.';$('mco-err').style.display='block';return}
+  // Criar usuário via Supabase Auth Admin — usa a função edge ou instrui manualmente
+  $('mco-ok').textContent=`Consultor "${nome}" pré-cadastrado! Acesse o Supabase → Authentication → Users → Add user para finalizar com e-mail ${email} e senha ${senha}, depois cole o UUID em usuarios.`;
+  $('mco-ok').style.display='block'
+}
+
+// ══════════════════════════════════════
+// MASTER
+// ══════════════════════════════════════
+async function renderMaster() {
+  const nav = $('app-nav')
+  const pages = $('pages-container')
+  nav.innerHTML = `
+    <button class="nav-btn active" onclick="maPage('ma-home',this)">Visão consolidada</button>
+    <button class="nav-btn" onclick="maPage('ma-equipes',this)">Equipes</button>
+    <button class="nav-btn" onclick="maPage('ma-funil',this)">Funil geral</button>
+    <button class="nav-btn" onclick="maPage('ma-operadoras',this)">Por operadora</button>
+  `
+  pages.innerHTML = `
+    <div id="ma-home" class="page active"></div>
+    <div id="ma-equipes" class="page"></div>
+    <div id="ma-funil" class="page"></div>
+    <div id="ma-operadoras" class="page"></div>
+  `
+  window.maPage = (id,btn) => {
+    document.querySelectorAll('#app-nav .nav-btn').forEach(b=>b.classList.remove('active'))
+    document.querySelectorAll('#pages-container .page').forEach(p=>p.classList.remove('active'))
+    $(id).classList.add('active');btn.classList.add('active')
+    if(id==='ma-home') loadMaHome()
+    else if(id==='ma-equipes') loadMaEquipes()
+    else if(id==='ma-funil') loadMaFunil()
+    else if(id==='ma-operadoras') loadMaOperadoras()
+  }
+  await loadMaHome()
+}
+
+async function loadMaHome() {
+  const el = $('ma-home')
+  el.innerHTML = '<div class="loading">Carregando dados consolidados...</div>'
+  const m=mes(),a=ano()
+  const [eqRes,userRes,ctRes,cotRes] = await Promise.all([
+    sb.from('equipes').select('*',{count:'exact',head:true}),
+    sb.from('usuarios').select('*',{count:'exact',head:true}).eq('perfil','consultor'),
+    sb.from('contratos').select('valor,vidas').eq('mes',m).eq('ano',a),
+    sb.from('cotacoes').select('*',{count:'exact',head:true}).eq('mes',m).eq('ano',a)
+  ])
+  const cts = ctRes.data||[]
+  const receita = cts.reduce((s,c)=>s+Number(c.valor),0)
+  const vidas = cts.reduce((s,c)=>s+c.vidas,0)
+
+  const { data: equipes } = await sb.from('equipes').select('*')
+  const eqStats = await Promise.all((equipes||[]).map(async eq=>{
+    const {data:cons}=await sb.from('usuarios').select('id').eq('equipe_id',eq.id).eq('perfil','consultor')
+    const ids=(cons||[]).map(c=>c.id)
+    const {data:cts2}=ids.length?await sb.from('contratos').select('valor').in('consultor_id',ids).eq('mes',m).eq('ano',a):{data:[]}
+    const rv=(cts2||[]).reduce((s,c)=>s+Number(c.valor),0)
+    const pct=eq.meta_mensal>0?Math.round(rv/eq.meta_mensal*100):0
+    return {eq,rv,pct,cons:cons?.length||0,st:pct>=64?'ok':pct>=40?'wn':'lw'}
+  }))
+
+  const cores=['#00C9A7','#2563EB','#8B5CF6','#F59E0B','#F97316']
+  el.innerHTML = `
+    <div class="banner" style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1px solid #93C5FD">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="1.5" style="flex-shrink:0"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div><div style="font-size:14px;font-weight:600">Painel Master — visão consolidada</div>
+      <div style="font-size:12px;color:#1E40AF;margin-top:2px">${eqRes.count||0} equipes · ${userRes.count||0} consultores · ${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div></div>
+    </div>
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-label">Equipes</div><div class="metric-val">${eqRes.count||0}</div></div>
+      <div class="metric"><div class="metric-label">Consultores</div><div class="metric-val">${userRes.count||0}</div></div>
+      <div class="metric"><div class="metric-label">Contratos (mês)</div><div class="metric-val">${cts.length}</div><div class="metric-sub">${vidas} vidas</div></div>
+      <div class="metric"><div class="metric-label">Receita (mês)</div><div class="metric-val">${fmt(receita)}</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Desempenho por equipe</span><span style="font-size:12px;color:#64748B">esperado: 64%</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-ma-perf"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Receita por equipe</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-ma-rv"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Resumo das equipes</span></div>
+      ${eqStats.map(({eq,rv,pct,cons,st},i)=>`
+        <div class="row">
+          <div class="av" style="background:${cores[i%cores.length]}22;color:${cores[i%cores.length]}">${initials(eq.nome)}</div>
+          <div class="ri"><div class="rn">${eq.nome}</div><div class="rm">${cons} consultores · ${fmt(rv)}</div></div>
+          <div class="pw">
+            <div class="pl"><span style="font-size:11px;color:#64748B">Meta</span><span style="font-size:11px;font-weight:600;color:${st==='ok'?'#059669':st==='wn'?'#D97706':'#DC2626'}">${pct}%</span></div>
+            <div class="pt"><div class="pf" style="width:${Math.min(pct,100)}%;background:${cores[i%cores.length]}"></div></div>
+          </div>
+          <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+        </div>`).join('')}
+    </div>
+  `
+
+  newChart('c-ma-perf',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome.replace('Equipe ','')),datasets:[{label:'Realizado',data:eqStats.map(e=>e.pct),backgroundColor:cores,borderRadius:6,barPercentage:.4},{label:'Esperado',data:eqStats.map(()=>64),backgroundColor:'#E2E8F0',borderRadius:6,barPercentage:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>v+'%'},max:100}}}})
+  newChart('c-ma-rv',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome.replace('Equipe ','')),datasets:[{data:eqStats.map(e=>e.rv),backgroundColor:cores,borderRadius:6,barPercentage:.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+}
+
+async function loadMaEquipes() {
+  const el=$('ma-equipes')
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const {data:equipes}=await sb.from('equipes').select('*')
+  const {data:cons}=await sb.from('usuarios').select('*').eq('perfil','consultor').order('nome')
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+      ${(equipes||[]).map(eq=>{
+        const members=(cons||[]).filter(c=>c.equipe_id===eq.id)
+        return `<div class="sv-card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px">${eq.nome}</div>
+          <div style="font-size:12px;color:#64748B;margin-bottom:12px">Meta: ${fmt(eq.meta_mensal)}/mês</div>
+          <div style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">${members.length} consultor${members.length!==1?'es':''}</div>
+          ${members.map(c=>`<div class="row" style="padding:6px 0">
+            <div class="av" style="background:#EFF6FF;color:#1E40AF;width:28px;height:28px;font-size:10px">${initials(c.nome)}</div>
+            <div class="ri"><div style="font-size:12px;font-weight:500">${c.nome}</div><div style="font-size:11px;color:#64748B">${c.email}</div></div>
+          </div>`).join('')}
+          ${members.length===0?'<div class="empty" style="padding:10px 0">Nenhum consultor</div>':''}
+        </div>`}).join('')}
+      ${!(equipes?.length)?'<div class="empty">Nenhuma equipe cadastrada. Crie equipes pelo Supabase → Table Editor → equipes.</div>':''}
+    </div>
+  `
+}
+
+async function loadMaFunil() {
+  const el=$('ma-funil')
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const {data}=await sb.from('clientes').select('*,operadoras(nome),usuarios(nome)').order('criado_em',{ascending:false})
+  const etapas=['Prospecção','Qualificação','Proposta','Negociação','Fechado']
+  const cores={'Prospecção':'#2563EB','Qualificação':'#8B5CF6','Proposta':'#F59E0B','Negociação':'#F97316','Fechado':'#10B981'}
+  const bgCores={'Prospecção':'#EFF6FF','Qualificação':'#EDE9FE','Proposta':'#FEF3C7','Negociação':'#FFF7ED','Fechado':'#D1FAE5'}
+  const txtCores={'Prospecção':'#1E40AF','Qualificação':'#4C1D95','Proposta':'#92400E','Negociação':'#C2410C','Fechado':'#065F46'}
+  el.innerHTML=`
+    <div class="metrics m3">
+      <div class="metric"><div class="metric-label">Total no funil</div><div class="metric-val">${fmt((data||[]).reduce((s,c)=>s+Number(c.valor_estimado||0),0))}</div><div class="metric-sub">${data?.length||0} negócios</div></div>
+      <div class="metric"><div class="metric-label">Fechados</div><div class="metric-val">${(data||[]).filter(c=>c.etapa_funil==='Fechado').length}</div></div>
+      <div class="metric"><div class="metric-label">Em negociação</div><div class="metric-val">${(data||[]).filter(c=>c.etapa_funil==='Negociação').length}</div></div>
+    </div>
+    <div class="fg">${etapas.map(et=>{
+      const items=(data||[]).filter(c=>c.etapa_funil===et)
+      return `<div>
+        <div class="fsl" style="color:${cores[et]}">${et}<span class="fsc" style="background:${bgCores[et]};color:${txtCores[et]}">${items.length}</span></div>
+        ${items.slice(0,6).map(c=>`<div class="fc" style="border-top:2px solid ${cores[et]}">
+          <div class="fon">${c.nome}</div>
+          <div class="fs"><span>Consultor</span><span>${c.usuarios?.nome?.split(' ')[0]||'—'}</span></div>
+          <div class="fs"><span>Operadora</span><span>${c.operadoras?.nome||'—'}</span></div>
+          <div class="fs"><span>Valor</span><span>${fmt(c.valor_estimado)}</span></div>
+        </div>`).join('')}
+        ${items.length>6?`<div style="font-size:11px;color:#64748B;text-align:center;padding:8px">+${items.length-6} mais</div>`:''}
+      </div>`}).join('')}
+    </div>`
+}
+
+async function loadMaOperadoras() {
+  const el=$('ma-operadoras')
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const m=mes(),a=ano()
+  const {data:cts}=await sb.from('contratos').select('valor,vidas,operadoras(nome)').eq('mes',m).eq('ano',a)
+  const agrupado={}
+  ;(cts||[]).forEach(c=>{
+    const n=c.operadoras?.nome||'Sem operadora'
+    if(!agrupado[n]) agrupado[n]={contratos:0,vidas:0,valor:0}
+    agrupado[n].contratos++;agrupado[n].vidas+=c.vidas;agrupado[n].valor+=Number(c.valor)
+  })
+  const sorted=Object.entries(agrupado).sort((a,b)=>b[1].contratos-a[1].contratos)
+  const cores=['#00C9A7','#2563EB','#1DA4D4','#8B5CF6','#F59E0B','#10B981','#F97316','#EF4444','#EC4899','#6366F1','#84CC16']
+  const totalCt=sorted.reduce((s,[,d])=>s+d.contratos,0)
+  el.innerHTML=`
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-label">Operadoras ativas</div><div class="metric-val">${sorted.length}</div></div>
+      <div class="metric"><div class="metric-label">Contratos (mês)</div><div class="metric-val">${(cts||[]).length}</div></div>
+      <div class="metric"><div class="metric-label">Vidas (mês)</div><div class="metric-val">${(cts||[]).reduce((s,c)=>s+c.vidas,0)}</div></div>
+      <div class="metric"><div class="metric-label">Receita (mês)</div><div class="metric-val">${fmt((cts||[]).reduce((s,c)=>s+Number(c.valor),0))}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Desempenho consolidado por operadora</span></div>
+      ${sorted.length?`
+        <div style="overflow-x:auto">
+          <table class="op-table">
+            <thead><tr><th>Operadora</th><th>Contratos</th><th>Vidas</th><th>Receita</th><th>Participação</th></tr></thead>
+            <tbody>${sorted.map(([n,d],i)=>`
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${cores[i%cores.length]}"></span>${n}</div></td>
+                <td>${d.contratos}</td><td>${d.vidas}</td><td>${fmt(d.valor)}</td>
+                <td><span style="font-size:12px;color:#64748B">${totalCt>0?Math.round(d.contratos/totalCt*100):0}%</span></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="g2" style="margin-top:16px">
+          <div style="position:relative;height:220px"><canvas id="c-ma-op-ct"></canvas></div>
+          <div style="position:relative;height:220px"><canvas id="c-ma-op-rv"></canvas></div>
+        </div>
+      `:'<div class="empty">Nenhum contrato registrado neste mês</div>'}
+    </div>
+  `
+  if(sorted.length){
+    newChart('c-ma-op-ct',{type:'bar',data:{labels:sorted.map(([n])=>n),datasets:[{data:sorted.map(([,d])=>d.contratos),backgroundColor:sorted.map((_,i)=>cores[i%cores.length]),borderRadius:6,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}}}}})
+    newChart('c-ma-op-rv',{type:'doughnut',data:{labels:sorted.map(([n])=>n),datasets:[{data:sorted.map(([,d])=>d.valor),backgroundColor:sorted.map((_,i)=>cores[i%cores.length]),borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},cutout:'60%'}})
+  }
+}
+
+// ── INIT ──
+window.$=$
+window.initials=initials
+</script>
+</body>
+</html>
