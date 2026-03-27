@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MVCRM — Corretora de Plano de Saúde</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#00C9A7;--blue:#2563EB;--mid:#1DA4D4;
+  --teal-d:#00A88A;--blue-d:#1D4ED8;
+  --bg:#F0F4F8;--card:#fff;--border:#E2E8F0;--border2:#CBD5E1;
+  --text1:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --green:#10B981;--red:#EF4444;--amber:#F59E0B;--purple:#8B5CF6;--orange:#F97316;
+  --sidebar-w:220px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text1);min-height:100vh}
+
+/* ── LOGIN ── */
+#s-login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#E0FAF5 0%,#EFF6FF 50%,#F0F4F8 100%)}
+.login-card{background:var(--card);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.1);padding:44px 40px;width:100%;max-width:420px}
+.brand-wrap{text-align:center;margin-bottom:32px}
+.brand-logo{display:inline-flex;align-items:flex-end;gap:1px;margin-bottom:8px}
+.bm{font-size:44px;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.bv{font-size:44px;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,#1DA4D4,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.bcrm{font-size:15px;font-weight:700;color:var(--blue);margin-left:3px;padding-bottom:8px}
+.brand-tag{font-size:11px;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-weight:500}
+.lfield{margin-bottom:18px}
+.lfield label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.lfield input{width:100%;height:46px;padding:0 16px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;color:var(--text1);background:#FAFBFC;outline:none;transition:all .2s}
+.lfield input:focus{border-color:var(--mid);background:#fff;box-shadow:0 0 0 4px rgba(29,164,212,.08)}
+.btn-login{width:100%;height:46px;background:linear-gradient(135deg,#00C9A7,#2563EB);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s,transform .1s;letter-spacing:.3px}
+.btn-login:hover{opacity:.92}
+.btn-login:active{transform:scale(.98)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed}
+.lerr{background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;padding:10px 14px;font-size:13px;color:#991B1B;margin-top:12px;display:none}
+
+/* ── APP SHELL ── */
+#s-app{display:none;min-height:100vh}
+.app-layout{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;transition:transform .3s}
+.sb-brand{padding:20px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-logo{display:flex;align-items:flex-end;gap:1px}
+.sb-m{font-size:22px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.sb-v{font-size:22px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#1DA4D4,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.sb-crm{font-size:11px;font-weight:700;color:var(--blue);margin-left:2px;padding-bottom:4px}
+.sb-user{padding:14px 18px;border-bottom:1px solid var(--border)}
+.sb-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.sb-name{font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-role{font-size:11px;color:var(--text3);margin-top:1px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.sb-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 4px}
+.sb-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:none;cursor:pointer;border-radius:8px;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s;text-align:left;margin-bottom:2px}
+.sb-btn:hover{background:var(--bg);color:var(--text1)}
+.sb-btn.active{background:linear-gradient(135deg,rgba(0,201,167,.1),rgba(37,99,235,.1));color:var(--mid);font-weight:600}
+.sb-btn svg{flex-shrink:0;opacity:.7}
+.sb-btn.active svg{opacity:1}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px}
+.sb-footer{padding:12px 18px;border-top:1px solid var(--border)}
+.btn-sair{width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;font-size:13px;color:var(--text2);font-weight:500;transition:all .15s}
+.btn-sair:hover{background:var(--bg);border-color:var(--red);color:var(--red)}
+
+/* ── MAIN ── */
+.main-content{margin-left:var(--sidebar-w);flex:1;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text1)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.notif-btn{position:relative;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
+.notif-btn:hover{background:var(--bg);border-color:var(--mid);color:var(--mid)}
+.notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
+
+/* ── PAGES ── */
+.page{display:none;padding:24px;flex-direction:column;gap:20px}
+.page.active{display:flex}
+
+/* ── COMPONENTS ── */
+.metrics{display:grid;gap:14px}
+.m4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.m3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.m2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--teal),var(--blue))}
+.metric-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.metric-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.metric-val{font-size:26px;font-weight:800;color:var(--text1);line-height:1}
+.metric-sub{font-size:12px;color:var(--text2);margin-top:5px;display:flex;align-items:center;gap:4px}
+.up{color:var(--green)}.dn{color:var(--red)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700;color:var(--text1)}
+.card-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* BOTÕES */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none;white-space:nowrap}
+.btn-pri{background:linear-gradient(135deg,var(--teal),var(--mid));color:#fff}
+.btn-pri:hover{opacity:.9}
+.btn-sec{background:var(--bg);border:1.5px solid var(--border);color:var(--text2)}
+.btn-sec:hover{border-color:var(--mid);color:var(--mid)}
+.btn-danger{background:#FEE2E2;border:1.5px solid #FCA5A5;color:#991B1B}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.p-ok{background:#D1FAE5;color:#065F46}
+.p-wn{background:#FEF3C7;color:#92400E}
+.p-lw{background:#FEE2E2;color:#991B1B}
+.p-info{background:#EFF6FF;color:#1E40AF}
+.p-tl{background:#E0FAF5;color:#065F46}
+.p-purple{background:#EDE9FE;color:#4C1D95}
+.p-gray{background:#F1F5F9;color:#475569}
+.p-mid{background:#E0F2FE;color:#0369A1}
+
+/* STATUS LEADS */
+.s-nrab{background:#FEE2E2;color:#991B1B}
+.s-nrm{background:#FEF3C7;color:#92400E}
+.s-anal{background:#EFF6FF;color:#1E40AF}
+.s-pb{background:#E0FAF5;color:#065F46}
+.s-ardd{background:#EDE9FE;color:#4C1D95}
+.s-prop{background:#D1FAE5;color:#065F46}
+.s-neg{background:#F1F5F9;color:#475569}
+
+/* ROWS */
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);transition:background .1s;border-radius:8px}
+.row:hover{background:var(--bg);padding-left:8px;padding-right:8px}
+.row:last-child{border-bottom:none}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.ri{flex:1;min-width:0}
+.rn{font-size:13px;font-weight:600;color:var(--text1)}
+.rm{font-size:11px;color:var(--text2);margin-top:2px}
+.pw{flex:1;min-width:80px}
+.pl{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.pt{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.pf{height:100%;border-radius:3px;transition:width .6s}
+
+/* FUNIL */
+.funil-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.funil-col{display:flex;flex-direction:column;gap:0}
+.funil-header{padding:10px 12px;border-radius:10px 10px 0 0;text-align:center}
+.funil-header-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.funil-header-count{font-size:18px;font-weight:800;margin-top:2px}
+.funil-body{background:var(--bg);border-radius:0 0 10px 10px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:6px}
+.funil-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:all .15s}
+.funil-card:hover{border-color:var(--mid);transform:translateY(-1px)}
+.funil-card-name{font-size:12px;font-weight:600;color:var(--text1);margin-bottom:4px}
+.funil-card-info{font-size:11px;color:var(--text2)}
+.funil-card-val{font-size:12px;font-weight:700;color:var(--mid);margin-top:4px}
+
+/* METAS */
+.meta-bar-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px}
+.meta-bar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.meta-bar-title{font-size:13px;font-weight:700;color:var(--text1);display:flex;align-items:center;gap:8px}
+.meta-bar-pct{font-size:20px;font-weight:800}
+.meta-track{height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:8px}
+.meta-fill{height:100%;border-radius:5px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.meta-foot{display:flex;justify-content:space-between}
+.meta-foot span{font-size:12px;color:var(--text2)}
+
+/* DU BARS */
+.du-wrap{display:flex;gap:3px;align-items:flex-end}
+.du-bar{flex:1;border-radius:2px 2px 0 0;min-width:0;transition:all .3s}
+
+/* NOTIFICAÇÕES */
+.notif-panel{position:fixed;top:52px;right:0;width:360px;height:calc(100vh - 52px);background:var(--card);border-left:1px solid var(--border);z-index:100;transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column}
+.notif-panel.open{transform:translateX(0)}
+.notif-panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notif-panel-body{flex:1;overflow-y:auto;padding:8px}
+.notif-item{display:flex;gap:12px;padding:12px;border-radius:10px;margin-bottom:4px;cursor:pointer;transition:background .1s}
+.notif-item:hover{background:var(--bg)}
+.notif-item.unread{background:#EFF6FF}
+.notif-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.notif-body{flex:1}
+.notif-text{font-size:13px;color:var(--text1);line-height:1.4}
+.notif-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--card);border-radius:16px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,.2)}
+.modal-box h3{font-size:17px;font-weight:800;margin-bottom:20px;color:var(--text1)}
+.mfield{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.mfield label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.mfield input,.mfield select,.mfield textarea{padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:#FAFBFC;color:var(--text1);font-size:13px;outline:none;font-family:inherit;transition:all .2s}
+.mfield input,.mfield select{height:42px}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--mid);background:#fff;box-shadow:0 0 0 4px rgba(29,164,212,.08)}
+.mfield .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.alert-ok{display:none;background:#D1FAE5;border:1.5px solid #6EE7B7;border-radius:10px;padding:10px 14px;font-size:13px;color:#065F46;margin-bottom:12px}
+.alert-err{display:none;background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;padding:10px 14px;font-size:13px;color:#991B1B;margin-bottom:12px}
+
+/* AGENDA */
+.agenda-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px}
+.agenda-day{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px;min-height:80px;cursor:pointer;transition:all .15s}
+.agenda-day:hover{border-color:var(--mid)}
+.agenda-day.today{border-color:var(--mid);background:#E0F2FE}
+.agenda-day-num{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.agenda-day.today .agenda-day-num{color:var(--mid)}
+.agenda-event{font-size:10px;background:linear-gradient(135deg,var(--teal),var(--mid));color:#fff;border-radius:4px;padding:2px 5px;margin-bottom:2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agenda-day-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+
+/* TABELA */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:2px solid var(--border);text-align:left;background:var(--bg)}
+.tbl th:first-child{border-radius:8px 0 0 0}
+.tbl th:last-child{border-radius:0 8px 0 0}
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg)}
+
+/* FILTROS */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filter-btn{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s}
+.filter-btn.on{background:var(--mid);border-color:var(--mid);color:#fff}
+.filter-btn:hover:not(.on){border-color:var(--mid);color:var(--mid)}
+
+/* RANKING */
+.rank-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;margin-bottom:8px;background:var(--bg);border:1.5px solid var(--border);transition:all .15s}
+.rank-row:hover{border-color:var(--mid)}
+.rank-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.rank-1{background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff}
+.rank-2{background:linear-gradient(135deg,#94A3B8,#64748B);color:#fff}
+.rank-3{background:linear-gradient(135deg,#F97316,#EA580C);color:#fff}
+.rank-n{background:var(--border);color:var(--text3)}
+
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:14px}
+.empty{text-align:center;padding:32px;color:var(--text3);font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.back-btn{background:none;border:none;color:var(--mid);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:0;font-weight:600}
+.section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-content{margin-left:0}
+  .funil-grid{grid-template-columns:repeat(2,1fr)}
+  .m4{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .m4{grid-template-columns:1fr}
+  .m3{grid-template-columns:1fr}
+  .m2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login">
+  <div class="login-card">
+    <div class="brand-wrap">
+      <div class="brand-logo"><span class="bm">M</span><span class="bv">V</span><span class="bcrm">CRM</span></div>
+      <div class="brand-tag">Corretora de plano de saúde</div>
+    </div>
+    <div class="lfield"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@mvcrm.com.br" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="lfield"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="lerr" id="l-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="s-app">
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <div class="sb-brand">
+        <div class="sb-logo"><span class="sb-m">M</span><span class="sb-v">V</span><span class="sb-crm">CRM</span></div>
+      </div>
+      <div class="sb-user">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="sb-av av" id="sb-av" style="width:38px;height:38px;font-size:13px;background:#E0FAF5;color:#065F46"></div>
+          <div style="min-width:0">
+            <div class="sb-name" id="sb-name"></div>
+            <div class="sb-role" id="sb-role"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-nav" id="sb-nav"></div>
+      <div class="sb-footer">
+        <button class="btn-sair" onclick="doLogout()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:6px;vertical-align:-2px"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair do sistema
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title" id="topbar-title">Dashboard</div>
+        </div>
+        <div class="topbar-right">
+          <button class="notif-btn" onclick="toggleNotif()" id="notif-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notif-dot" id="notif-dot" style="display:none"></span>
+          </button>
+        </div>
+      </div>
+      <div id="pages-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICAÇÕES PANEL -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-panel-head">
+    <span style="font-size:14px;font-weight:700">Notificações</span>
+    <button onclick="marcarTodasLidas()" style="font-size:12px;color:var(--mid);background:none;border:none;cursor:pointer;font-weight:600">Marcar todas como lidas</button>
+  </div>
+  <div class="notif-panel-body" id="notif-list"></div>
+</div>
+
+<!-- MODAIS -->
+<div class="modal-overlay" id="mod-lead">
+  <div class="modal-box">
+    <h3 id="mod-lead-title">Novo lead</h3>
+    <input type="hidden" id="ml-id">
+    <div class="mfield"><label>Nome</label><input type="text" id="ml-nome" placeholder="Nome completo"></div>
+    <div class="mfield"><label>Empresa (se tiver CNPJ)</label><input type="text" id="ml-empresa" placeholder="Razão social ou nome fantasia"></div>
+    <div class="mfield"><label>Telefone</label><input type="text" id="ml-tel" placeholder="(41) 99999-9999"></div>
+    <div class="mfield"><label>Canal</label>
+      <select id="ml-canal">
+        <option>WhatsApp</option><option>Indicação</option><option>Instagram</option><option>Facebook</option><option>LinkedIn</option><option>Site</option><option>Ligação</option><option>Outro</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Status</label>
+      <select id="ml-status">
+        <option value="Não responderam AB">Não responderam AB</option>
+        <option value="Não responderam mais">Não responderam mais</option>
+        <option value="Analisando">Analisando</option>
+        <option value="Pela Boa">Pela Boa</option>
+        <option value="Ard Documento">Ard Documento</option>
+        <option value="Proposta">Proposta</option>
+        <option value="Negativa">Negativa</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Observações</label><textarea id="ml-obs" rows="3" placeholder="Informações relevantes sobre o lead..."></textarea></div>
+    <div id="ml-fechamento" style="display:none">
+      <div style="border-top:1px solid var(--border);margin:12px 0 16px"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Dados da venda</div>
+      <div class="mfield"><label>Tipo</label>
+        <select id="ml-tipo"><option value="PF">PF</option><option value="Adesão">Adesão</option><option value="PME">PME</option></select>
+      </div>
+      <div class="mfield"><label>Operadora</label>
+        <select id="ml-operadora">
+          <option>Clinipam</option><option>Unimed</option><option>Amil</option><option>Nossa Saúde</option><option>PR Clínicas</option><option>SulAmérica</option><option>MedSênior</option><option>MedSul</option><option>Qualicorp</option><option>Bradesco</option><option>Select</option>
+        </select>
+      </div>
+      <div class="mfield"><label>Valor da proposta (R$)</label><input type="number" id="ml-valor" placeholder="Ex: 1500" min="0"></div>
+      <div class="mfield"><label>Número de vidas</label><input type="number" id="ml-vidas" placeholder="Ex: 5" min="1" value="1"></div>
+    </div>
+    <div id="ml-negativa" style="display:none">
+      <div style="border-top:1px solid var(--border);margin:12px 0 16px"></div>
+      <div class="mfield"><label>Motivo da perda</label><textarea id="ml-motivo" rows="2" placeholder="Por que o lead foi perdido?"></textarea></div>
+    </div>
+    <div class="alert-ok" id="ml-ok"></div>
+    <div class="alert-err" id="ml-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-lead')">Cancelar</button>
+      <button class="btn btn-pri" onclick="salvarLead()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-agenda">
+  <div class="modal-box">
+    <h3>Novo agendamento</h3>
+    <div class="mfield"><label>Título</label><input type="text" id="ma-titulo" placeholder="Ex: Reunião com cliente X"></div>
+    <div class="mfield"><label>Lead relacionado</label><select id="ma-lead"><option value="">Nenhum</option></select></div>
+    <div class="mfield">
+      <label>Data e hora</label>
+      <div class="grid2">
+        <input type="date" id="ma-data">
+        <input type="time" id="ma-hora" value="09:00">
+      </div>
+    </div>
+    <div class="mfield"><label>Tipo</label>
+      <select id="ma-tipo"><option>Reunião</option><option>Ligação</option><option>Visita</option><option>Follow-up</option><option>Apresentação</option><option>Outro</option></select>
+    </div>
+    <div class="mfield"><label>Observação</label><textarea id="ma-obs" rows="2" placeholder="Detalhes do agendamento..."></textarea></div>
+    <div class="alert-ok" id="ma-ok"></div>
+    <div class="alert-err" id="ma-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-agenda')">Cancelar</button>
+      <button class="btn btn-pri" onclick="salvarAgendamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-meta">
+  <div class="modal-box">
+    <h3>Configurar metas</h3>
+    <div id="mod-meta-content"></div>
+    <div class="alert-ok" id="mm-ok"></div>
+    <div class="alert-err" id="mm-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-meta')">Cancelar</button>
+      <button class="btn btn-pri" onclick="salvarMetas()">Salvar metas</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+const SB_URL='https://nfldasoaverzplbowjdn.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGRhc29hdmVyenBsYm93amRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzM4MDUsImV4cCI6MjA5MDE0OTgwNX0.i17swv-ExxKis9yCNQsnFGv8gWrFtYs8XqbM_9VkI_k'
+const sb=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}})
+
+// ── MULTIPLICADORES PME ──
+const PME_MULT={
+  'Clinipam':3,'Unimed':3,'Amil':3,'PR Clínicas':3,'SulAmérica':3,'Bradesco':3,
+  'Nossa Saúde':2,'MedSênior':2,'MedSul':2,'Qualicorp':2,'Select':2
+}
+function calcMeta(valor,tipo,operadora){
+  if(operadora==='MedSênior') return Number(valor)*2
+  if(tipo==='PME') return Number(valor)*(PME_MULT[operadora]||1)
+  return Number(valor)
+}
+
+// ── STATUS LEADS ──
+const STATUS_LEADS=['Não responderam AB','Não responderam mais','Analisando','Pela Boa','Ard Documento','Proposta','Negativa']
+const STATUS_COLORS={'Não responderam AB':'s-nrab','Não responderam mais':'s-nrm','Analisando':'s-anal','Pela Boa':'s-pb','Ard Documento':'s-ardd','Proposta':'s-prop','Negativa':'s-neg'}
+const STATUS_BG={'Não responderam AB':'#FEE2E2','Não responderam mais':'#FEF3C7','Analisando':'#EFF6FF','Pela Boa':'#E0FAF5','Ard Documento':'#EDE9FE','Proposta':'#D1FAE5','Negativa':'#F1F5F9'}
+const STATUS_COLOR={'Não responderam AB':'#991B1B','Não responderam mais':'#92400E','Analisando':'#1E40AF','Pela Boa':'#065F46','Ard Documento':'#4C1D95','Proposta':'#065F46','Negativa':'#475569'}
+
+// ── UTILITÁRIOS ──
+const $=id=>document.getElementById(id)
+const fmt=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0})
+const mes=()=>new Date().getMonth()+1
+const ano=()=>new Date().getFullYear()
+const duTotal=22
+const duHoje=Math.min(new Date().getDate(),duTotal)
+const pctDU=Math.round(duHoje/duTotal*100)
+window.openModal=id=>{$(id).classList.add('open')}
+window.closeModal=id=>{$(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}))
+let CU=null,chartInst={},notifOpen=false,AGENDA_EVENTS=[],LEADS_CACHE=[]
+
+function ini(n){return n?.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?'}
+function destroyChart(id){if(chartInst[id]){chartInst[id].destroy();delete chartInst[id]}}
+function newChart(id,cfg){destroyChart(id);const c=$(id);if(!c)return;chartInst[id]=new Chart(c,cfg)}
+window.toggleNotif=()=>{notifOpen=!notifOpen;$('notif-panel').classList.toggle('open',notifOpen)}
+document.addEventListener('click',e=>{if(notifOpen&&!e.target.closest('#notif-panel')&&!e.target.closest('#notif-btn')){notifOpen=false;$('notif-panel').classList.remove('open')}})
+
+// ── STATUS MODAL ──
+$('ml-status').addEventListener('change',function(){
+  $('ml-fechamento').style.display=this.value==='Proposta'?'block':'none'
+  $('ml-negativa').style.display=this.value==='Negativa'?'block':'none'
+})
+
+// ── AUTH ──
+async function doLogin(){
+  const email=$('l-email').value.trim(),senha=$('l-senha').value
+  $('l-err').style.display='none'
+  $('btn-login').disabled=true;$('btn-login').textContent='Entrando...'
+  try{
+    const{data,error}=await sb.auth.signInWithPassword({email,password:senha})
+    if(error)throw error
+    const{data:u}=await sb.from('usuarios').select('*').eq('id',data.user.id).single()
+    if(!u)throw new Error('Usuário não configurado')
+    CU=u
+    await iniciarApp()
+  }catch(e){
+    $('l-err').textContent='E-mail ou senha incorretos. Tente novamente.'
+    $('l-err').style.display='block'
+    $('btn-login').disabled=false;$('btn-login').textContent='Entrar'
+  }
+}
+window.doLogin=doLogin
+
+async function doLogout(){
+  await sb.auth.signOut();CU=null
+  $('s-login').style.display='flex';$('s-app').style.display='none'
+  $('l-email').value='';$('l-senha').value=''
+  $('btn-login').disabled=false;$('btn-login').textContent='Entrar'
+}
+window.doLogout=doLogout
+
+// Recuperar sessão
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==='SIGNED_IN'&&session&&!CU){
+    const{data:u}=await sb.from('usuarios').select('*').eq('id',session.user.id).single()
+    if(u){CU=u;await iniciarApp()}
+  }
+})
+
+async function iniciarApp(){
+  $('s-login').style.display='none';$('s-app').style.display='block'
+  $('sb-av').textContent=ini(CU.nome)
+  $('sb-name').textContent=CU.nome
+  $('sb-role').textContent=CU.perfil==='master'?'Master':CU.perfil==='supervisor'?'Supervisor':'Consultor(a)'
+  await carregarNotificacoes()
+  if(CU.perfil==='master') setupMaster()
+  else if(CU.perfil==='supervisor') setupSupervisor()
+  else setupConsultor()
+}
+
+// ── NOTIFICAÇÕES ──
+async function carregarNotificacoes(){
+  const{data}=await sb.from('notificacoes').select('*').eq('para_usuario',CU.id).order('criada_em',{ascending:false}).limit(30)
+  const unread=(data||[]).filter(n=>!n.lida).length
+  $('notif-dot').style.display=unread>0?'block':'none'
+  const cores={sucesso:'#D1FAE5',info:'#EFF6FF',alerta:'#FEF3C7',urgente:'#FEE2E2'}
+  const icones={sucesso:'✓',info:'ℹ',alerta:'⚠',urgente:'🔴'}
+  $('notif-list').innerHTML=(data||[]).length?(data||[]).map(n=>`
+    <div class="notif-item${n.lida?'':' unread'}" onclick="lerNotif('${n.id}')">
+      <div class="notif-icon" style="background:${cores[n.tipo]||'#EFF6FF'}">
+        <span style="font-size:14px">${icones[n.tipo]||'ℹ'}</span>
+      </div>
+      <div class="notif-body">
+        <div class="notif-text"><strong>${n.titulo}</strong>${n.mensagem?'<br><span style="color:var(--text2);font-size:12px">'+n.mensagem+'</span>':''}</div>
+        <div class="notif-time">${new Date(n.criada_em).toLocaleString('pt-BR')}</div>
+      </div>
+    </div>`).join(''):'<div class="empty">Nenhuma notificação</div>'
+}
+
+window.lerNotif=async(id)=>{
+  await sb.from('notificacoes').update({lida:true}).eq('id',id)
+  await carregarNotificacoes()
+}
+window.marcarTodasLidas=async()=>{
+  await sb.from('notificacoes').update({lida:true}).eq('para_usuario',CU.id)
+  await carregarNotificacoes()
+}
+
+async function notificarTodos(titulo,mensagem,tipo='info'){
+  const{data:users}=await sb.from('usuarios').select('id')
+  if(!users?.length)return
+  const notifs=users.map(u=>({para_usuario:u.id,titulo,mensagem,tipo,lida:false}))
+  await sb.from('notificacoes').insert(notifs)
+}
+
+async function verificarMeta(consultorId,consultorNome,equipeId,equipeName){
+  const m=mes(),a=ano()
+  const[metaRes,resultRes]=await Promise.all([
+    sb.from('metas_mensais').select('meta_vendas').eq('consultor_id',consultorId).eq('mes',m).eq('ano',a).maybeSingle(),
+    sb.from('leads').select('valor_meta').eq('consultor_id',consultorId).eq('mes_fechamento',m).eq('ano_fechamento',a).eq('status','Proposta')
+  ])
+  const metaVnd=metaRes.data?.meta_vendas||17000
+  const realizado=(resultRes.data||[]).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+  if(realizado>=metaVnd){
+    await notificarTodos(`🏆 Meta batida! ${consultorNome}`,`${consultorNome} atingiu a meta de ${fmt(metaVnd)} neste mês!`,'sucesso')
+  }
+  if(equipeId){
+    const{data:cons}=await sb.from('usuarios').select('id').eq('equipe_id',equipeId).eq('perfil','consultor')
+    if(cons?.length){
+      const ids=cons.map(c=>c.id)
+      const{data:metasEq}=await sb.from('metas_mensais').select('meta_vendas').in('consultor_id',ids).eq('mes',m).eq('ano',a)
+      const metaEqTotal=(metasEq||[]).reduce((s,x)=>s+Number(x.meta_vendas||17000),0)
+      const{data:leadEq}=await sb.from('leads').select('valor_meta').in('consultor_id',ids).eq('mes_fechamento',m).eq('ano_fechamento',a).eq('status','Proposta')
+      const realEq=(leadEq||[]).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+      if(realEq>=metaEqTotal&&metaEqTotal>0){
+        await notificarTodos(`🏆 Equipe ${equipeName} bateu a meta!`,`A equipe ${equipeName} atingiu ${fmt(metaEqTotal)} neste mês! Parabéns a todos!`,'sucesso')
+      }
+    }
+  }
+}
+
+// ── SETUP MENUS ──
+function setupConsultor(){
+  $('sb-nav').innerHTML=`
+    <div class="sb-section">Principal</div>
+    <button class="sb-btn active" onclick="navTo('p-home',this,'Meu painel')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Meu painel
+    </button>
+    <button class="sb-btn" onclick="navTo('p-leads',this,'Leads')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Leads
+    </button>
+    <button class="sb-btn" onclick="navTo('p-funil',this,'Funil de vendas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Funil
+    </button>
+    <button class="sb-btn" onclick="navTo('p-agenda',this,'Agenda')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Agenda
+    </button>
+    <div class="sb-section">Resultados</div>
+    <button class="sb-btn" onclick="navTo('p-metas',this,'Minhas metas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Metas
+    </button>
+    <button class="sb-btn" onclick="navTo('p-historico',this,'Histórico')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Histórico
+    </button>
+  `
+  $('pages-wrap').innerHTML=`
+    <div id="p-home" class="page active"></div>
+    <div id="p-leads" class="page"></div>
+    <div id="p-funil" class="page"></div>
+    <div id="p-agenda" class="page"></div>
+    <div id="p-metas" class="page"></div>
+    <div id="p-historico" class="page"></div>
+  `
+  loadCoHome()
+}
+
+function setupSupervisor(){
+  $('sb-nav').innerHTML=`
+    <div class="sb-section">Visão geral</div>
+    <button class="sb-btn active" onclick="navTo('p-sv-home',this,'Dashboard da equipe')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="sb-btn" onclick="navTo('p-sv-consultores',this,'Consultores')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Consultores
+    </button>
+    <button class="sb-btn" onclick="navTo('p-sv-funil',this,'Funil da equipe')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Funil
+    </button>
+    <div class="sb-section">Gestão</div>
+    <button class="sb-btn" onclick="navTo('p-sv-metas',this,'Configurar metas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Metas
+    </button>
+    <button class="sb-btn" onclick="navTo('p-sv-ranking',this,'Ranking')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Ranking
+    </button>
+    <button class="sb-btn" onclick="navTo('p-sv-historico',this,'Histórico mensal')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Histórico
+    </button>
+  `
+  $('pages-wrap').innerHTML=`
+    <div id="p-sv-home" class="page active"></div>
+    <div id="p-sv-consultores" class="page"></div>
+    <div id="p-sv-funil" class="page"></div>
+    <div id="p-sv-metas" class="page"></div>
+    <div id="p-sv-ranking" class="page"></div>
+    <div id="p-sv-historico" class="page"></div>
+  `
+  loadSvHome()
+}
+
+function setupMaster(){
+  $('sb-nav').innerHTML=`
+    <div class="sb-section">Consolidado</div>
+    <button class="sb-btn active" onclick="navTo('p-ma-home',this,'Visão master')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="sb-btn" onclick="navTo('p-ma-equipes',this,'Equipes')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Equipes
+    </button>
+    <button class="sb-btn" onclick="navTo('p-ma-funil',this,'Funil geral')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Funil geral
+    </button>
+    <div class="sb-section">Análise</div>
+    <button class="sb-btn" onclick="navTo('p-ma-ranking',this,'Ranking geral')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Ranking
+    </button>
+    <button class="sb-btn" onclick="navTo('p-ma-historico',this,'Histórico')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Histórico
+    </button>
+    <button class="sb-btn" onclick="navTo('p-ma-metas',this,'Configurar metas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Metas globais
+    </button>
+  `
+  $('pages-wrap').innerHTML=`
+    <div id="p-ma-home" class="page active"></div>
+    <div id="p-ma-equipes" class="page"></div>
+    <div id="p-ma-funil" class="page"></div>
+    <div id="p-ma-ranking" class="page"></div>
+    <div id="p-ma-historico" class="page"></div>
+    <div id="p-ma-metas" class="page"></div>
+  `
+  loadMaHome()
+}
+
+window.navTo=(id,btn,title)=>{
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'))
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  btn.classList.add('active');$(id).classList.add('active')
+  $('topbar-title').textContent=title
+  const loaders={
+    'p-home':loadCoHome,'p-leads':loadLeads,'p-funil':loadFunil,'p-agenda':loadAgenda,
+    'p-metas':loadMetas,'p-historico':loadHistorico,
+    'p-sv-home':loadSvHome,'p-sv-consultores':loadSvConsultores,'p-sv-funil':loadSvFunil,
+    'p-sv-metas':loadSvMetas,'p-sv-ranking':loadSvRanking,'p-sv-historico':loadSvHistorico,
+    'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
+    'p-ma-ranking':loadMaRanking,'p-ma-historico':loadMaHistorico,'p-ma-metas':loadMaMetas
+  }
+  if(loaders[id]) loaders[id]()
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — HOME
+// ════════════════════════════════════════
+async function loadCoHome(){
+  const el=$('p-home');if(!el)return
+  el.innerHTML='<div class="loading">Carregando seu painel...</div>'
+  const m=mes(),a=ano()
+  const[metaRes,leadsRes,agendaRes]=await Promise.all([
+    sb.from('metas_mensais').select('*').eq('consultor_id',CU.id).eq('mes',m).eq('ano',a).maybeSingle(),
+    sb.from('leads').select('*').eq('consultor_id',CU.id),
+    sb.from('agendamentos').select('*').eq('consultor_id',CU.id).gte('data',new Date().toISOString().split('T')[0]).order('data').limit(5)
+  ])
+  const metaVnd=metaRes.data?.meta_vendas||17000
+  const metaCot=metaRes.data?.meta_cotacoes||70
+  const leads=leadsRes.data||[]
+  const fechados=leads.filter(l=>l.status==='Proposta'&&l.mes_fechamento===m&&l.ano_fechamento===a)
+  const realizado=fechados.reduce((s,l)=>s+Number(l.valor_meta||0),0)
+  const cotacoes=leads.filter(l=>l.mes_cotacao===m&&l.ano_cotacao===a).length
+  const vndPct=metaVnd>0?Math.min(Math.round(realizado/metaVnd*100),100):0
+  const cotPct=metaCot>0?Math.min(Math.round(cotacoes/metaCot*100),100):0
+  const vndEsp=Math.round(metaVnd*duHoje/duTotal)
+  const cotEsp=Math.round(metaCot*duHoje/duTotal)
+  const vndOk=realizado>=vndEsp,cotOk=cotacoes>=cotEsp
+  const hoje=leads.filter(l=>l.followup_date===new Date().toISOString().split('T')[0])
+
+  el.innerHTML=`
+    <div style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="1.5" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <div>
+        <div style="font-size:15px;font-weight:700">Olá, ${CU.nome.split(' ')[0]}!</div>
+        <div style="font-size:13px;color:#1E40AF;margin-top:3px">Dia útil ${duHoje} de ${duTotal} — você deveria estar em <strong>${pctDU}%</strong> da meta.</div>
+      </div>
+      ${hoje.length>0?`<div style="margin-left:auto;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#92400E;white-space:nowrap">${hoje.length} follow-up hoje</div>`:''}
+    </div>
+
+    <div class="metrics m4">
+      <div class="metric">
+        <div class="metric-icon" style="background:#E0FAF5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="metric-label">Leads ativos</div>
+        <div class="metric-val">${leads.filter(l=>l.status!=='Negativa').length}</div>
+        <div class="metric-sub">${leads.length} total</div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon" style="background:#EFF6FF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <div class="metric-label">Cotações (mês)</div>
+        <div class="metric-val">${cotacoes}</div>
+        <div class="metric-sub ${cotOk?'up':'dn'}">${cotOk?'▲':'▼'} esperado ${cotEsp}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon" style="background:#D1FAE5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="metric-label">Vendas (mês)</div>
+        <div class="metric-val">${fechados.length}</div>
+        <div class="metric-sub">${fmt(realizado)}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-icon" style="background:#FEF3C7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+        <div class="metric-label">Meta acumulada</div>
+        <div class="metric-val" style="font-size:20px">${fmt(realizado)}</div>
+        <div class="metric-sub ${vndOk?'up':'dn'}">${vndPct}% de ${fmt(metaVnd)}</div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div>
+        <div class="meta-bar-wrap">
+          <div class="meta-bar-head">
+            <div class="meta-bar-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${vndOk?'#00C9A7':'#EF4444'}" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              Meta de vendas
+            </div>
+            <span class="meta-bar-pct" style="color:${vndOk?'#00C9A7':'#EF4444'}">${vndPct}%</span>
+          </div>
+          <div class="meta-track"><div class="meta-fill" style="width:${vndPct}%;background:${vndOk?'linear-gradient(90deg,#00C9A7,#1DA4D4)':'#EF4444'}"></div></div>
+          <div class="meta-foot"><span>${fmt(realizado)} de ${fmt(metaVnd)}</span><span style="color:${vndOk?'#059669':'#DC2626'};font-weight:600">${vndOk?'▲ acima':'▼ abaixo'} do esperado (${fmt(vndEsp)})</span></div>
+        </div>
+        <div class="meta-bar-wrap">
+          <div class="meta-bar-head">
+            <div class="meta-bar-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cotOk?'#1DA4D4':'#EF4444'}" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+              Meta de cotações
+            </div>
+            <span class="meta-bar-pct" style="color:${cotOk?'#1DA4D4':'#EF4444'}">${cotPct}%</span>
+          </div>
+          <div class="meta-track"><div class="meta-fill" style="width:${cotPct}%;background:${cotOk?'linear-gradient(90deg,#1DA4D4,#2563EB)':'#EF4444'}"></div></div>
+          <div class="meta-foot"><span>${cotacoes} de ${metaCot} cotações</span><span style="color:${cotOk?'#059669':'#DC2626'};font-weight:600">${cotOk?'▲ acima':'▼ abaixo'} do esperado (${cotEsp})</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Régua de dias úteis</span><span style="font-size:12px;color:var(--text3)">dia ${duHoje} de ${duTotal}</span></div>
+        <div class="du-wrap" id="du-home" style="height:64px;margin-bottom:8px"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px"><span style="font-size:11px;color:var(--text3)">1</span><span style="font-size:13px;font-weight:700;color:var(--mid)">${pctDU}% do mês</span><span style="font-size:11px;color:var(--text3)">${duTotal}</span></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Próximos agendamentos</div>
+        ${(agendaRes.data||[]).length?agendaRes.data.map(ag=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:36px;height:36px;border-radius:8px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div><div style="font-size:12px;font-weight:600">${ag.titulo}</div><div style="font-size:11px;color:var(--text3)">${new Date(ag.data+'T'+ag.hora).toLocaleString('pt-BR',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
+          </div>`).join(''):'<div class="empty" style="padding:16px 0">Nenhum agendamento próximo</div>'}
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Follow-up do dia</span><span class="pill p-wn">${hoje.length} pendentes</span></div>
+        ${hoje.length?hoje.map(l=>`
+          <div class="row" onclick="abrirLead('${l.id}')">
+            <div class="av" style="width:34px;height:34px;font-size:12px;background:#FEF3C7;color:#92400E">${ini(l.nome)}</div>
+            <div class="ri"><div class="rn">${l.nome}</div><div class="rm">${l.empresa||l.canal}</div></div>
+            <span class="pill ${STATUS_COLORS[l.status]||'p-gray'}">${l.status}</span>
+          </div>`).join(''):'<div class="empty">Nenhum follow-up pendente hoje!</div>'}
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Leads por status</span></div>
+        <div style="position:relative;height:180px"><canvas id="c-co-status"></canvas></div>
+      </div>
+    </div>
+  `
+
+  // DU bars
+  const w=$('du-home')
+  if(w){w.innerHTML='';for(let i=1;i<=duTotal;i++){const b=document.createElement('div');b.className='du-bar';const h=Math.round(60*i/duTotal);b.style.cssText=`height:${h}px;background:${i===duHoje?'var(--mid)':i<duHoje?'var(--teal)':'var(--border)'};opacity:${i===duHoje?1:i<duHoje?.8:.4}`;w.appendChild(b)}}
+
+  // Gráfico status
+  const statusCount={}
+  STATUS_LEADS.forEach(s=>statusCount[s]=0)
+  leads.forEach(l=>statusCount[l.status]=(statusCount[l.status]||0)+1)
+  const labels=Object.keys(statusCount).filter(s=>statusCount[s]>0)
+  const vals=labels.map(s=>statusCount[s])
+  const bgColors=labels.map(s=>STATUS_BG[s]||'#E2E8F0')
+  setTimeout(()=>newChart('c-co-status',{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:bgColors,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+c.raw}}}}}),100)
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — LEADS
+// ════════════════════════════════════════
+async function loadLeads(){
+  const el=$('p-leads');if(!el)return
+  el.innerHTML='<div class="loading">Carregando leads...</div>'
+  const{data}=await sb.from('leads').select('*').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
+  LEADS_CACHE=data||[]
+  renderLeadsView(LEADS_CACHE,'all')
+}
+
+function renderLeadsView(leads,filtro){
+  const el=$('p-leads');if(!el)return
+  const filtrados=filtro==='all'?leads:leads.filter(l=>l.status===filtro)
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:20px;font-weight:800">Leads</div>
+        <div style="font-size:13px;color:var(--text3)">${filtrados.length} leads ${filtro==='all'?'no total':'com status "'+filtro+'"'}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-pri" onclick="novoLead()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo lead
+        </button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn${filtro==='all'?' on':''}" onclick="filterLeads('all',this)">Todos (${leads.length})</button>
+      ${STATUS_LEADS.map(s=>`<button class="filter-btn${filtro===s?' on':''}" onclick="filterLeads('${s}',this)" style="${filtro===s?'':'border-color:'+STATUS_BG[s]}">${s} (${leads.filter(l=>l.status===s).length})</button>`).join('')}
+    </div>
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Telefone</th><th>Canal</th><th>Status</th><th>Follow-up</th><th>Ações</th></tr></thead>
+        <tbody>${filtrados.length?filtrados.map(l=>`
+          <tr>
+            <td><strong>${l.nome}</strong></td>
+            <td>${l.empresa||'—'}</td>
+            <td>${l.telefone||'—'}</td>
+            <td><span class="pill p-gray">${l.canal||'—'}</span></td>
+            <td><span class="pill" style="background:${STATUS_BG[l.status]};color:${STATUS_COLOR[l.status]}">${l.status}</span></td>
+            <td style="font-size:12px;color:var(--text3)">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR'):'—'}</td>
+            <td>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sec btn-sm" onclick="editarLead('${l.id}')">Editar</button>
+                <button class="btn btn-sec btn-sm" onclick="verHistoricoLead('${l.id}','${l.nome.replace(/'/g,"\\'")}')">Histórico</button>
+              </div>
+            </td>
+          </tr>`).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+window.filterLeads=(s,btn)=>{
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on')
+  renderLeadsView(LEADS_CACHE,s)
+}
+
+window.novoLead=()=>{
+  $('mod-lead-title').textContent='Novo lead'
+  $('ml-id').value=''
+  ;['ml-nome','ml-empresa','ml-tel','ml-obs','ml-valor','ml-vidas','ml-motivo'].forEach(id=>{if($(id))$(id).value=''})
+  $('ml-status').value='Não responderam AB'
+  $('ml-canal').value='WhatsApp'
+  $('ml-fechamento').style.display='none'
+  $('ml-negativa').style.display='none'
+  $('ml-ok').style.display='none';$('ml-err').style.display='none'
+  openModal('mod-lead')
+}
+
+window.editarLead=async(id)=>{
+  const l=LEADS_CACHE.find(x=>x.id===id);if(!l)return
+  $('mod-lead-title').textContent='Editar lead'
+  $('ml-id').value=l.id
+  $('ml-nome').value=l.nome||''
+  $('ml-empresa').value=l.empresa||''
+  $('ml-tel').value=l.telefone||''
+  $('ml-canal').value=l.canal||'WhatsApp'
+  $('ml-status').value=l.status||'Não responderam AB'
+  $('ml-obs').value=l.observacoes||''
+  $('ml-fechamento').style.display=l.status==='Proposta'?'block':'none'
+  $('ml-negativa').style.display=l.status==='Negativa'?'block':'none'
+  if(l.status==='Proposta'){$('ml-tipo').value=l.tipo||'PF';$('ml-operadora').value=l.operadora||'Unimed';$('ml-valor').value=l.valor||'';$('ml-vidas').value=l.vidas||1}
+  if(l.status==='Negativa') $('ml-motivo').value=l.motivo_perda||''
+  $('ml-ok').style.display='none';$('ml-err').style.display='none'
+  openModal('mod-lead')
+}
+
+window.salvarLead=async()=>{
+  const id=$('ml-id').value
+  const nome=$('ml-nome').value.trim(),status=$('ml-status').value
+  $('ml-err').style.display='none'
+  if(!nome){$('ml-err').textContent='Informe o nome do lead.';$('ml-err').style.display='block';return}
+  const amanha=new Date();amanha.setDate(amanha.getDate()+1)
+  const followup=amanha.toISOString().split('T')[0]
+  const m=mes(),a=ano()
+  let dados={
+    nome,empresa:$('ml-empresa').value.trim(),telefone:$('ml-tel').value.trim(),
+    canal:$('ml-canal').value,status,observacoes:$('ml-obs').value.trim(),
+    followup_date:status!=='Proposta'&&status!=='Negativa'?followup:null,
+    consultor_id:CU.id
+  }
+  if(status==='Proposta'){
+    const tipo=$('ml-tipo').value,op=$('ml-operadora').value
+    const val=Number($('ml-valor').value)||0
+    const valMeta=calcMeta(val,tipo,op)
+    dados={...dados,tipo,operadora:op,valor:val,valor_meta:valMeta,vidas:Number($('ml-vidas').value)||1,
+      mes_fechamento:m,ano_fechamento:a,mes_cotacao:m,ano_cotacao:a}
+  }
+  if(status==='Negativa') dados={...dados,motivo_perda:$('ml-motivo').value.trim()}
+  let error
+  if(id){const r=await sb.from('leads').update(dados).eq('id',id);error=r.error}
+  else{const r=await sb.from('leads').insert({...dados,mes_cotacao:m,ano_cotacao:a});error=r.error}
+  if(error){$('ml-err').textContent='Erro: '+error.message;$('ml-err').style.display='block';return}
+  if(status==='Proposta'&&CU.equipe_id){
+    const{data:eq}=await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single()
+    await verificarMeta(CU.id,CU.nome,CU.equipe_id,eq?.nome||'')
+  }
+  $('ml-ok').textContent=id?'Lead atualizado!':'Lead cadastrado!';$('ml-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-lead');loadLeads();loadCoHome()},1400)
+}
+
+window.abrirLead=id=>editarLead(id)
+
+window.verHistoricoLead=async(id,nome)=>{
+  const el=$('p-leads');if(!el)return
+  const{data:hist}=await sb.from('historico_leads').select('*').eq('lead_id',id).order('criado_em',{ascending:false})
+  const cores={Ligação:'#2563EB','E-mail':'#F59E0B',Reunião:'#8B5CF6',Proposta:'#F97316',Fechamento:'#00C9A7',Nota:'#94A3B8','Follow-up':'#1DA4D4'}
+  el.innerHTML=`
+    <button class="back-btn" onclick="loadLeads()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar para leads
+    </button>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:18px;font-weight:800">${nome}</div>
+      <button class="btn btn-pri" onclick="novaInteracaoLead('${id}')">+ Registrar interação</button>
+    </div>
+    <div class="card">
+      ${hist?.length?hist.map(h=>`
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div class="dot" style="background:${cores[h.tipo]||'#94A3B8'};margin-top:5px;width:10px;height:10px"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600">${h.tipo}</div><div style="font-size:12px;color:var(--text2);margin-top:3px">${h.observacao||''}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">${new Date(h.criado_em).toLocaleString('pt-BR')}</div></div>
+        </div>`).join(''):'<div class="empty">Nenhuma interação registrada</div>'}
+    </div>
+  `
+}
+
+window.novaInteracaoLead=async(leadId)=>{
+  const tipo=prompt('Tipo: Ligação, E-mail, Reunião, Proposta, Fechamento, Follow-up, Nota');if(!tipo)return
+  const obs=prompt('Observação:');
+  await sb.from('historico_leads').insert({lead_id:leadId,consultor_id:CU.id,tipo,observacao:obs})
+  const l=LEADS_CACHE.find(x=>x.id===leadId)
+  if(l) verHistoricoLead(leadId,l.nome)
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — FUNIL
+// ════════════════════════════════════════
+async function loadFunil(){
+  const el=$('p-funil');if(!el)return
+  el.innerHTML='<div class="loading">Carregando funil...</div>'
+  const{data}=await sb.from('leads').select('*').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
+  const leads=data||[]
+  const totValMeta=leads.filter(l=>l.status==='Proposta').reduce((s,l)=>s+Number(l.valor_meta||0),0)
+  el.innerHTML=`
+    <div class="metrics m3">
+      <div class="metric"><div class="metric-label">Total no funil</div><div class="metric-val">${leads.filter(l=>l.status!=='Negativa').length}</div><div class="metric-sub">leads ativos</div></div>
+      <div class="metric"><div class="metric-label">Propostas enviadas</div><div class="metric-val">${leads.filter(l=>l.status==='Proposta').length}</div><div class="metric-sub">${fmt(totValMeta)} na meta</div></div>
+      <div class="metric"><div class="metric-label">Negativas</div><div class="metric-val">${leads.filter(l=>l.status==='Negativa').length}</div></div>
+    </div>
+    <div style="overflow-x:auto">
+      <div class="funil-grid" style="min-width:900px">
+        ${STATUS_LEADS.map(s=>{
+          const items=leads.filter(l=>l.status===s)
+          return`<div class="funil-col">
+            <div class="funil-header" style="background:${STATUS_BG[s]};color:${STATUS_COLOR[s]}">
+              <div class="funil-header-title">${s}</div>
+              <div class="funil-header-count">${items.length}</div>
+            </div>
+            <div class="funil-body">
+              ${items.map(l=>`<div class="funil-card" onclick="editarLead('${l.id}')">
+                <div class="funil-card-name">${l.nome}</div>
+                <div class="funil-card-info">${l.empresa||l.canal}</div>
+                ${l.valor_meta?`<div class="funil-card-val">${fmt(l.valor_meta)}</div>`:''}
+                ${l.followup_date?`<div style="font-size:10px;color:var(--text3);margin-top:4px">Follow-up: ${new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')}</div>`:''}
+              </div>`).join('')}
+            </div>
+          </div>`}).join('')}
+      </div>
+    </div>
+  `
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — AGENDA
+// ════════════════════════════════════════
+async function loadAgenda(){
+  const el=$('p-agenda');if(!el)return
+  el.innerHTML='<div class="loading">Carregando agenda...</div>'
+  const hoje=new Date()
+  const ano=hoje.getFullYear(),mes=hoje.getMonth()
+  const inicioMes=new Date(ano,mes,1).toISOString().split('T')[0]
+  const fimMes=new Date(ano,mes+1,0).toISOString().split('T')[0]
+  const[agRes,leadsRes]=await Promise.all([
+    sb.from('agendamentos').select('*').eq('consultor_id',CU.id).gte('data',inicioMes).lte('data',fimMes).order('data'),
+    sb.from('leads').select('id,nome').eq('consultor_id',CU.id).order('nome')
+  ])
+  AGENDA_EVENTS=agRes.data||[]
+  // Popular select de leads no modal
+  const lo=$('ma-lead');if(lo){lo.innerHTML='<option value="">Nenhum</option>'+(leadsRes.data||[]).map(l=>`<option value="${l.id}">${l.nome}</option>`).join('')}
+
+  const diasSemana=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+  const primeiroDia=new Date(ano,mes,1).getDay()
+  const totalDias=new Date(ano,mes+1,0).getDate()
+  const nomeMes=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'})
+
+  let calHTML=diasSemana.map(d=>`<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0;text-transform:uppercase;letter-spacing:.5px">${d}</div>`).join('')
+  for(let i=0;i<primeiroDia;i++) calHTML+=`<div></div>`
+  for(let d=1;d<=totalDias;d++){
+    const dateStr=`${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    const isToday=d===hoje.getDate()
+    const evs=AGENDA_EVENTS.filter(e=>e.data===dateStr)
+    calHTML+=`<div class="agenda-day${isToday?' today':''}" onclick="diaSelecionado('${dateStr}')">
+      <div class="agenda-day-num">${d}</div>
+      ${evs.slice(0,2).map(e=>`<div class="agenda-event">${e.hora?.slice(0,5)} ${e.titulo}</div>`).join('')}
+      ${evs.length>2?`<div style="font-size:10px;color:var(--text3)">+${evs.length-2} mais</div>`:''}
+    </div>`
+  }
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:20px;font-weight:800;text-transform:capitalize">${nomeMes}</div>
+      <button class="btn btn-pri" onclick="novoAgendamento()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo agendamento
+      </button>
+    </div>
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px">${calHTML}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Próximos agendamentos</span></div>
+      <div id="agenda-lista">
+        ${AGENDA_EVENTS.filter(e=>e.data>=new Date().toISOString().split('T')[0]).slice(0,10).map(e=>`
+          <div class="row">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--mid));display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+              <span style="font-size:14px;font-weight:800;color:#fff;line-height:1">${new Date(e.data+'T12:00').getDate()}</span>
+              <span style="font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase">${new Date(e.data+'T12:00').toLocaleString('pt-BR',{month:'short'})}</span>
+            </div>
+            <div class="ri"><div class="rn">${e.titulo}</div><div class="rm">${e.hora?.slice(0,5)} · ${e.tipo}</div></div>
+            <button class="btn btn-danger btn-sm" onclick="excluirAgendamento('${e.id}')">Excluir</button>
+          </div>`).join('')||'<div class="empty">Nenhum agendamento futuro</div>'}
+      </div>
+    </div>
+  `
+}
+
+window.diaSelecionado=(date)=>{
+  const evs=AGENDA_EVENTS.filter(e=>e.data===date)
+  if(evs.length){alert(evs.map(e=>`${e.hora?.slice(0,5)} — ${e.titulo} (${e.tipo})`).join('\n'))}
+  else{$('ma-data').value=date;openModal('mod-agenda')}
+}
+
+window.novoAgendamento=()=>{
+  $('ma-titulo').value='';$('ma-obs').value=''
+  $('ma-data').value=new Date().toISOString().split('T')[0]
+  $('ma-hora').value='09:00'
+  $('ma-ok').style.display='none';$('ma-err').style.display='none'
+  openModal('mod-agenda')
+}
+
+window.salvarAgendamento=async()=>{
+  const titulo=$('ma-titulo').value.trim(),data=$('ma-data').value,hora=$('ma-hora').value
+  $('ma-err').style.display='none'
+  if(!titulo||!data){$('ma-err').textContent='Informe título e data.';$('ma-err').style.display='block';return}
+  const{error}=await sb.from('agendamentos').insert({titulo,lead_id:$('ma-lead').value||null,data,hora,tipo:$('ma-tipo').value,observacao:$('ma-obs').value.trim(),consultor_id:CU.id})
+  if(error){$('ma-err').textContent='Erro: '+error.message;$('ma-err').style.display='block';return}
+  $('ma-ok').textContent='Agendamento salvo!';$('ma-ok').style.display='block'
+  setTimeout(()=>{closeModal('mod-agenda');loadAgenda()},1400)
+}
+
+window.excluirAgendamento=async(id)=>{
+  if(!confirm('Excluir este agendamento?'))return
+  await sb.from('agendamentos').delete().eq('id',id)
+  loadAgenda()
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — METAS
+// ════════════════════════════════════════
+async function loadMetas(){
+  const el=$('p-metas');if(!el)return
+  el.innerHTML='<div class="loading">Carregando metas...</div>'
+  const m=mes(),a=ano()
+  const[metaRes,leadsRes]=await Promise.all([
+    sb.from('metas_mensais').select('*').eq('consultor_id',CU.id).order('ano desc,mes desc').limit(12),
+    sb.from('leads').select('valor_meta,mes_fechamento,ano_fechamento,status').eq('consultor_id',CU.id)
+  ])
+  const metaAtual=metaRes.data?.find(x=>x.mes===m&&x.ano===a)||{meta_vendas:17000,meta_cotacoes:70}
+  const meses=[...new Set((metaRes.data||[]).map(x=>`${x.ano}-${x.mes}`))]
+  el.innerHTML=`
+    <div class="metrics m3">
+      <div class="metric"><div class="metric-label">Meta vendas (mês)</div><div class="metric-val">${fmt(metaAtual.meta_vendas)}</div></div>
+      <div class="metric"><div class="metric-label">Meta cotações (mês)</div><div class="metric-val">${metaAtual.meta_cotacoes}</div></div>
+      <div class="metric"><div class="metric-label">Multiplicadores PME</div><div class="metric-val" style="font-size:14px">300% / 200%</div><div class="metric-sub">por operadora</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Histórico por mês</span><span style="font-size:12px;color:var(--text3)">com filtro por período</span></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Mês/Ano</th><th>Meta vendas</th><th>Realizado</th><th>%</th><th>Meta cotações</th></tr></thead>
+          <tbody>
+            ${(metaRes.data||[]).map(x=>{
+              const real=(leadsRes.data||[]).filter(l=>l.status==='Proposta'&&l.mes_fechamento===x.mes&&l.ano_fechamento===x.ano).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+              const pct=x.meta_vendas>0?Math.round(real/x.meta_vendas*100):0
+              return`<tr>
+                <td><strong>${String(x.mes).padStart(2,'0')}/${x.ano}</strong></td>
+                <td>${fmt(x.meta_vendas)}</td>
+                <td>${fmt(real)}</td>
+                <td><span class="pill ${pct>=100?'p-ok':pct>=64?'p-wn':'p-lw'}">${pct}%</span></td>
+                <td>${x.meta_cotacoes}</td>
+              </tr>`}).join('')||'<tr><td colspan="5"><div class="empty">Nenhum histórico de metas</div></td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Regra de multiplicadores PME</span></div>
+      <table class="tbl">
+        <thead><tr><th>Operadora</th><th>Tipo</th><th>Multiplicador</th><th>Exemplo: R$ 1.000</th></tr></thead>
+        <tbody>
+          ${Object.entries(PME_MULT).map(([op,m])=>`<tr>
+            <td><strong>${op}</strong></td>
+            <td>${op==='MedSênior'?'Qualquer':'PME'}</td>
+            <td><span class="pill ${m===3?'p-ok':'p-info'}">${m*100}%</span></td>
+            <td style="font-weight:600;color:var(--mid)">${fmt(1000*m)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+// ════════════════════════════════════════
+// CONSULTOR — HISTÓRICO
+// ════════════════════════════════════════
+async function loadHistorico(){
+  const el=$('p-historico');if(!el)return
+  el.innerHTML='<div class="loading">Carregando histórico...</div>'
+  const{data}=await sb.from('leads').select('nome,status,valor_meta,operadora,tipo,mes_fechamento,ano_fechamento,criado_em').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
+  const mesesDisp=[...new Set((data||[]).filter(l=>l.mes_fechamento).map(l=>`${l.ano_fechamento}-${String(l.mes_fechamento).padStart(2,'0')}`))]
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Histórico de resultados</div>
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Lead</th><th>Status</th><th>Operadora</th><th>Tipo</th><th>Valor meta</th><th>Mês</th></tr></thead>
+        <tbody>
+          ${(data||[]).filter(l=>l.status==='Proposta').map(l=>`<tr>
+            <td><strong>${l.nome}</strong></td>
+            <td><span class="pill p-ok">Proposta</span></td>
+            <td>${l.operadora||'—'}</td>
+            <td><span class="pill p-info">${l.tipo||'—'}</span></td>
+            <td style="font-weight:700;color:var(--mid)">${fmt(l.valor_meta)}</td>
+            <td>${l.mes_fechamento?String(l.mes_fechamento).padStart(2,'0')+'/'+l.ano_fechamento:'—'}</td>
+          </tr>`).join('')||'<tr><td colspan="6"><div class="empty">Nenhuma proposta fechada ainda</div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+// ════════════════════════════════════════
+// SUPERVISOR
+// ════════════════════════════════════════
+async function getConsultoresEq(){
+  const{data}=await sb.from('usuarios').select('*').eq('equipe_id',CU.equipe_id).eq('perfil','consultor').order('nome')
+  return data||[]
+}
+
+async function loadSvHome(){
+  const el=$('p-sv-home');if(!el)return
+  el.innerHTML='<div class="loading">Carregando dashboard...</div>'
+  const m=mes(),a=ano()
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const[leadsRes,agRes]=await Promise.all([
+    ids.length?sb.from('leads').select('*').in('consultor_id',ids):{data:[]},
+    ids.length?sb.from('metas_mensais').select('*').in('consultor_id',ids).eq('mes',m).eq('ano',a):{data:[]}
+  ])
+  const leads=leadsRes.data||[]
+  const fechados=leads.filter(l=>l.status==='Proposta'&&l.mes_fechamento===m&&l.ano_fechamento===a)
+  const receita=fechados.reduce((s,l)=>s+Number(l.valor_meta||0),0)
+  const{data:eq}=await sb.from('equipes').select('*').eq('id',CU.equipe_id).single()
+
+  const consStats=await Promise.all(cons.map(async c=>{
+    const meta=(agRes.data||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000,meta_cotacoes:70}
+    const real=fechados.filter(l=>l.consultor_id===c.id).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+    const pct=meta.meta_vendas>0?Math.round(real/meta.meta_vendas*100):0
+    const st=pct>=pctDU?'ok':pct>=(pctDU*0.7)?'wn':'lw'
+    return{c,meta,real,pct,st}
+  }))
+
+  el.innerHTML=`
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-icon" style="background:#E0FAF5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00C9A7" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="metric-label">Consultores</div><div class="metric-val">${cons.length}</div></div>
+      <div class="metric"><div class="metric-icon" style="background:#EFF6FF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="metric-label">Leads ativos</div><div class="metric-val">${leads.filter(l=>l.status!=='Negativa').length}</div></div>
+      <div class="metric"><div class="metric-icon" style="background:#D1FAE5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div class="metric-label">Propostas (mês)</div><div class="metric-val">${fechados.length}</div></div>
+      <div class="metric"><div class="metric-icon" style="background:#FEF3C7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="metric-label">Receita (mês)</div><div class="metric-val" style="font-size:20px">${fmt(receita)}</div><div class="metric-sub">${eq?.meta_mensal?Math.round(receita/eq.meta_mensal*100)+'% da meta':''}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Desempenho da equipe ${eq?.nome||''}</span><span style="font-size:12px;color:var(--text3)">esperado: ${pctDU}% · dia útil ${duHoje}/${duTotal}</span></div>
+      ${consStats.map(({c,meta,real,pct,st})=>`
+        <div class="row">
+          <div class="av" style="width:36px;height:36px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
+          <div class="ri"><div class="rn">${c.nome}</div><div class="rm">${fmt(real)} de ${fmt(meta.meta_vendas)}</div></div>
+          <div class="pw">
+            <div class="pl"><span style="font-size:11px;color:var(--text2)">Vendas</span><span style="font-size:12px;font-weight:700;color:${st==='ok'?'#00C9A7':st==='wn'?'#F59E0B':'#EF4444'}">${pct}%</span></div>
+            <div class="pt"><div class="pf" style="width:${Math.min(pct,100)}%;background:${st==='ok'?'linear-gradient(90deg,#00C9A7,#1DA4D4)':st==='wn'?'#F59E0B':'#EF4444'}"></div></div>
+          </div>
+          <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+        </div>`).join('')}
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Leads por status — equipe</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-sv-status"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Receita por consultor</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-sv-rv"></canvas></div>
+      </div>
+    </div>
+  `
+  const statusCount={};STATUS_LEADS.forEach(s=>statusCount[s]=0);leads.forEach(l=>statusCount[l.status]=(statusCount[l.status]||0)+1)
+  const sLabels=Object.keys(statusCount).filter(s=>statusCount[s]>0)
+  setTimeout(()=>{
+    newChart('c-sv-status',{type:'doughnut',data:{labels:sLabels,datasets:[{data:sLabels.map(s=>statusCount[s]),backgroundColor:sLabels.map(s=>STATUS_BG[s]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})
+    const cores=['#00C9A7','#1DA4D4','#2563EB','#8B5CF6','#F59E0B']
+    newChart('c-sv-rv',{type:'bar',data:{labels:consStats.map(x=>x.c.nome.split(' ')[0]),datasets:[{data:consStats.map(x=>x.real),backgroundColor:cores,borderRadius:8,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+  },100)
+}
+
+async function loadSvConsultores(){
+  const el=$('p-sv-consultores');if(!el)return
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const m=mes(),a=ano()
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const[leadsRes,metasRes]=await Promise.all([
+    ids.length?sb.from('leads').select('*').in('consultor_id',ids):{data:[]},
+    ids.length?sb.from('metas_mensais').select('*').in('consultor_id',ids).eq('mes',m).eq('ano',a):{data:[]}
+  ])
+  const leads=leadsRes.data||[]
+  const fechados=leads.filter(l=>l.status==='Proposta'&&l.mes_fechamento===m&&l.ano_fechamento===a)
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Consultores da equipe</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      ${cons.map(c=>{
+        const meta=(metasRes.data||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000,meta_cotacoes:70}
+        const real=fechados.filter(l=>l.consultor_id===c.id).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+        const leads_c=leads.filter(l=>l.consultor_id===c.id)
+        const pctVnd=meta.meta_vendas>0?Math.round(real/meta.meta_vendas*100):0
+        const st=pctVnd>=pctDU?'ok':pctVnd>=(pctDU*0.7)?'wn':'lw'
+        return`<div class="card">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+            <div class="av" style="width:44px;height:44px;font-size:15px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
+            <div style="flex:1"><div style="font-size:15px;font-weight:700">${c.nome}</div><div style="font-size:12px;color:var(--text3)">${c.email}</div></div>
+            <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+          </div>
+          <div class="g3">
+            <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Leads ativos</div><div style="font-size:22px;font-weight:800">${leads_c.filter(l=>l.status!=='Negativa').length}</div></div>
+            <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Receita (mês)</div><div style="font-size:18px;font-weight:800;color:var(--mid)">${fmt(real)}</div><div style="font-size:11px;color:var(--text3)">de ${fmt(meta.meta_vendas)}</div></div>
+            <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">% da meta</div><div style="font-size:22px;font-weight:800;color:${st==='ok'?'#00C9A7':st==='wn'?'#F59E0B':'#EF4444'}">${pctVnd}%</div></div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="pt"><div class="pf" style="width:${Math.min(pctVnd,100)}%;background:${st==='ok'?'linear-gradient(90deg,#00C9A7,#1DA4D4)':st==='wn'?'#F59E0B':'#EF4444'}"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px"><span style="font-size:11px;color:var(--text3)">0%</span><span style="font-size:11px;color:var(--mid);font-weight:600">Esperado hoje: ${pctDU}%</span><span style="font-size:11px;color:var(--text3)">100%</span></div>
+          </div>
+        </div>`}).join('')}
+    </div>
+  `
+}
+
+async function loadSvFunil(){
+  const el=$('p-sv-funil');if(!el)return
+  el.innerHTML='<div class="loading">Carregando funil...</div>'
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const{data}=ids.length?await sb.from('leads').select('*,usuarios(nome)').in('consultor_id',ids).order('criado_em',{ascending:false}):{data:[]}
+  const leads=data||[]
+  el.innerHTML=`
+    <div style="overflow-x:auto">
+      <div class="funil-grid" style="min-width:900px">
+        ${STATUS_LEADS.map(s=>{
+          const items=leads.filter(l=>l.status===s)
+          return`<div class="funil-col">
+            <div class="funil-header" style="background:${STATUS_BG[s]};color:${STATUS_COLOR[s]}">
+              <div class="funil-header-title">${s}</div>
+              <div class="funil-header-count">${items.length}</div>
+            </div>
+            <div class="funil-body">
+              ${items.map(l=>`<div class="funil-card">
+                <div class="funil-card-name">${l.nome}</div>
+                <div class="funil-card-info" style="color:var(--mid);font-weight:600">${l.usuarios?.nome?.split(' ')[0]||'—'}</div>
+                ${l.valor_meta?`<div class="funil-card-val">${fmt(l.valor_meta)}</div>`:''}
+              </div>`).join('')}
+            </div>
+          </div>`}).join('')}
+      </div>
+    </div>
+  `
+}
+
+async function loadSvRanking(){
+  const el=$('p-sv-ranking');if(!el)return
+  el.innerHTML='<div class="loading">Carregando ranking...</div>'
+  const m=mes(),a=ano()
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const[leadsRes,metasRes]=await Promise.all([
+    ids.length?sb.from('leads').select('consultor_id,valor_meta').eq('status','Proposta').in('consultor_id',ids).eq('mes_fechamento',m).eq('ano_fechamento',a):{data:[]},
+    ids.length?sb.from('metas_mensais').select('*').in('consultor_id',ids).eq('mes',m).eq('ano',a):{data:[]}
+  ])
+  const ranking=cons.map(c=>{
+    const real=(leadsRes.data||[]).filter(l=>l.consultor_id===c.id).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+    const meta=(metasRes.data||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000}
+    const pct=meta.meta_vendas>0?Math.round(real/meta.meta_vendas*100):0
+    return{c,real,pct,meta}
+  }).sort((a,b)=>b.real-a.real)
+
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Ranking da equipe</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:20px">${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+    <div class="g2">
+      <div>
+        ${ranking.map((r,i)=>`
+          <div class="rank-row">
+            <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
+            <div class="av" style="width:36px;height:36px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(r.c.nome)}</div>
+            <div class="ri"><div class="rn">${r.c.nome}</div><div class="rm">${fmt(r.real)} · ${r.pct}% da meta</div></div>
+            <div style="text-align:right"><div style="font-size:15px;font-weight:800;color:var(--mid)">${fmt(r.real)}</div><div style="font-size:11px;color:var(--text3)">de ${fmt(r.meta.meta_vendas)}</div></div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Comparativo visual</span></div>
+        <div style="position:relative;height:280px"><canvas id="c-sv-rank"></canvas></div>
+      </div>
+    </div>
+  `
+  setTimeout(()=>{
+    const cores=['#F59E0B','#94A3B8','#F97316','#00C9A7','#1DA4D4']
+    newChart('c-sv-rank',{type:'bar',data:{labels:ranking.map(r=>r.c.nome.split(' ')[0]),datasets:[{data:ranking.map(r=>r.real),backgroundColor:cores,borderRadius:8,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+  },100)
+}
+
+async function loadSvMetas(){
+  const el=$('p-sv-metas');if(!el)return
+  el.innerHTML='<div class="loading">Carregando metas...</div>'
+  const m=mes(),a=ano()
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const{data:metasAtual}=await sb.from('metas_mensais').select('*').in('consultor_id',ids).eq('mes',m).eq('ano',a)
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Configurar metas</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:20px">${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Consultor</th><th>Meta de vendas (R$)</th><th>Meta de cotações</th><th>Ação</th></tr></thead>
+        <tbody>
+          ${cons.map(c=>{
+            const m_atual=(metasAtual||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000,meta_cotacoes:70}
+            return`<tr>
+              <td><strong>${c.nome}</strong></td>
+              <td><input type="number" id="mv-${c.id}" value="${m_atual.meta_vendas}" style="width:120px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
+              <td><input type="number" id="mc-${c.id}" value="${m_atual.meta_cotacoes}" style="width:100px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
+              <td><button class="btn btn-pri btn-sm" onclick="salvarMetaConsultor('${c.id}')">Salvar</button></td>
+            </tr>`}).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+window.salvarMetaConsultor=async(consultorId)=>{
+  const metaV=Number($(`mv-${consultorId}`).value)||17000
+  const metaC=Number($(`mc-${consultorId}`).value)||70
+  const m=mes(),a=ano()
+  await sb.from('metas_mensais').upsert({consultor_id:consultorId,mes:m,ano:a,meta_vendas:metaV,meta_cotacoes:metaC},{onConflict:'consultor_id,mes,ano'})
+  alert('Meta salva com sucesso!')
+}
+
+async function loadSvHistorico(){
+  const el=$('p-sv-historico');if(!el)return
+  el.innerHTML='<div class="loading">Carregando histórico...</div>'
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const anos=[ano(),ano()-1]
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Histórico mensal</div>
+    <div class="filter-bar" id="hist-filter">
+      ${anos.map((a,i)=>`<button class="filter-btn${i===0?' on':''}" onclick="loadSvHistMes(${a},this)">${a}</button>`).join('')}
+    </div>
+    <div id="sv-hist-content"><div class="loading">Carregando...</div></div>
+  `
+  await loadSvHistMes(ano(),document.querySelector('.filter-btn'))
+}
+
+window.loadSvHistMes=async(a,btn)=>{
+  if(btn){document.querySelectorAll('#hist-filter .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on')}
+  const cons=await getConsultoresEq()
+  const ids=cons.map(c=>c.id)
+  const{data:metas}=await sb.from('metas_mensais').select('*').in('consultor_id',ids).eq('ano',a)
+  const{data:leads}=ids.length?await sb.from('leads').select('*').in('consultor_id',ids).eq('ano_fechamento',a).eq('status','Proposta'):{data:[]}
+  const mesesDoAno=Array.from({length:12},(_,i)=>i+1)
+  const el=$('sv-hist-content');if(!el)return
+  el.innerHTML=`<div style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Mês</th>${cons.map(c=>`<th>${c.nome.split(' ')[0]}</th>`).join('')}<th>Total equipe</th></tr></thead>
+    <tbody>${mesesDoAno.map(m=>{
+      const cells=cons.map(c=>{
+        const meta=(metas||[]).find(x=>x.consultor_id===c.id&&x.mes===m)||{meta_vendas:17000}
+        const real=(leads||[]).filter(l=>l.consultor_id===c.id&&l.mes_fechamento===m).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+        const pct=meta.meta_vendas>0?Math.round(real/meta.meta_vendas*100):0
+        return{real,pct}
+      })
+      const totalReal=cells.reduce((s,c)=>s+c.real,0)
+      return`<tr>
+        <td><strong>${String(m).padStart(2,'0')}/${a}</strong></td>
+        ${cells.map(c=>`<td><span style="font-weight:600;color:${c.pct>=100?'#00C9A7':c.pct>=64?'#F59E0B':'var(--text3)'}">${fmt(c.real)}</span> <span style="font-size:11px;color:var(--text3)">${c.pct}%</span></td>`).join('')}
+        <td><strong>${fmt(totalReal)}</strong></td>
+      </tr>`}).join('')}
+    </tbody>
+  </table></div>`
+}
+
+// ════════════════════════════════════════
+// MASTER
+// ════════════════════════════════════════
+async function loadMaHome(){
+  const el=$('p-ma-home');if(!el)return
+  el.innerHTML='<div class="loading">Carregando visão master...</div>'
+  const m=mes(),a=ano()
+  const[eqRes,usersRes,leadsRes]=await Promise.all([
+    sb.from('equipes').select('*'),
+    sb.from('usuarios').select('*').eq('perfil','consultor'),
+    sb.from('leads').select('valor_meta,status,consultor_id,mes_fechamento,ano_fechamento,equipe_id')
+  ])
+  const equipes=eqRes.data||[]
+  const cons=usersRes.data||[]
+  const leads=leadsRes.data||[]
+  const fechados=leads.filter(l=>l.status==='Proposta'&&l.mes_fechamento===m&&l.ano_fechamento===a)
+  const receitaTotal=fechados.reduce((s,l)=>s+Number(l.valor_meta||0),0)
+
+  const eqStats=await Promise.all(equipes.map(async eq=>{
+    const consEq=cons.filter(c=>c.equipe_id===eq.id)
+    const idsEq=consEq.map(c=>c.id)
+    const real=fechados.filter(l=>idsEq.includes(l.consultor_id)).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+    const pct=eq.meta_mensal>0?Math.round(real/eq.meta_mensal*100):0
+    const st=pct>=pctDU?'ok':pct>=(pctDU*0.7)?'wn':'lw'
+    return{eq,real,pct,st,cons:consEq.length}
+  }))
+
+  const cores=['#00C9A7','#1DA4D4','#2563EB','#8B5CF6','#F59E0B']
+  el.innerHTML=`
+    <div style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:4px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div>
+        <div style="font-size:15px;font-weight:700">Painel Master — visão consolidada</div>
+        <div style="font-size:13px;color:#1E40AF;margin-top:2px">${equipes.length} equipes · ${cons.length} consultores · ${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+      </div>
+    </div>
+    <div class="metrics m4">
+      <div class="metric"><div class="metric-label">Equipes</div><div class="metric-val">${equipes.length}</div></div>
+      <div class="metric"><div class="metric-label">Consultores</div><div class="metric-val">${cons.length}</div></div>
+      <div class="metric"><div class="metric-label">Propostas (mês)</div><div class="metric-val">${fechados.length}</div></div>
+      <div class="metric"><div class="metric-label">Receita total (mês)</div><div class="metric-val" style="font-size:20px">${fmt(receitaTotal)}</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Desempenho por equipe</span><span style="font-size:12px;color:var(--text3)">esperado: ${pctDU}%</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-ma-perf"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Receita por equipe</span></div>
+        <div style="position:relative;height:200px"><canvas id="c-ma-rv"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Resumo das equipes</span></div>
+      ${eqStats.map(({eq,real,pct,st,cons},i)=>`
+        <div class="row">
+          <div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]};flex-shrink:0"></div>
+          <div class="av" style="width:34px;height:34px;font-size:12px;background:${cores[i%cores.length]}22;color:${cores[i%cores.length]}">${eq.nome.substring(0,2).toUpperCase()}</div>
+          <div class="ri"><div class="rn">${eq.nome}</div><div class="rm">${cons} consultores · ${fmt(real)}</div></div>
+          <div class="pw">
+            <div class="pl"><span style="font-size:11px;color:var(--text2)">Meta</span><span style="font-size:12px;font-weight:700;color:${st==='ok'?'#00C9A7':st==='wn'?'#F59E0B':'#EF4444'}">${pct}%</span></div>
+            <div class="pt"><div class="pf" style="width:${Math.min(pct,100)}%;background:${cores[i%cores.length]}"></div></div>
+          </div>
+          <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>
+        </div>`).join('')}
+    </div>
+  `
+  setTimeout(()=>{
+    newChart('c-ma-perf',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome),datasets:[{label:'Realizado',data:eqStats.map(e=>e.pct),backgroundColor:cores,borderRadius:8,barPercentage:.4},{label:'Esperado',data:eqStats.map(()=>pctDU),backgroundColor:'#E2E8F0',borderRadius:8,barPercentage:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>v+'%'},max:100}}}})
+    newChart('c-ma-rv',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome),datasets:[{data:eqStats.map(e=>e.real),backgroundColor:cores,borderRadius:8,barPercentage:.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+  },100)
+}
+
+async function loadMaEquipes(){
+  const el=$('p-ma-equipes');if(!el)return
+  el.innerHTML='<div class="loading">Carregando equipes...</div>'
+  const m=mes(),a=ano()
+  const[eqRes,consRes]=await Promise.all([sb.from('equipes').select('*'),sb.from('usuarios').select('*').eq('perfil','consultor').order('nome')])
+  const equipes=eqRes.data||[];const cons=consRes.data||[]
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:20px">Todas as equipes</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+      ${equipes.map((eq,i)=>{
+        const cores=['#00C9A7','#1DA4D4','#2563EB','#8B5CF6','#F59E0B']
+        const membros=cons.filter(c=>c.equipe_id===eq.id)
+        return`<div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+            <div style="width:40px;height:40px;border-radius:10px;background:${cores[i%cores.length]}22;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:${cores[i%cores.length]}">${eq.nome.substring(0,2).toUpperCase()}</div>
+            <div><div style="font-size:15px;font-weight:700">${eq.nome}</div><div style="font-size:12px;color:var(--text3)">Meta: ${fmt(eq.meta_mensal)}/mês</div></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">${membros.length} consultor${membros.length!==1?'es':''}</div>
+          ${membros.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <div class="av" style="width:28px;height:28px;font-size:10px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
+            <div><div style="font-size:12px;font-weight:600">${c.nome}</div><div style="font-size:11px;color:var(--text3)">${c.email}</div></div>
+          </div>`).join('')}
+        </div>`}).join('')}
+    </div>
+  `
+}
+
+async function loadMaFunil(){
+  const el=$('p-ma-funil');if(!el)return
+  el.innerHTML='<div class="loading">Carregando funil geral...</div>'
+  const{data}=await sb.from('leads').select('*,usuarios(nome)').order('criado_em',{ascending:false})
+  const leads=data||[]
+  el.innerHTML=`
+    <div class="metrics m3">
+      <div class="metric"><div class="metric-label">Total de leads</div><div class="metric-val">${leads.length}</div></div>
+      <div class="metric"><div class="metric-label">Propostas</div><div class="metric-val">${leads.filter(l=>l.status==='Proposta').length}</div><div class="metric-sub">${fmt(leads.filter(l=>l.status==='Proposta').reduce((s,l)=>s+Number(l.valor_meta||0),0))}</div></div>
+      <div class="metric"><div class="metric-label">Negativas</div><div class="metric-val">${leads.filter(l=>l.status==='Negativa').length}</div></div>
+    </div>
+    <div style="overflow-x:auto">
+      <div class="funil-grid" style="min-width:900px">
+        ${STATUS_LEADS.map(s=>{
+          const items=leads.filter(l=>l.status===s)
+          return`<div class="funil-col">
+            <div class="funil-header" style="background:${STATUS_BG[s]};color:${STATUS_COLOR[s]}">
+              <div class="funil-header-title">${s}</div>
+              <div class="funil-header-count">${items.length}</div>
+            </div>
+            <div class="funil-body">
+              ${items.slice(0,8).map(l=>`<div class="funil-card">
+                <div class="funil-card-name">${l.nome}</div>
+                <div class="funil-card-info" style="color:var(--mid);font-weight:600">${l.usuarios?.nome?.split(' ')[0]||'—'}</div>
+                ${l.valor_meta?`<div class="funil-card-val">${fmt(l.valor_meta)}</div>`:''}
+              </div>`).join('')}
+              ${items.length>8?`<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">+${items.length-8} mais</div>`:''}
+            </div>
+          </div>`}).join('')}
+      </div>
+    </div>
+  `
+}
+
+async function loadMaRanking(){
+  const el=$('p-ma-ranking');if(!el)return
+  el.innerHTML='<div class="loading">Carregando ranking geral...</div>'
+  const m=mes(),a=ano()
+  const[consRes,leadsRes,metasRes]=await Promise.all([
+    sb.from('usuarios').select('*,equipes(nome)').eq('perfil','consultor').order('nome'),
+    sb.from('leads').select('consultor_id,valor_meta').eq('status','Proposta').eq('mes_fechamento',m).eq('ano_fechamento',a),
+    sb.from('metas_mensais').select('*').eq('mes',m).eq('ano',a)
+  ])
+  const cons=consRes.data||[]
+  const ranking=cons.map(c=>{
+    const real=(leadsRes.data||[]).filter(l=>l.consultor_id===c.id).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+    const meta=(metasRes.data||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000}
+    const pct=meta.meta_vendas>0?Math.round(real/meta.meta_vendas*100):0
+    return{c,real,pct,meta}
+  }).sort((a,b)=>b.real-a.real)
+
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Ranking geral</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:20px">${new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+    <div class="g2">
+      <div>
+        ${ranking.map((r,i)=>`
+          <div class="rank-row">
+            <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
+            <div class="av" style="width:36px;height:36px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(r.c.nome)}</div>
+            <div class="ri">
+              <div class="rn">${r.c.nome}</div>
+              <div class="rm">${r.c.equipes?.nome||'Sem equipe'} · ${r.pct}%</div>
+            </div>
+            <div style="text-align:right"><div style="font-size:15px;font-weight:800;color:var(--mid)">${fmt(r.real)}</div><div style="font-size:11px;color:var(--text3)">de ${fmt(r.meta.meta_vendas)}</div></div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Top 10 — receita</span></div>
+        <div style="position:relative;height:320px"><canvas id="c-ma-rank"></canvas></div>
+      </div>
+    </div>
+  `
+  setTimeout(()=>{
+    const top10=ranking.slice(0,10)
+    const cores=['#F59E0B','#94A3B8','#F97316','#00C9A7','#1DA4D4','#2563EB','#8B5CF6','#10B981','#EF4444','#EC4899']
+    newChart('c-ma-rank',{type:'bar',data:{labels:top10.map(r=>r.c.nome.split(' ')[0]),datasets:[{data:top10.map(r=>r.real),backgroundColor:cores,borderRadius:8,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
+  },100)
+}
+
+async function loadMaHistorico(){
+  const el=$('p-ma-historico');if(!el)return
+  el.innerHTML='<div class="loading">Carregando histórico...</div>'
+  const anos=[ano(),ano()-1]
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Histórico consolidado</div>
+    <div class="filter-bar" id="ma-hist-filter">
+      ${anos.map((a,i)=>`<button class="filter-btn${i===0?' on':''}" onclick="loadMaHistAno(${a},this)">${a}</button>`).join('')}
+    </div>
+    <div id="ma-hist-content"><div class="loading">Carregando...</div></div>
+  `
+  await loadMaHistAno(ano(),document.querySelector('#ma-hist-filter .filter-btn'))
+}
+
+window.loadMaHistAno=async(a,btn)=>{
+  if(btn){document.querySelectorAll('#ma-hist-filter .filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on')}
+  const[eqRes,leadsRes]=await Promise.all([
+    sb.from('equipes').select('*'),
+    sb.from('leads').select('valor_meta,consultor_id,mes_fechamento,status').eq('status','Proposta').eq('ano_fechamento',a)
+  ])
+  const equipes=eqRes.data||[];const leads=leadsRes.data||[]
+  const{data:cons}=await sb.from('usuarios').select('id,equipe_id').eq('perfil','consultor')
+  const meses=Array.from({length:12},(_,i)=>i+1)
+  const el=$('ma-hist-content');if(!el)return
+  el.innerHTML=`<div style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Mês</th>${equipes.map(eq=>`<th>${eq.nome}</th>`).join('')}<th>Total</th></tr></thead>
+    <tbody>${meses.map(m=>{
+      const cells=equipes.map(eq=>{
+        const idsEq=(cons||[]).filter(c=>c.equipe_id===eq.id).map(c=>c.id)
+        const real=leads.filter(l=>idsEq.includes(l.consultor_id)&&l.mes_fechamento===m).reduce((s,l)=>s+Number(l.valor_meta||0),0)
+        const pct=eq.meta_mensal>0?Math.round(real/eq.meta_mensal*100):0
+        return{real,pct}
+      })
+      const total=cells.reduce((s,c)=>s+c.real,0)
+      return`<tr>
+        <td><strong>${String(m).padStart(2,'0')}/${a}</strong></td>
+        ${cells.map(c=>`<td><span style="font-weight:600;color:${c.pct>=100?'#00C9A7':c.pct>=64?'#F59E0B':'var(--text3)'}">${fmt(c.real)}</span></td>`).join('')}
+        <td><strong style="color:var(--mid)">${fmt(total)}</strong></td>
+      </tr>`}).join('')}
+    </tbody>
+  </table></div>`
+}
+
+async function loadMaMetas(){
+  const el=$('p-ma-metas');if(!el)return
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const{data:equipes}=await sb.from('equipes').select('*')
+  el.innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:20px">Metas globais das equipes</div>
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Equipe</th><th>Meta mensal (R$)</th><th>Ação</th></tr></thead>
+        <tbody>
+          ${(equipes||[]).map(eq=>`<tr>
+            <td><strong>${eq.nome}</strong></td>
+            <td><input type="number" id="meq-${eq.id}" value="${eq.meta_mensal||0}" style="width:140px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
+            <td><button class="btn btn-pri btn-sm" onclick="salvarMetaEquipe('${eq.id}')">Salvar</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+window.salvarMetaEquipe=async(eqId)=>{
+  const val=Number($(`meq-${eqId}`).value)||0
+  await sb.from('equipes').update({meta_mensal:val}).eq('id',eqId)
+  alert('Meta da equipe salva!')
+}
+
+window.$=$
+</script>
+</body>
+</html>
