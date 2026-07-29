@@ -269,7 +269,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </div>
       <div class="sb-user">
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="sb-av av" id="sb-av" style="width:38px;height:38px;font-size:13px;background:#E0FAF5;color:#065F46"></div>
+          <div class="sb-av av" id="sb-av" onclick="abrirUploadFoto()" title="Clique para trocar sua foto" style="width:38px;height:38px;font-size:13px;background:#E0FAF5;color:#065F46;cursor:pointer;overflow:hidden"></div>
           <div style="min-width:0"><div class="sb-name" id="sb-name"></div><div class="sb-role" id="sb-role"></div></div>
         </div>
       </div>
@@ -400,6 +400,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
+<div class="modal-overlay" id="mod-foto">
+  <div class="modal-box" style="max-width:380px">
+    <h3>Sua foto de perfil</h3>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <div id="uf-preview" style="width:120px;height:120px"></div>
+      <label class="btn btn-sec" style="cursor:pointer;display:inline-block">
+        Escolher imagem
+        <input type="file" id="uf-input" accept="image/*" onchange="selecionarFoto(this)" style="display:none">
+      </label>
+      <div style="font-size:12px;color:var(--text3);text-align:center">JPG ou PNG, até 5MB. A imagem é redimensionada automaticamente.</div>
+      <div class="alert-err" id="uf-err"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn btn-sec" id="uf-remove" onclick="removerFoto()" style="margin-right:auto">Remover</button>
+      <button class="btn btn-sec" onclick="closeModal('mod-foto')">Cancelar</button>
+      <button class="btn btn-pri" id="uf-salvar" onclick="salvarFoto()" disabled>Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SB_URL='https://nfldasoaverzplbowjdn.supabase.co'
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGRhc29hdmVyenBsYm93amRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NzM4MDUsImV4cCI6MjA5MDE0OTgwNX0.i17swv-ExxKis9yCNQsnFGv8gWrFtYs8XqbM_9VkI_k'
@@ -495,6 +515,101 @@ function getDiasUteisAte(ano,mes,dia){
 
 let CU=null,chartInst={},notifOpen=false,LEADS_CACHE=[],AGENDA_EVENTS=[]
 const ini=n=>n?.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?'
+
+function aplicarAvatar(el,user){
+  if(!el)return
+  if(user?.foto_url){
+    const v=user.foto_ver||''
+    el.innerHTML=`<img src="${user.foto_url}${v?'?v='+v:''}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
+  }else{
+    el.textContent=ini(user?.nome||'')
+  }
+}
+
+function _redimensionarImagem(file,maxDim,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image()
+    img.onload=()=>{
+      const r=Math.min(1,maxDim/Math.max(img.width,img.height))
+      const w=Math.round(img.width*r),h=Math.round(img.height*r)
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h
+      cv.getContext('2d').drawImage(img,0,0,w,h)
+      resolve(cv.toDataURL('image/jpeg',quality))
+    }
+    img.onerror=reject
+    img.src=URL.createObjectURL(file)
+  })
+}
+
+window.abrirUploadFoto=()=>{
+  if(!CU)return
+  $('uf-input').value=''
+  $('uf-preview').removeAttribute('data-pending')
+  if(CU.foto_url){
+    $('uf-preview').innerHTML=`<img src="${CU.foto_url}?v=${Date.now()}" style="width:120px;height:120px;object-fit:cover;border-radius:50%;display:block">`
+  }else{
+    $('uf-preview').innerHTML=`<div class="av" style="width:120px;height:120px;font-size:36px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(CU.nome)}</div>`
+  }
+  $('uf-err').style.display='none';$('uf-err').textContent=''
+  $('uf-salvar').disabled=true
+  $('uf-remove').style.display=CU.foto_url?'':'none'
+  openModal('mod-foto')
+}
+
+window.selecionarFoto=async(input)=>{
+  const f=input.files?.[0]
+  if(!f)return
+  if(!f.type.startsWith('image/')){$('uf-err').textContent='Envie um arquivo de imagem.';$('uf-err').style.display='block';return}
+  if(f.size>5*1024*1024){$('uf-err').textContent='Imagem grande demais (máx 5MB).';$('uf-err').style.display='block';return}
+  $('uf-err').style.display='none';$('uf-err').textContent=''
+  try{
+    const dataUrl=await _redimensionarImagem(f,512,0.85)
+    $('uf-preview').innerHTML=`<img src="${dataUrl}" style="width:120px;height:120px;object-fit:cover;border-radius:50%;display:block">`
+    $('uf-preview').dataset.pending=dataUrl
+    $('uf-salvar').disabled=false
+  }catch(e){
+    $('uf-err').textContent='Não consegui ler essa imagem.';$('uf-err').style.display='block'
+  }
+}
+
+window.salvarFoto=async()=>{
+  const dataUrl=$('uf-preview').dataset.pending
+  if(!dataUrl)return
+  const btn=$('uf-salvar');btn.disabled=true;btn.textContent='Enviando...'
+  try{
+    const blob=await(await fetch(dataUrl)).blob()
+    const path=`${CU.id}/avatar.jpg`
+    const{error:upErr}=await sb.storage.from('fotos-usuarios').upload(path,blob,{upsert:true,contentType:'image/jpeg',cacheControl:'3600'})
+    if(upErr)throw upErr
+    const{data:pu}=sb.storage.from('fotos-usuarios').getPublicUrl(path)
+    const url=pu.publicUrl
+    const{error:updErr}=await sb.from('usuarios').update({foto_url:url}).eq('id',CU.id)
+    if(updErr)throw updErr
+    CU.foto_url=url;CU.foto_ver=Date.now()
+    aplicarAvatar($('sb-av'),CU)
+    closeModal('mod-foto')
+    mostrarToast('Foto atualizada','','info')
+  }catch(e){
+    $('uf-err').textContent='Erro ao salvar: '+(e.message||e);$('uf-err').style.display='block'
+    btn.disabled=false;btn.textContent='Salvar'
+  }
+}
+
+window.removerFoto=async()=>{
+  if(!CU?.foto_url)return
+  if(!confirm('Remover a foto de perfil?'))return
+  try{
+    await sb.storage.from('fotos-usuarios').remove([`${CU.id}/avatar.jpg`])
+    const{error}=await sb.from('usuarios').update({foto_url:null}).eq('id',CU.id)
+    if(error)throw error
+    CU.foto_url=null;CU.foto_ver=Date.now()
+    aplicarAvatar($('sb-av'),CU)
+    closeModal('mod-foto')
+    mostrarToast('Foto removida','','info')
+  }catch(e){
+    $('uf-err').textContent='Erro ao remover: '+(e.message||e);$('uf-err').style.display='block'
+  }
+}
 function destroyChart(id){if(chartInst[id]){chartInst[id].destroy();delete chartInst[id]}}
 function newChart(id,cfg){destroyChart(id);const c=$(id);if(!c)return;chartInst[id]=new Chart(c,cfg)}
 window.toggleAcoesMenu=(btn)=>{
@@ -626,7 +741,7 @@ window.doLogout=doLogout
 let _notifInterval=null
 async function iniciarApp(){
   $('s-login').style.display='none';$('s-app').style.display='block'
-  $('sb-av').textContent=ini(CU.nome)
+  aplicarAvatar($('sb-av'),CU)
   $('sb-name').textContent=CU.nome
   $('sb-role').textContent=CU.perfil==='master'?'Master':CU.perfil==='supervisor'?'Supervisor':'Consultor(a)'
   await carregarNotificacoes()
