@@ -479,6 +479,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   background:var(--card);color:var(--text2);
   border:1px solid var(--border);white-space:nowrap;flex-shrink:0;
 }
+
+/* Menções @nome */
+.mention{
+  font-weight:700;
+  background:var(--grad-soft);
+  color:var(--mid);
+  padding:0 5px;border-radius:5px;
+  cursor:default;
+}
+
+/* Post fixado (sticky) */
+.post-sticky{
+  border-color:var(--mid);
+  box-shadow:0 8px 24px -12px rgba(29,164,212,.35);
+}
+.post-sticky-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:4px 10px;border-radius:6px;
+  background:var(--grad);color:#fff;
+  margin-bottom:12px;
+  box-shadow:0 3px 8px -2px rgba(37,99,235,.4);
+}
+
+/* Ações do post (sticky/denunciar/apagar) */
+.post-acoes{display:flex;gap:4px;margin-left:auto}
+.post-act-btn{
+  all:unset;cursor:pointer;
+  width:30px;height:30px;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:14px;
+  transition:all .14s;
+}
+.post-act-btn:hover{background:var(--card-hover);color:var(--text1)}
+.post-act-btn.del:hover{background:var(--crit-bg,#FEE2E2);color:var(--red)}
+.post-act-btn.den:hover{background:var(--warn-bg,#FEF3C7);color:var(--amber)}
 </style>
 
 
@@ -641,6 +677,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="modal-btns">
       <button class="btn btn-sec" onclick="closeModal(&#39;mod-agenda&#39;)">Cancelar</button>
       <button class="btn btn-pri" onclick="salvarAgendamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-denuncia">
+  <div class="modal-box" style="max-width:420px">
+    <h3>Denunciar post</h3>
+    <input type="hidden" id="den-post-id">
+    <div class="mfield">
+      <label>Motivo (opcional)</label>
+      <textarea id="den-motivo" rows="3" maxlength="500" placeholder="Descreva o problema, se quiser..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);resize:vertical"></textarea>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.5">Sua denúncia é <strong>anônima</strong>. Apenas os masters recebem a notificação.</div>
+    <div class="alert-err" id="den-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-denuncia')">Cancelar</button>
+      <button class="btn btn-pri" onclick="enviarDenuncia()">Enviar denúncia</button>
     </div>
   </div>
 </div>
@@ -1420,6 +1473,91 @@ let _feedOffset=0,_feedNoMore=false,_feedLoading=false
 
 function _escapeFeed(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
+// Normaliza pra comparação sem acento
+const _semAcento=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+
+// Escapa + destaca @menções no corpo do post
+function _feedFormatBody(str){
+  return _escapeFeed(str).replace(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)/g,'<span class="mention">@$1</span>')
+}
+
+// Detecta @menções e notifica os usuários batidos
+async function _processarMencoes(conteudo,postId){
+  const matches=[...conteudo.matchAll(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)/g)]
+  if(!matches.length)return
+  const tokens=[...new Set(matches.map(m=>_semAcento(m[1])))]
+  const{data:users}=await sb.from('usuarios').select('id,nome').neq('id',CU.id)
+  if(!users)return
+  const mencionados=new Set()
+  users.forEach(u=>{
+    const palavras=(u.nome||'').split(/\s+/).map(_semAcento)
+    if(tokens.some(t=>palavras.some(p=>p===t)))mencionados.add(u.id)
+  })
+  if(!mencionados.size)return
+  const rows=[...mencionados].map(uid=>({
+    para_usuario:uid,
+    titulo:`${CU.nome} mencionou você no Feed`,
+    mensagem:conteudo.slice(0,120)+(conteudo.length>120?'…':''),
+    tipo:'info',
+    lida:false,
+    sobre_usuario_id:CU.id
+  }))
+  await sb.from('notificacoes').insert(rows)
+}
+
+// Notifica todos os masters (usado por denúncias)
+async function _notificarMasters(titulo,mensagem,sobreUsuarioId){
+  const{data}=await sb.from('usuarios').select('id').eq('perfil','master')
+  if(!data?.length)return
+  const rows=data.map(u=>({para_usuario:u.id,titulo,mensagem,tipo:'alerta',lida:false,sobre_usuario_id:sobreUsuarioId||null}))
+  await sb.from('notificacoes').insert(rows)
+}
+
+// Sticky post — só 1 por vez, unique index no banco garante
+window.toggleSticky=async(postId,currentSticky)=>{
+  if(CU.perfil!=='master'){mostrarToast('Sem permissão','Só o master fixa posts','alerta');return}
+  if(currentSticky){
+    const{error}=await sb.from('posts').update({sticky:false}).eq('id',postId)
+    if(error){mostrarToast('Erro',error.message,'urgente');return}
+    mostrarToast('Post desafixado','','info')
+  }else{
+    // Desmarca qualquer sticky atual primeiro pra evitar violação do unique index
+    await sb.from('posts').update({sticky:false}).eq('sticky',true)
+    const{error}=await sb.from('posts').update({sticky:true}).eq('id',postId)
+    if(error){mostrarToast('Erro',error.message,'urgente');return}
+    mostrarToast('Post fixado no topo','','info')
+  }
+  await loadFeed()
+}
+
+// Denunciar post — abre modal
+window.denunciarPost=(postId)=>{
+  $('den-post-id').value=postId
+  $('den-motivo').value=''
+  $('den-err').style.display='none'
+  $('den-err').textContent=''
+  openModal('mod-denuncia')
+}
+
+window.enviarDenuncia=async()=>{
+  const postId=$('den-post-id').value
+  const motivo=$('den-motivo').value.trim().slice(0,500)||null
+  const err=$('den-err')
+  const{data:jaDenunciei}=await sb.from('denuncias').select('id').eq('post_id',postId).eq('denunciante_id',CU.id).eq('resolvida',false).maybeSingle()
+  if(jaDenunciei){err.textContent='Você já denunciou este post — está pendente.';err.style.display='block';return}
+  const{error}=await sb.from('denuncias').insert({post_id:postId,denunciante_id:CU.id,motivo})
+  if(error){err.textContent='Erro: '+error.message;err.style.display='block';return}
+  // Notifica masters (sobre o AUTOR do post, pra foto aparecer)
+  const{data:p}=await sb.from('posts').select('autor_id').eq('id',postId).single()
+  await _notificarMasters(
+    '⚠ Nova denúncia no Feed',
+    motivo?motivo.slice(0,120):'(sem motivo informado)',
+    p?.autor_id||null
+  )
+  closeModal('mod-denuncia')
+  mostrarToast('Denúncia enviada','Os masters foram avisados','info')
+}
+
 function _feedAvatarHTML(user,size){
   const s=size+'px'
   if(user?.foto_url){
@@ -1498,8 +1636,9 @@ async function _appendFeedPosts(){
   const loadMoreEl=$('feed-load-more')
   loadMoreEl.innerHTML='<div class="loading">Carregando…</div>'
   const{data,error}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
     .eq('deletado',false)
+    .order('sticky',{ascending:false})
     .order('criado_em',{ascending:false})
     .range(_feedOffset,_feedOffset+FEED_PAGE_SIZE-1)
   _feedLoading=false
@@ -1527,7 +1666,11 @@ function _renderPost(p){
   const display=isAuto
     ?{nome:'MV Corretora',avatarHTML:`<div class="avatar-mv" style="width:40px;height:40px;font-size:12.5px">MV</div>`,roleTag:`<span class="role-tag master">oficial</span>`}
     :_feedDisplayAutor(p.autor,40)
-  const podeApagar=(!isAuto&&p.autor_id===CU.id)||CU.perfil==='master'||CU.perfil==='supervisor'
+  const isDono=!isAuto&&p.autor_id===CU.id
+  const isMaster=CU.perfil==='master'
+  const podeApagar=isDono||isMaster||CU.perfil==='supervisor'
+  const podeFixar=isMaster
+  const podeDenunciar=!isDono&&!isAuto
   const curtidas=p.curtidas||[]
   const comentarios=(p.comentarios||[]).filter(c=>!c.deletado).sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em))
   const reactions=REACTION_TYPES.map(t=>{
@@ -1536,7 +1679,6 @@ function _renderPost(p){
     return{tipo:t,emoji:REACTION_EMOJI[t],count:list.length,ativo:!!eu}
   })
   const editado=p.editado_em?' · editado':''
-  // Card destacado da pessoa celebrada (só em posts automáticos com sobre)
   const tipoIco={conquista:'🏆',aniversario:'🎂',tempo_empresa:'⭐'}
   const tipoLabel={conquista:'Meta batida',aniversario:'Aniversário',tempo_empresa:'Aniversário na MV'}
   const featured=isAuto&&p.sobre?`
@@ -1549,18 +1691,30 @@ function _renderPost(p){
       <div class="featured-tag">${tipoIco[p.tipo]||''} ${tipoLabel[p.tipo]||''}</div>
     </div>
   `:''
-  const postClass=isAuto?`post post-auto post-${p.tipo}`:'post'
+  const stickyBadge=p.sticky?`<div class="post-sticky-badge">📌 Fixado pela MV Corretora</div>`:''
+  const acoes=`
+    ${podeFixar?`<button class="post-act-btn" onclick="toggleSticky('${p.id}',${!!p.sticky})" title="${p.sticky?'Desafixar':'Fixar no topo'}">${p.sticky?'📌✕':'📌'}</button>`:''}
+    ${podeDenunciar?`<button class="post-act-btn den" onclick="denunciarPost('${p.id}')" title="Denunciar">⚠</button>`:''}
+    ${podeApagar?`<button class="post-act-btn del" onclick="apagarPost('${p.id}')" title="Excluir post">🗑</button>`:''}
+  `
+  const postClass=[
+    'post',
+    isAuto?'post-auto':'',
+    isAuto?`post-${p.tipo}`:'',
+    p.sticky?'post-sticky':''
+  ].filter(Boolean).join(' ')
   return `
     <div class="${postClass}" data-post-id="${p.id}">
+      ${stickyBadge}
       <div class="post-head">
         <div style="width:40px;height:40px;flex-shrink:0">${display.avatarHTML}</div>
         <div class="post-who">
           <div class="post-name">${_escapeFeed(display.nome)} ${display.roleTag}</div>
           <div class="post-time">${_feedTimeAgo(p.criado_em)}${editado}</div>
         </div>
-        ${podeApagar?`<button class="post-del-btn" onclick="apagarPost('${p.id}')" title="Excluir post">🗑</button>`:''}
+        <div class="post-acoes">${acoes}</div>
       </div>
-      <div class="post-body">${_escapeFeed(p.conteudo)}</div>
+      <div class="post-body">${_feedFormatBody(p.conteudo)}</div>
       ${featured}
       <div class="post-reactions">
         ${reactions.map(r=>`<button class="react-btn ${r.ativo?'active':''}" onclick="curtirPost('${p.id}','${r.tipo}')">${r.emoji}${r.count?`<span class="n">${r.count}</span>`:''}</button>`).join('')}
@@ -1601,7 +1755,7 @@ function _renderComment(c,postId){
 
 async function _refreshPost(postId){
   const{data}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
     .eq('id',postId).single()
   if(!data)return
   const old=document.querySelector(`[data-post-id="${postId}"]`)
@@ -1628,7 +1782,7 @@ window.publicarPost=async()=>{
   if(!conteudo)return
   if(conteudo.length>2000){mostrarToast('Post muito longo','Máximo 2000 caracteres','alerta');return}
   const btn=$('feed-publish-btn');btn.disabled=true;btn.textContent='Publicando…'
-  const{error}=await sb.from('posts').insert({autor_id:CU.id,conteudo})
+  const{data,error}=await sb.from('posts').insert({autor_id:CU.id,conteudo}).select('id').single()
   btn.textContent='Publicar'
   if(error){
     btn.disabled=false
@@ -1637,6 +1791,8 @@ window.publicarPost=async()=>{
     return
   }
   ta.value=''
+  // Notifica quem foi @mencionado (roda em background, não trava o refresh)
+  if(data?.id) _processarMencoes(conteudo,data.id).catch(e=>console.warn('mencoes:',e))
   mostrarToast('Publicado!','','info')
   await loadFeed()
 }
