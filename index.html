@@ -367,10 +367,92 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .post-who{flex:1;min-width:0}
 .post-name{font-size:13.5px;font-weight:700;color:var(--text1);display:flex;align-items:center;gap:6px}
 .post-time{font-size:11px;color:var(--text3);margin-top:2px}
-.post-body{font-size:13.5px;line-height:1.55;color:var(--text1);margin-bottom:12px;white-space:pre-line}
+.post-body{font-size:13.5px;line-height:1.55;color:var(--text1);margin-bottom:12px;white-space:pre-line;word-break:break-word}
 .post-actions{display:flex;gap:14px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);font-weight:600}
 .post-action{display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .12s}
 .post-action:hover{background:var(--card-hover);color:var(--text1)}
+
+/* Avatar MV Corretora (voz institucional) */
+.avatar-mv{
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:var(--grad);color:#fff;font-weight:800;letter-spacing:-.5px;
+  box-shadow:0 4px 12px -4px rgba(29,164,212,.55);
+}
+
+/* Role tag */
+.role-tag{
+  display:inline-flex;
+  font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:1px 6px;border-radius:4px;
+  background:var(--surface);color:var(--text3);border:1px solid var(--border);
+  vertical-align:middle;
+}
+.role-tag.master{background:var(--grad);color:#fff;border-color:transparent}
+.role-tag.sup{background:rgba(59,130,246,.14);color:#3B82F6;border-color:transparent}
+
+/* Reactions */
+.post-reactions{
+  display:flex;gap:6px;flex-wrap:wrap;
+  padding:10px 0;margin-bottom:12px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.react-btn{
+  all:unset;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:999px;
+  font-size:13px;font-weight:600;color:var(--text2);
+  background:var(--surface);border:1px solid var(--border);
+  transition:all .12s;user-select:none;
+}
+.react-btn:hover{background:var(--card-hover);border-color:var(--border-strong);transform:translateY(-1px)}
+.react-btn.active{background:var(--grad-soft);border-color:var(--mid);color:var(--text1)}
+.react-btn .n{font-variant-numeric:tabular-nums;font-size:12px}
+
+/* Comentários */
+.post-comments{display:flex;flex-direction:column;gap:8px}
+.comment{
+  display:flex;gap:8px;align-items:flex-start;
+  padding:8px 10px;background:var(--surface);border-radius:10px;
+}
+.comment-body{flex:1;min-width:0}
+.comment-head{display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap}
+.comment-name{font-size:12px;font-weight:700;color:var(--text1)}
+.comment-time{font-size:10.5px;color:var(--text3)}
+.comment-text{font-size:12.5px;color:var(--text2);line-height:1.5;word-break:break-word}
+.comment-del{
+  all:unset;cursor:pointer;color:var(--text3);
+  font-size:12px;padding:2px 4px;margin-left:auto;
+  opacity:0;transition:opacity .15s;
+}
+.comment:hover .comment-del{opacity:.7}
+.comment-del:hover{color:var(--red);opacity:1!important}
+
+.add-comment{
+  display:flex;gap:8px;align-items:center;
+  padding-top:8px;border-top:1px dashed var(--border);margin-top:4px;
+}
+.add-comment input{
+  flex:1;background:var(--input-bg);border:1px solid var(--border);
+  border-radius:999px;padding:8px 14px;font-size:12.5px;
+  color:var(--text1);font-family:inherit;outline:none;
+}
+.add-comment input::placeholder{color:var(--text3)}
+.add-comment input:focus{border-color:var(--mid);box-shadow:0 0 0 3px rgba(29,164,212,.15)}
+
+/* Delete post button */
+.post-del-btn{
+  all:unset;cursor:pointer;
+  width:28px;height:28px;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text3);margin-left:auto;transition:all .15s;font-size:15px;
+}
+.post-del-btn:hover{background:var(--crit-bg,#FEE2E2);color:var(--red)}
+
+/* Estado do composer (limite atingido / desabilitado) */
+.composer.locked{opacity:.65;pointer-events:none}
+.composer-hint{font-size:11.5px;color:var(--text3);padding:0 4px}
+.composer-count{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+.composer-count.over{color:var(--red);font-weight:700}
 </style>
 
 
@@ -1220,66 +1302,258 @@ window.abrirFeed=()=>{
   navTo('p-feed',b,'Feed da equipe')
 }
 
+// ═══ FEED (rede social interna) ═══
+const REACTION_EMOJI={heart:'❤️',clap:'👏',tada:'🎉',rocket:'🚀'}
+const REACTION_TYPES=['heart','clap','tada','rocket']
+const FEED_PAGE_SIZE=10
+let _feedOffset=0,_feedNoMore=false,_feedLoading=false
+
+function _escapeFeed(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function _feedAvatarHTML(user,size){
+  const s=size+'px'
+  if(user?.foto_url){
+    return `<img src="${user.foto_url}" alt="" style="width:${s};height:${s};object-fit:cover;border-radius:50%;display:block">`
+  }
+  return `<div class="av" style="width:${s};height:${s};font-size:${Math.round(size*0.34)}px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(user?.nome||'?')}</div>`
+}
+
+function _feedDisplayAutor(autor,size){
+  if(!autor)return{nome:'Usuário removido',avatarHTML:`<div class="av" style="width:${size}px;height:${size}px;background:var(--surface);color:var(--text3);border-radius:50%">?</div>`,roleTag:''}
+  if(autor.perfil==='master'){
+    return{
+      nome:'MV Corretora',
+      avatarHTML:`<div class="avatar-mv" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.32)}px">MV</div>`,
+      roleTag:`<span class="role-tag master">oficial</span>`
+    }
+  }
+  const roleName=autor.perfil==='supervisor'?'supervisor':'consultor'
+  const roleClass=autor.perfil==='supervisor'?'sup':''
+  return{
+    nome:autor.nome||'Sem nome',
+    avatarHTML:_feedAvatarHTML(autor,size),
+    roleTag:`<span class="role-tag ${roleClass}">${roleName}</span>`
+  }
+}
+
+function _feedTimeAgo(iso){
+  const s=Math.floor((Date.now()-new Date(iso).getTime())/1000)
+  if(s<60)return'agora'
+  if(s<3600)return`há ${Math.floor(s/60)} min`
+  if(s<86400)return`há ${Math.floor(s/3600)} h`
+  if(s<604800)return`há ${Math.floor(s/86400)} d`
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+async function _podePostar(){
+  if(CU.perfil!=='consultor')return{pode:true,texto:'Compartilhe algo com o time…',hint:''}
+  const hoje=new Date().toISOString().split('T')[0]
+  const{count}=await sb.from('posts').select('id',{count:'exact',head:true}).eq('autor_id',CU.id).eq('deletado',false).gte('criado_em',hoje+'T00:00:00')
+  if(count&&count>0)return{pode:false,texto:'',hint:'Você já postou hoje. Volte amanhã!'}
+  return{pode:true,texto:'Compartilhe algo com o time…',hint:'Você pode fazer 1 post por dia.'}
+}
+
 async function loadFeed(){
   const el=$('p-feed');if(!el)return
-  const fotoUrl=CU?.foto_url?`${CU.foto_url}${CU.foto_ver?'?v='+CU.foto_ver:''}`:null
-  const meuAvatar=fotoUrl
-    ?`<img src="${fotoUrl}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;display:block">`
-    :`<div class="av" style="width:40px;height:40px;font-size:13px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(CU?.nome||'?')}</div>`
+  _feedOffset=0;_feedNoMore=false;_feedLoading=false
+  el.innerHTML='<div class="feed-wrap"><div class="loading">Carregando feed…</div></div>'
+  const perm=await _podePostar()
+  const meuAvatar=_feedAvatarHTML(CU,40)
   el.innerHTML=`
     <div class="feed-wrap">
-      <div class="feed-banner">
-        <span class="em">em breve</span>
-        <div>Este é o <strong>preview</strong> do Feed. Ainda não é funcional — a página vai permitir posts com texto, imagens, curtidas e comentários, tudo dentro do CRM.</div>
-      </div>
-
-      <div class="composer">
+      <div class="composer ${perm.pode?'':'locked'}" id="feed-composer">
         <div class="composer-row">
-          <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0">${meuAvatar}</div>
-          <textarea placeholder="Compartilhe algo com o time…" disabled></textarea>
+          <div style="width:40px;height:40px;flex-shrink:0">${meuAvatar}</div>
+          <textarea id="feed-text" placeholder="${perm.texto||'Bloqueado hoje'}" maxlength="2000" oninput="_atualizarBtnPublicar()" ${perm.pode?'':'disabled'}></textarea>
         </div>
         <div class="composer-foot">
-          <div class="composer-actions">
-            <button class="icon-btn" title="Foto" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
-            <button class="icon-btn" title="Emoji" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
+          <div class="composer-hint">${perm.hint}</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="composer-count" id="feed-char-count">0/2000</span>
+            <button class="btn-publish" id="feed-publish-btn" onclick="publicarPost()" disabled>Publicar</button>
           </div>
-          <button class="btn-publish" disabled>Publicar</button>
         </div>
       </div>
+      <div id="feed-posts"></div>
+      <div id="feed-load-more" style="text-align:center;padding:16px 0"></div>
+    </div>
+  `
+  await _appendFeedPosts()
+}
 
-      <div class="post">
-        <div class="post-head">
-          <div class="av" style="width:40px;height:40px;font-size:13px;background:linear-gradient(135deg,#F59E0B,#EA580C);color:#fff;border-radius:50%">M</div>
-          <div class="post-who">
-            <div class="post-name">Marco <span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--surface);color:var(--text3);border:1px solid var(--border)">consultor</span></div>
-            <div class="post-time">exemplo</div>
-          </div>
+async function _appendFeedPosts(){
+  if(_feedLoading||_feedNoMore)return
+  _feedLoading=true
+  const loadMoreEl=$('feed-load-more')
+  loadMoreEl.innerHTML='<div class="loading">Carregando…</div>'
+  const{data,error}=await sb.from('posts')
+    .select(`id,conteudo,criado_em,editado_em,autor_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .eq('deletado',false)
+    .order('criado_em',{ascending:false})
+    .range(_feedOffset,_feedOffset+FEED_PAGE_SIZE-1)
+  _feedLoading=false
+  if(error){loadMoreEl.innerHTML=`<div class="empty">Erro: ${_escapeFeed(error.message)}</div>`;return}
+  const posts=data||[]
+  const container=$('feed-posts')
+  if(_feedOffset===0&&posts.length===0){
+    container.innerHTML='<div class="empty" style="padding:32px 0;text-align:center">Ainda não há posts. Seja o primeiro a compartilhar!</div>'
+    loadMoreEl.innerHTML=''
+    _feedNoMore=true
+    return
+  }
+  posts.forEach(p=>container.insertAdjacentHTML('beforeend',_renderPost(p)))
+  _feedOffset+=posts.length
+  if(posts.length<FEED_PAGE_SIZE){
+    _feedNoMore=true
+    loadMoreEl.innerHTML=''
+  }else{
+    loadMoreEl.innerHTML='<button class="btn btn-sec" onclick="_appendFeedPosts()">Carregar mais</button>'
+  }
+}
+
+function _renderPost(p){
+  const display=_feedDisplayAutor(p.autor,40)
+  const podeApagar=p.autor_id===CU.id||CU.perfil==='master'||CU.perfil==='supervisor'
+  const curtidas=p.curtidas||[]
+  const comentarios=(p.comentarios||[]).filter(c=>!c.deletado).sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em))
+  const reactions=REACTION_TYPES.map(t=>{
+    const list=curtidas.filter(c=>c.tipo===t)
+    const eu=list.find(c=>c.usuario_id===CU.id)
+    return{tipo:t,emoji:REACTION_EMOJI[t],count:list.length,ativo:!!eu}
+  })
+  const editado=p.editado_em?' · editado':''
+  return `
+    <div class="post" data-post-id="${p.id}">
+      <div class="post-head">
+        <div style="width:40px;height:40px;flex-shrink:0">${display.avatarHTML}</div>
+        <div class="post-who">
+          <div class="post-name">${_escapeFeed(display.nome)} ${display.roleTag}</div>
+          <div class="post-time">${_feedTimeAgo(p.criado_em)}${editado}</div>
         </div>
-        <div class="post-body">🚀 Fechei minha 5ª proposta do mês! Cliente indicado por outro do ano passado — vale muito a pena manter o relacionamento pós-venda.</div>
-        <div class="post-actions">
-          <span class="post-action">👏 15</span>
-          <span class="post-action">❤️ 9</span>
-          <span class="post-action" style="margin-left:auto">💬 3 comentários</span>
-        </div>
+        ${podeApagar?`<button class="post-del-btn" onclick="apagarPost('${p.id}')" title="Excluir post">🗑</button>`:''}
       </div>
-
-      <div class="post">
-        <div class="post-head">
-          <div class="av" style="width:40px;height:40px;font-size:13px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);color:#fff;border-radius:50%">B</div>
-          <div class="post-who">
-            <div class="post-name">Beher <span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,.14);color:#3B82F6;border:1px solid transparent">supervisor</span></div>
-            <div class="post-time">exemplo</div>
-          </div>
-        </div>
-        <div class="post-body">💡 Dica: quando cliente pede prazo pra pensar, agende follow-up pra 48h — não deixa esfriar. Se demorar mais, tá muito frio pra reativar.</div>
-        <div class="post-actions">
-          <span class="post-action">👏 22</span>
-          <span class="post-action">❤️ 11</span>
-          <span class="post-action" style="margin-left:auto">💬 8 comentários</span>
+      <div class="post-body">${_escapeFeed(p.conteudo)}</div>
+      <div class="post-reactions">
+        ${reactions.map(r=>`<button class="react-btn ${r.ativo?'active':''}" onclick="curtirPost('${p.id}','${r.tipo}')">${r.emoji}${r.count?`<span class="n">${r.count}</span>`:''}</button>`).join('')}
+      </div>
+      <div class="post-comments">
+        ${comentarios.map(c=>_renderComment(c,p.id)).join('')}
+        <div class="add-comment">
+          <div style="width:28px;height:28px;flex-shrink:0">${_feedAvatarHTML(CU,28)}</div>
+          <input type="text" placeholder="Comentar…" maxlength="1000" onkeydown="if(event.key==='Enter'){comentarPost('${p.id}',this)}">
         </div>
       </div>
     </div>
   `
+}
+
+function _renderComment(c,postId){
+  const autor=c.autor
+  const isMaster=autor?.perfil==='master'
+  const nome=isMaster?'MV Corretora':(autor?.nome||'Usuário removido')
+  const avatarHTML=isMaster
+    ?`<div class="avatar-mv" style="width:28px;height:28px;font-size:9px">MV</div>`
+    :_feedAvatarHTML(autor,28)
+  const podeApagar=autor?.id===CU.id||CU.perfil==='master'||CU.perfil==='supervisor'
+  return `
+    <div class="comment" data-comment-id="${c.id}">
+      <div style="width:28px;height:28px;flex-shrink:0">${avatarHTML}</div>
+      <div class="comment-body">
+        <div class="comment-head">
+          <span class="comment-name">${_escapeFeed(nome)}</span>
+          <span class="comment-time">${_feedTimeAgo(c.criado_em)}</span>
+          ${podeApagar?`<button class="comment-del" onclick="apagarComentario('${c.id}','${postId}')" title="Excluir">×</button>`:''}
+        </div>
+        <div class="comment-text">${_escapeFeed(c.conteudo)}</div>
+      </div>
+    </div>
+  `
+}
+
+async function _refreshPost(postId){
+  const{data}=await sb.from('posts')
+    .select(`id,conteudo,criado_em,editado_em,autor_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .eq('id',postId).single()
+  if(!data)return
+  const old=document.querySelector(`[data-post-id="${postId}"]`)
+  if(old){
+    const tmp=document.createElement('div')
+    tmp.innerHTML=_renderPost(data)
+    old.replaceWith(tmp.firstElementChild)
+  }
+}
+
+window._atualizarBtnPublicar=()=>{
+  const ta=$('feed-text');if(!ta)return
+  const btn=$('feed-publish-btn'),cc=$('feed-char-count')
+  const len=ta.value.trim().length
+  const total=ta.value.length
+  btn.disabled=len===0||total>2000
+  cc.textContent=`${total}/2000`
+  cc.classList.toggle('over',total>2000)
+}
+
+window.publicarPost=async()=>{
+  const ta=$('feed-text');if(!ta)return
+  const conteudo=ta.value.trim()
+  if(!conteudo)return
+  if(conteudo.length>2000){mostrarToast('Post muito longo','Máximo 2000 caracteres','alerta');return}
+  const btn=$('feed-publish-btn');btn.disabled=true;btn.textContent='Publicando…'
+  const{error}=await sb.from('posts').insert({autor_id:CU.id,conteudo})
+  btn.textContent='Publicar'
+  if(error){
+    btn.disabled=false
+    if(error.message?.includes('row-level security')){mostrarToast('Erro','Sem permissão pra postar','urgente')}
+    else{mostrarToast('Erro',error.message,'urgente')}
+    return
+  }
+  ta.value=''
+  mostrarToast('Publicado!','','info')
+  await loadFeed()
+}
+
+window.curtirPost=async(postId,tipo)=>{
+  const{data:existente}=await sb.from('curtidas').select('id,tipo').eq('post_id',postId).eq('usuario_id',CU.id).maybeSingle()
+  let err
+  if(existente){
+    if(existente.tipo===tipo){
+      ;({error:err}=await sb.from('curtidas').delete().eq('id',existente.id))
+    }else{
+      ;({error:err}=await sb.from('curtidas').update({tipo}).eq('id',existente.id))
+    }
+  }else{
+    ;({error:err}=await sb.from('curtidas').insert({post_id:postId,usuario_id:CU.id,tipo}))
+  }
+  if(err){mostrarToast('Erro',err.message,'urgente');return}
+  await _refreshPost(postId)
+}
+
+window.comentarPost=async(postId,inputEl)=>{
+  const conteudo=inputEl.value.trim()
+  if(!conteudo)return
+  if(conteudo.length>1000){mostrarToast('Comentário muito longo','Máximo 1000 caracteres','alerta');return}
+  inputEl.disabled=true
+  const{error}=await sb.from('comentarios').insert({post_id:postId,autor_id:CU.id,conteudo})
+  inputEl.disabled=false
+  if(error){mostrarToast('Erro',error.message,'urgente');return}
+  inputEl.value=''
+  await _refreshPost(postId)
+}
+
+window.apagarPost=async(postId)=>{
+  if(!confirm('Excluir este post?'))return
+  const{error}=await sb.from('posts').update({deletado:true,deletado_por:CU.id}).eq('id',postId)
+  if(error){mostrarToast('Erro',error.message,'urgente');return}
+  const el=document.querySelector(`[data-post-id="${postId}"]`)
+  if(el)el.remove()
+  mostrarToast('Post excluído','','info')
+}
+
+window.apagarComentario=async(comentarioId,postId)=>{
+  if(!confirm('Excluir este comentário?'))return
+  const{error}=await sb.from('comentarios').update({deletado:true}).eq('id',comentarioId)
+  if(error){mostrarToast('Erro',error.message,'urgente');return}
+  await _refreshPost(postId)
 }
 
 async function notificarTodos(titulo,mensagem,tipo='info',sobreUsuarioId=null){
