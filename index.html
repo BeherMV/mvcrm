@@ -760,7 +760,8 @@ async function iniciarApp(){
 // ── NOTIFICAÇÕES ──
 async function carregarNotificacoes(){
   const{data}=await sb.from('notificacoes').select('*').eq('para_usuario',CU.id).order('criada_em',{ascending:false}).limit(30)
-  const unread=(data||[]).filter(n=>!n.lida).length
+  const notifs=data||[]
+  const unread=notifs.filter(n=>!n.lida).length
   const dot=$('notif-dot'),btn=$('notif-btn')
   if(unread>0){
     dot.style.display='flex'
@@ -771,13 +772,28 @@ async function carregarNotificacoes(){
     dot.textContent=''
     btn.classList.remove('tem-notif')
   }
+  // Buscar foto/nome dos usuários referenciados em sobre_usuario_id (uma query só)
+  const uids=[...new Set(notifs.map(n=>n.sobre_usuario_id).filter(Boolean))]
+  const userMap={}
+  if(uids.length){
+    const{data:us}=await sb.from('usuarios').select('id,nome,foto_url').in('id',uids)
+    ;(us||[]).forEach(u=>{userMap[u.id]=u})
+  }
   const cores={sucesso:'#D1FAE5',info:'#EFF6FF',alerta:'#FEF3C7',urgente:'#FEE2E2'}
   const ic={sucesso:'🏆',info:'ℹ️',alerta:'⚠️',urgente:'🔴'}
-  $('notif-list').innerHTML=(data||[]).length?(data||[]).map(n=>`
-    <div class="notif-item${n.lida?'':' unread'}" onclick="lerNotif('${n.id}')">
-      <div class="notif-icon" style="background:${cores[n.tipo]||'#EFF6FF'}">${ic[n.tipo]||'ℹ️'}</div>
+  $('notif-list').innerHTML=notifs.length?notifs.map(n=>{
+    const sobre=n.sobre_usuario_id?userMap[n.sobre_usuario_id]:null
+    const iconInner=sobre?.foto_url
+      ?`<img src="${sobre.foto_url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
+      :(ic[n.tipo]||'ℹ️')
+    const iconStyle=sobre?.foto_url
+      ?`background:${cores[n.tipo]||'#EFF6FF'};padding:0;overflow:hidden;border-radius:50%`
+      :`background:${cores[n.tipo]||'#EFF6FF'}`
+    return `<div class="notif-item${n.lida?'':' unread'}" onclick="lerNotif('${n.id}')">
+      <div class="notif-icon" style="${iconStyle}">${iconInner}</div>
       <div><div class="notif-text"><strong>${n.titulo}</strong>${n.mensagem?'<br><span style="color:var(--text2);font-size:12px">'+n.mensagem+'</span>':''}</div><div class="notif-time">${new Date(n.criada_em).toLocaleString('pt-BR')}</div></div>
-    </div>`).join(''):'<div class="empty">Nenhuma notificação</div>'
+    </div>`
+  }).join(''):'<div class="empty">Nenhuma notificação</div>'
 }
 window.lerNotif=async id=>{await sb.from('notificacoes').update({lida:true}).eq('id',id);await carregarNotificacoes()}
 window.marcarTodasLidas=async()=>{await sb.from('notificacoes').update({lida:true}).eq('para_usuario',CU.id);await carregarNotificacoes()}
@@ -814,6 +830,7 @@ function mostrarToast(titulo,mensagem,tipo){
 
 // ── PERFIL / EQUIPE / ANIVERSARIANTES ──
 const formatarCPF=cpf=>{if(!cpf)return'';const d=String(cpf).replace(/\D/g,'').padStart(11,'0').slice(-11);return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}
+const formatarCNPJ=cnpj=>{if(!cnpj)return'';const d=String(cnpj).replace(/\D/g,'').padStart(14,'0').slice(-14);return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5')}
 const _csvEscape=v=>{if(v==null)return'';const s=String(v);return /[";\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
 
 function _tempoNaMV(dataEntrada){
@@ -892,9 +909,12 @@ async function loadMeuPerfil(userId,containerId){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
         <div class="mfield"><label>Nome completo</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.nome||'—'}</div>`:`<input id="pf-nome" type="text" value="${(u.nome||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>CPF</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.cpf?formatarCPF(u.cpf):'—'}</div>`:`<input id="pf-cpf" type="text" value="${u.cpf?formatarCPF(u.cpf):''}" placeholder="000.000.000-00" oninput="_maskCPF(this)" maxlength="14" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield"><label>E-mail</label><div style="padding:9px 0;font-size:14px;color:var(--text2)">${u.email||'—'}</div></div>
+        <div class="mfield"><label>E-mail de contato</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.email||'—'}</div>`:`<input id="pf-email" type="email" value="${(u.email||'').replace(/"/g,'&quot;')}" placeholder="voce@empresa.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>Data de nascimento</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-nasc" type="date" value="${u.data_nascimento||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield" style="grid-column:span 2"><label>Data de entrada na MV</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-entrada" type="date" value="${u.data_entrada||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>Data de entrada na MV</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-entrada" type="date" value="${u.data_entrada||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>CNPJ</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.cnpj?formatarCNPJ(u.cnpj):'—'}</div>`:`<input id="pf-cnpj" type="text" value="${u.cnpj?formatarCNPJ(u.cnpj):''}" placeholder="00.000.000/0000-00" oninput="_maskCNPJ(this)" maxlength="18" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Razão social</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.razao_social||'—'}</div>`:`<input id="pf-razao" type="text" value="${(u.razao_social||'').replace(/"/g,'&quot;')}" placeholder="Razão social da empresa" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Chave PIX</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.pix||'—'}</div>`:`<input id="pf-pix" type="text" value="${(u.pix||'').replace(/"/g,'&quot;')}" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield" style="grid-column:span 2"><label>Bio</label>${ro?`<div style="padding:9px 0;font-size:14px;white-space:pre-wrap">${(u.bio||'—').replace(/</g,'&lt;')}</div>`:`<textarea id="pf-bio" rows="3" placeholder="Fale um pouco sobre você..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);resize:vertical">${(u.bio||'').replace(/</g,'&lt;')}</textarea>`}</div>
       </div>
       ${ro?'':`<div class="alert-err" id="pf-err"></div><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-pri" onclick="salvarPerfil()">Salvar alterações</button></div>`}
@@ -920,19 +940,34 @@ window._maskCPF=(inp)=>{
   inp.value=v
 }
 
+window._maskCNPJ=(inp)=>{
+  let v=inp.value.replace(/\D/g,'').slice(0,14)
+  if(v.length>12)v=v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/,'$1.$2.$3/$4-$5')
+  else if(v.length>8)v=v.replace(/(\d{2})(\d{3})(\d{3})(\d+)/,'$1.$2.$3/$4')
+  else if(v.length>5)v=v.replace(/(\d{2})(\d{3})(\d+)/,'$1.$2.$3')
+  else if(v.length>2)v=v.replace(/(\d{2})(\d+)/,'$1.$2')
+  inp.value=v
+}
+
 window.salvarPerfil=async()=>{
   const nome=$('pf-nome').value.trim()
+  const email=$('pf-email').value.trim()
   const cpfRaw=$('pf-cpf').value.replace(/\D/g,'')
+  const cnpjRaw=$('pf-cnpj').value.replace(/\D/g,'')
+  const razao=$('pf-razao').value.trim()||null
+  const pix=$('pf-pix').value.trim()||null
   const nasc=$('pf-nasc').value||null
   const entrada=$('pf-entrada').value||null
   const bio=$('pf-bio').value.trim()||null
   const err=$('pf-err')
   if(!nome){err.textContent='O nome não pode ficar vazio.';err.style.display='block';return}
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='E-mail inválido.';err.style.display='block';return}
   if(cpfRaw&&cpfRaw.length!==11){err.textContent='CPF deve ter 11 dígitos.';err.style.display='block';return}
+  if(cnpjRaw&&cnpjRaw.length!==14){err.textContent='CNPJ deve ter 14 dígitos.';err.style.display='block';return}
   err.style.display='none';err.textContent=''
-  const{error}=await sb.from('usuarios').update({nome,cpf:cpfRaw||null,data_nascimento:nasc,data_entrada:entrada,bio}).eq('id',CU.id)
+  const{error}=await sb.from('usuarios').update({nome,email:email||null,cpf:cpfRaw||null,cnpj:cnpjRaw||null,razao_social:razao,pix,data_nascimento:nasc,data_entrada:entrada,bio}).eq('id',CU.id)
   if(error){err.textContent='Erro ao salvar: '+error.message;err.style.display='block';return}
-  CU.nome=nome;CU.cpf=cpfRaw||null;CU.data_nascimento=nasc;CU.data_entrada=entrada;CU.bio=bio
+  CU.nome=nome;CU.email=email||null;CU.cpf=cpfRaw||null;CU.cnpj=cnpjRaw||null;CU.razao_social=razao;CU.pix=pix;CU.data_nascimento=nasc;CU.data_entrada=entrada;CU.bio=bio
   $('sb-name').textContent=nome
   aplicarAvatar($('sb-av'),CU)
   mostrarToast('Perfil atualizado','','info')
@@ -1023,7 +1058,7 @@ async function renderAniversariantes(hostEl){
   hostEl.appendChild(box)
 }
 
-async function notificarTodos(titulo,mensagem,tipo='info'){
+async function notificarTodos(titulo,mensagem,tipo='info',sobreUsuarioId=null){
   // SEMPRE usar a RPC — tem security definer, retorna todos os usuários ignorando RLS
   // Fallback para query direta caso a RPC não exista ainda
   let destinatarios=[]
@@ -1040,7 +1075,7 @@ async function notificarTodos(titulo,mensagem,tipo='info'){
   const lotes=[]
   for(let i=0;i<destinatarios.length;i+=50) lotes.push(destinatarios.slice(i,i+50))
   for(const lote of lotes){
-    await sb.from('notificacoes').insert(lote.map(u=>({para_usuario:u.id,titulo,mensagem,tipo,lida:false})))
+    await sb.from('notificacoes').insert(lote.map(u=>({para_usuario:u.id,titulo,mensagem,tipo,lida:false,sobre_usuario_id:sobreUsuarioId})))
   }
   mostrarToast(titulo,mensagem,tipo)
   await carregarNotificacoes()
@@ -1061,7 +1096,7 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
     const tituloIndiv=`🏆 ${consultorNome} bateu a meta!`
     const{data:jaNotif}=await sb.from('notificacoes').select('id').eq('titulo',tituloIndiv).gte('criada_em',hoje+'T00:00:00').limit(1)
     if(!jaNotif?.length){
-      await notificarTodos(tituloIndiv,`${consultorNome} atingiu ${fmt(real)} — meta de ${fmt(meta)}!`,'sucesso')
+      await notificarTodos(tituloIndiv,`${consultorNome} atingiu ${fmt(real)} — meta de ${fmt(meta)}!`,'sucesso',consultorId)
     }
   }
 
@@ -2027,7 +2062,7 @@ window.salvarAgendamento=async()=>{
   // Notificar o consultor se quem agendou é supervisor ou master
   if(cid!==CU.id){
     const dataFmt=new Date(data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})
-    await sb.from('notificacoes').insert({para_usuario:cid,titulo:`📅 Novo agendamento: ${titulo}`,mensagem:`${dataFmt} às ${hora?.slice(0,5)} — criado por ${CU.nome.split(' ')[0]}`,tipo:'info',lida:false})
+    await sb.from('notificacoes').insert({para_usuario:cid,titulo:`📅 Novo agendamento: ${titulo}`,mensagem:`${dataFmt} às ${hora?.slice(0,5)} — criado por ${CU.nome.split(' ')[0]}`,tipo:'info',lida:false,sobre_usuario_id:CU.id})
     // Recarregar notificações do consultor atual
     await carregarNotificacoes()
   }
