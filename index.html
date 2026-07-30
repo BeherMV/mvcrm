@@ -272,6 +272,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           <div class="sb-av av" id="sb-av" onclick="abrirUploadFoto()" title="Clique para trocar sua foto" style="width:38px;height:38px;font-size:13px;background:#E0FAF5;color:#065F46;cursor:pointer;overflow:hidden"></div>
           <div style="min-width:0"><div class="sb-name" id="sb-name"></div><div class="sb-role" id="sb-role"></div></div>
         </div>
+        <button id="sb-btn-perfil" onclick="abrirMeuPerfil()" style="display:none;width:100%;margin-top:10px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;font-size:12px;color:var(--text2);font-weight:500;transition:all .15s" onmouseover="this.style.borderColor='var(--mid)';this.style.color='var(--mid)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">👤 Meu Perfil</button>
       </div>
       <div class="sb-nav" id="sb-nav"></div>
       <div class="sb-footer">
@@ -588,6 +589,7 @@ window.salvarFoto=async()=>{
     CU.foto_url=url;CU.foto_ver=Date.now()
     aplicarAvatar($('sb-av'),CU)
     closeModal('mod-foto')
+    if($('p-perfil')?.classList.contains('active'))loadMeuPerfil()
     mostrarToast('Foto atualizada','','info')
   }catch(e){
     $('uf-err').textContent='Erro ao salvar: '+(e.message||e);$('uf-err').style.display='block'
@@ -605,6 +607,7 @@ window.removerFoto=async()=>{
     CU.foto_url=null;CU.foto_ver=Date.now()
     aplicarAvatar($('sb-av'),CU)
     closeModal('mod-foto')
+    if($('p-perfil')?.classList.contains('active'))loadMeuPerfil()
     mostrarToast('Foto removida','','info')
   }catch(e){
     $('uf-err').textContent='Erro ao remover: '+(e.message||e);$('uf-err').style.display='block'
@@ -742,6 +745,7 @@ let _notifInterval=null
 async function iniciarApp(){
   $('s-login').style.display='none';$('s-app').style.display='block'
   aplicarAvatar($('sb-av'),CU)
+  $('sb-btn-perfil').style.display=CU.perfil==='master'?'none':'block'
   $('sb-name').textContent=CU.nome
   $('sb-role').textContent=CU.perfil==='master'?'Master':CU.perfil==='supervisor'?'Supervisor':'Consultor(a)'
   await carregarNotificacoes()
@@ -806,6 +810,217 @@ function mostrarToast(titulo,mensagem,tipo){
   if(!document.getElementById('toast-style')){const s=document.createElement('style');s.id='toast-style';s.textContent='@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}';document.head.appendChild(s)}
   document.body.appendChild(t)
   setTimeout(()=>{if(t.parentNode){t.style.animation='slideIn .3s ease reverse';setTimeout(()=>t.remove(),300)}},5000)
+}
+
+// ── PERFIL / EQUIPE / ANIVERSARIANTES ──
+const formatarCPF=cpf=>{if(!cpf)return'';const d=String(cpf).replace(/\D/g,'').padStart(11,'0').slice(-11);return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}
+const _csvEscape=v=>{if(v==null)return'';const s=String(v);return /[";\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
+
+function _tempoNaMV(dataEntrada){
+  const de=new Date(dataEntrada+'T12:00'),h=new Date()
+  let m=(h.getFullYear()-de.getFullYear())*12+(h.getMonth()-de.getMonth())
+  if(h.getDate()<de.getDate())m--
+  if(m<0)return'menos de 1 mês'
+  const y=Math.floor(m/12),mm=m%12
+  if(y===0)return mm===0?'menos de 1 mês':`${mm} ${mm===1?'mês':'meses'}`
+  if(mm===0)return`${y} ${y===1?'ano':'anos'}`
+  return`${y} ${y===1?'ano':'anos'} e ${mm} ${mm===1?'mês':'meses'}`
+}
+
+function _computeStats(arr){
+  const total=arr.length
+  const receita=arr.reduce((s,l)=>s+Number(l.valor_meta||0),0)
+  const ticket=total?receita/total:0
+  const porMes={}
+  arr.forEach(l=>{if(!l.mes_fechamento||!l.ano_fechamento)return;const k=`${l.ano_fechamento}-${String(l.mes_fechamento).padStart(2,'0')}`;porMes[k]=(porMes[k]||0)+Number(l.valor_meta||0)})
+  let melhorK=null,melhorV=0
+  for(const k in porMes){if(porMes[k]>melhorV){melhorV=porMes[k];melhorK=k}}
+  return{total,receita,ticket,melhorK,melhorV}
+}
+
+async function _calcStatsConsultor(userId){
+  const{data}=await sb.from('leads').select('valor_meta,mes_fechamento,ano_fechamento').eq('consultor_id',userId).eq('status','Proposta')
+  return _computeStats(data||[])
+}
+
+async function _calcStatsEquipe(supervisorUserId){
+  const{data:sup}=await sb.from('usuarios').select('equipe_id').eq('id',supervisorUserId).single()
+  if(!sup?.equipe_id)return _computeStats([])
+  const{data:cons}=await sb.from('usuarios').select('id').eq('equipe_id',sup.equipe_id).eq('perfil','consultor')
+  const ids=(cons||[]).map(c=>c.id)
+  if(!ids.length)return _computeStats([])
+  const{data}=await sb.from('leads').select('valor_meta,mes_fechamento,ano_fechamento').in('consultor_id',ids).eq('status','Proposta')
+  return _computeStats(data||[])
+}
+
+window.abrirMeuPerfil=()=>navTo('p-perfil',$('sb-btn-perfil'),'Meu perfil')
+
+async function loadMeuPerfil(userId,containerId){
+  userId=userId||CU.id
+  containerId=containerId||'p-perfil'
+  const el=$(containerId)
+  if(!el)return
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const{data:u}=await sb.from('usuarios').select('*,equipes(nome)').eq('id',userId).single()
+  if(!u){el.innerHTML='<div class="empty">Usuário não encontrado</div>';return}
+  const ro=userId!==CU.id
+  const stats=u.perfil==='supervisor'?await _calcStatsEquipe(u.id):await _calcStatsConsultor(u.id)
+  const mesesAbr=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+  const melhorLabel=stats.melhorK?`${mesesAbr[Number(stats.melhorK.split('-')[1])-1]}/${stats.melhorK.split('-')[0]}`:'—'
+  const fotoUrl=u.foto_url?`${u.foto_url}${u.id===CU.id&&CU.foto_ver?'?v='+CU.foto_ver:''}`:null
+  const foto=fotoUrl?`<img src="${fotoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:100%;height:100%;font-size:32px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
+  const tempo=u.data_entrada?_tempoNaMV(u.data_entrada):''
+  const roleTxt=u.perfil==='master'?'Master':u.perfil==='supervisor'?'Supervisor':'Consultor(a)'
+  const equipeTxt=u.equipes?.nome?` · Equipe ${u.equipes.nome}`:''
+  const statsTitle=u.perfil==='supervisor'?'Números da equipe':'Meus números'
+  el.innerHTML=`
+    <div class="card" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+      <div style="width:104px;height:104px;border-radius:50%;overflow:hidden;flex-shrink:0;position:relative">
+        ${foto}
+        ${ro?'':`<button onclick="abrirUploadFoto()" title="Trocar foto" style="position:absolute;right:0;bottom:0;width:34px;height:34px;border-radius:50%;background:var(--mid);color:#fff;border:2.5px solid var(--card);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0">📷</button>`}
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:20px;font-weight:800">${u.nome||'—'}</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">${roleTxt}${equipeTxt}</div>
+        ${tempo?`<div style="font-size:12px;color:var(--text2);margin-top:6px">🗓️ ${tempo} na MV</div>`:''}
+        ${ro?'<div style="font-size:11px;color:var(--text3);margin-top:6px;text-transform:uppercase;letter-spacing:.4px">Modo leitura</div>':''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Dados pessoais</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
+        <div class="mfield"><label>Nome completo</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.nome||'—'}</div>`:`<input id="pf-nome" type="text" value="${(u.nome||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>CPF</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.cpf?formatarCPF(u.cpf):'—'}</div>`:`<input id="pf-cpf" type="text" value="${u.cpf?formatarCPF(u.cpf):''}" placeholder="000.000.000-00" oninput="_maskCPF(this)" maxlength="14" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>E-mail</label><div style="padding:9px 0;font-size:14px;color:var(--text2)">${u.email||'—'}</div></div>
+        <div class="mfield"><label>Data de nascimento</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-nasc" type="date" value="${u.data_nascimento||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Data de entrada na MV</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-entrada" type="date" value="${u.data_entrada||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Bio</label>${ro?`<div style="padding:9px 0;font-size:14px;white-space:pre-wrap">${(u.bio||'—').replace(/</g,'&lt;')}</div>`:`<textarea id="pf-bio" rows="3" placeholder="Fale um pouco sobre você..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);resize:vertical">${(u.bio||'').replace(/</g,'&lt;')}</textarea>`}</div>
+      </div>
+      ${ro?'':`<div class="alert-err" id="pf-err"></div><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-pri" onclick="salvarPerfil()">Salvar alterações</button></div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">${statsTitle}</span></div>
+      <div class="metrics m4" style="margin-top:12px">
+        <div class="metric"><div class="metric-label">Propostas fechadas</div><div class="metric-val">${stats.total}</div></div>
+        <div class="metric"><div class="metric-label">Receita total</div><div class="metric-val" style="font-size:22px">${fmt(stats.receita)}</div></div>
+        <div class="metric"><div class="metric-label">Ticket médio</div><div class="metric-val" style="font-size:22px">${fmt(stats.ticket)}</div></div>
+        <div class="metric"><div class="metric-label">Melhor mês</div><div class="metric-val" style="font-size:18px">${melhorLabel}</div><div class="metric-sub">${stats.melhorV?fmt(stats.melhorV):'—'}</div></div>
+      </div>
+    </div>
+  `
+}
+
+window._maskCPF=(inp)=>{
+  let v=inp.value.replace(/\D/g,'').slice(0,11)
+  if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d+)/,'$1.$2.$3-$4')
+  else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d+)/,'$1.$2.$3')
+  else if(v.length>3)v=v.replace(/(\d{3})(\d+)/,'$1.$2')
+  inp.value=v
+}
+
+window.salvarPerfil=async()=>{
+  const nome=$('pf-nome').value.trim()
+  const cpfRaw=$('pf-cpf').value.replace(/\D/g,'')
+  const nasc=$('pf-nasc').value||null
+  const entrada=$('pf-entrada').value||null
+  const bio=$('pf-bio').value.trim()||null
+  const err=$('pf-err')
+  if(!nome){err.textContent='O nome não pode ficar vazio.';err.style.display='block';return}
+  if(cpfRaw&&cpfRaw.length!==11){err.textContent='CPF deve ter 11 dígitos.';err.style.display='block';return}
+  err.style.display='none';err.textContent=''
+  const{error}=await sb.from('usuarios').update({nome,cpf:cpfRaw||null,data_nascimento:nasc,data_entrada:entrada,bio}).eq('id',CU.id)
+  if(error){err.textContent='Erro ao salvar: '+error.message;err.style.display='block';return}
+  CU.nome=nome;CU.cpf=cpfRaw||null;CU.data_nascimento=nasc;CU.data_entrada=entrada;CU.bio=bio
+  $('sb-name').textContent=nome
+  aplicarAvatar($('sb-av'),CU)
+  mostrarToast('Perfil atualizado','','info')
+  loadMeuPerfil()
+}
+
+async function loadMaEquipe(){
+  const el=$('p-ma-equipe');if(!el)return
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const{data}=await sb.from('usuarios').select('*,equipes(nome)').in('perfil',['consultor','supervisor']).order('nome')
+  const users=data||[]
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="font-size:15px;font-weight:700">Equipe (${users.length})</div>
+      <button class="btn btn-pri" onclick="exportarEquipeCSV()">⬇ Exportar CSV</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px">
+      ${users.length?users.map(u=>{
+        const foto=u.foto_url?`<img src="${u.foto_url}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:52px;height:52px;font-size:15px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
+        return `<div class="card" style="cursor:pointer;padding:16px;transition:transform .15s" onclick="verPerfilDe('${u.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0">${foto}</div>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div>
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">${u.perfil}${u.equipes?.nome?' · '+u.equipes.nome:''}</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.6">
+            📧 ${u.email||'—'}<br>
+            🎂 ${u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}<br>
+            🗓️ Entrada: ${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}
+          </div>
+        </div>`
+      }).join(''):'<div class="empty">Nenhum consultor ou supervisor cadastrado</div>'}
+    </div>
+  `
+}
+
+window.verPerfilDe=(userId)=>{
+  const b=document.querySelector('.sb-btn.active')||document.querySelector('.sb-btn')
+  navTo('p-ma-perfil',b,'Perfil do usuário')
+  loadMeuPerfil(userId,'p-ma-perfil')
+}
+
+window.exportarEquipeCSV=async()=>{
+  const{data}=await sb.from('usuarios').select('nome,email,perfil,cpf,data_nascimento,data_entrada,equipes(nome)').in('perfil',['consultor','supervisor']).order('nome')
+  const headers=['Nome','Email','Perfil','CPF','Data de Nascimento','Data de Entrada','Equipe']
+  const rows=(data||[]).map(u=>[
+    u.nome||'',
+    u.email||'',
+    u.perfil||'',
+    u.cpf?formatarCPF(u.cpf):'',
+    u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'',
+    u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'',
+    u.equipes?.nome||''
+  ])
+  const csv=[headers,...rows].map(r=>r.map(_csvEscape).join(';')).join('\r\n')
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'})
+  const a=document.createElement('a')
+  a.href=URL.createObjectURL(blob)
+  a.download=`equipe-mv-${new Date().toISOString().slice(0,10)}.csv`
+  document.body.appendChild(a);a.click();a.remove()
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+  mostrarToast('CSV gerado','Download iniciado','info')
+}
+
+async function renderAniversariantes(hostEl){
+  if(!hostEl)return
+  const m=mesAtual()
+  const{data}=await sb.from('usuarios').select('id,nome,foto_url,data_nascimento').not('data_nascimento','is',null)
+  const doMes=(data||[]).filter(u=>new Date(u.data_nascimento+'T12:00').getMonth()+1===m).sort((a,b)=>new Date(a.data_nascimento+'T12:00').getDate()-new Date(b.data_nascimento+'T12:00').getDate())
+  if(!doMes.length)return
+  const meses=['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+  const box=document.createElement('div')
+  box.className='card'
+  box.style.marginTop='14px'
+  box.innerHTML=`<div class="card-head"><span class="card-title">🎂 Aniversariantes de ${meses[m]}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px">
+      ${doMes.map(u=>{
+        const d=new Date(u.data_nascimento+'T12:00')
+        const foto=u.foto_url?`<img src="${u.foto_url}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:40px;height:40px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
+        return `<div style="display:flex;gap:10px;align-items:center;padding:10px;background:var(--bg2);border-radius:10px">
+          <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0">${foto}</div>
+          <div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div><div style="font-size:11px;color:var(--text3)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</div></div>
+        </div>`
+      }).join('')}
+    </div>`
+  hostEl.appendChild(box)
 }
 
 async function notificarTodos(titulo,mensagem,tipo='info'){
@@ -896,6 +1111,7 @@ function setupConsultor(){
     <div id="p-agenda" class="page"></div>
     <div id="p-drives" class="page"></div>
     <div id="p-historico" class="page"></div>
+    <div id="p-perfil" class="page"></div>
   `
   loadCoHome()
 }
@@ -931,6 +1147,7 @@ function setupSupervisor(){
     <div id="p-sv-recusas" class="page"></div>
     <div id="p-sv-engajamento" class="page"></div>
     <div id="p-sv-historico" class="page"></div>
+    <div id="p-perfil" class="page"></div>
   `
   loadSvHome()
 }
@@ -951,6 +1168,7 @@ function setupMaster(){
     <button class="sb-btn" onclick="navTo('p-ma-metas',this,'Metas globais')">🎯 Metas globais</button>
     <button class="sb-btn" onclick="navTo('p-ma-drives',this,'Drives')">📁 Drives</button>
     <div class="sb-section">Sistema</div>
+    <button class="sb-btn" onclick="navTo('p-ma-equipe',this,'Equipe')">👥 Equipe</button>
     <button class="sb-btn" onclick="navTo('p-ma-usuarios',this,'Usuários')">👤 Usuários</button>
   `
   $('pages-wrap').innerHTML=`
@@ -966,6 +1184,8 @@ function setupMaster(){
     <div id="p-ma-metas" class="page"></div>
     <div id="p-ma-drives" class="page"></div>
     <div id="p-ma-usuarios" class="page"></div>
+    <div id="p-ma-equipe" class="page"></div>
+    <div id="p-ma-perfil" class="page"></div>
   `
   loadMaHome()
 }
@@ -981,7 +1201,8 @@ window.navTo=(id,btn,title)=>{
     'p-sv-home':loadSvHome,'p-sv-consultores':loadSvConsultores,'p-sv-funil':loadSvFunil,'p-sv-meus-leads':()=>loadSvMeusLeads(),'p-sv-meu-funil':()=>loadSvMeuFunil(),
     'p-sv-metas':loadSvMetas,'p-sv-ranking':loadSvRanking,'p-sv-curvas':loadSvCurvas,'p-sv-prov':loadSvProv,'p-sv-recusas':loadSvRecusas,'p-sv-engajamento':loadSvEngajamento,'p-sv-historico':loadSvHistorico,
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
-    'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios
+    'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
+    'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe
   }
   if(map[id]) map[id]()
 }
@@ -1166,6 +1387,7 @@ async function loadCoHome(){
   const sc={};STATUS_LEADS.forEach(s=>sc[s]=0);leadsC.forEach(l=>sc[l.status]=(sc[l.status]||0)+1)
   const sl=Object.keys(sc).filter(s=>sc[s]>0)
   setTimeout(()=>newChart('c-co-status',{type:'doughnut',data:{labels:sl,datasets:[{data:sl.map(s=>sc[s]),backgroundColor:sl.map(s=>S_BG[s]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}}),100)
+  renderAniversariantes($('p-home'))
 }
 
 // ════════════════════════════════════════
@@ -1996,6 +2218,7 @@ async function loadSvHome(fMes=null,fAno=null){
     newChart('c-sv-status',{type:'doughnut',data:{labels:sl,datasets:[{data:sl.map(s=>sc[s]),backgroundColor:sl.map(s=>S_BG[s]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})
     newChart('c-sv-rv',{type:'bar',data:{labels:consStats.map(x=>x.c.nome.split(' ')[0]),datasets:[{data:consStats.map(x=>x.real),backgroundColor:cores,borderRadius:8,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
   },100)
+  renderAniversariantes($('p-sv-home'))
 }
 
 // Abrir dashboard do consultor
@@ -2926,6 +3149,7 @@ async function loadMaHome(fMes=null,fAno=null){
     newChart('c-ma-perf',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome),datasets:[{label:'Realizado',data:eqStats.map(e=>e.pct),backgroundColor:cores,borderRadius:8,barPercentage:.4},{label:'Esperado',data:eqStats.map(()=>pctDU),backgroundColor:'#E2E8F0',borderRadius:8,barPercentage:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:10},callback:v=>v+'%'},max:100}}}})
     newChart('c-ma-rv',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome),datasets:[{data:eqStats.map(e=>e.real),backgroundColor:cores,borderRadius:8,barPercentage:.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:10},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
   },100)
+  renderAniversariantes($('p-ma-home'))
 }
 
 async function loadMaEquipes(){
