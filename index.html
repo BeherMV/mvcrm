@@ -12,12 +12,51 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
+  color-scheme:light dark;
+  /* Marca — DNA da MV (inalterada) */
   --teal:#00C9A7;--blue:#2563EB;--mid:#1DA4D4;
-  --bg:#F0F4F8;--card:#fff;--border:#E2E8F0;
-  --text1:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --grad:linear-gradient(135deg,var(--teal),var(--mid) 55%,var(--blue));
+  --grad-soft:linear-gradient(135deg,rgba(0,201,167,.14),rgba(37,99,235,.14));
+  /* Semânticos (independentes do acento) */
   --green:#10B981;--red:#EF4444;--amber:#F59E0B;--purple:#8B5CF6;
   --sidebar-w:224px;
+  /* Neutros — light (padrão) */
+  --bg:#F5F7FB;--surface:#FAFCFF;--card:#FFFFFF;--card-hover:#F5F8FC;
+  --border:#E5EAF2;--border-strong:#CBD5E1;
+  --text1:#0B1424;--text2:#465468;--text3:#8697AC;
+  --input-bg:#F8FAFD;--bg2:#F8FAFD;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.04);
+  --shadow:0 6px 24px -10px rgba(15,23,42,.10);
 }
+/* Dark via preferência do sistema */
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#060B18;--surface:#0B1224;--card:#111C31;--card-hover:#152341;
+    --border:#1E2C46;--border-strong:#2C3F5E;
+    --text1:#EEF3FC;--text2:#A8B6CB;--text3:#6B7A94;
+    --input-bg:#0F1A30;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow:0 8px 30px -8px rgba(0,0,0,.55);
+  }
+}
+/* Overrides pelo toggle (sempre vencem a media query) */
+:root[data-theme="dark"]{
+  --bg:#060B18;--surface:#0B1224;--card:#111C31;--card-hover:#152341;
+  --border:#1E2C46;--border-strong:#2C3F5E;
+  --text1:#EEF3FC;--text2:#A8B6CB;--text3:#6B7A94;
+  --input-bg:#0F1A30;--bg2:#0F1A30;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 8px 30px -8px rgba(0,0,0,.55);
+}
+:root[data-theme="light"]{
+  --bg:#F5F7FB;--surface:#FAFCFF;--card:#FFFFFF;--card-hover:#F5F8FC;
+  --border:#E5EAF2;--border-strong:#CBD5E1;
+  --text1:#0B1424;--text2:#465468;--text3:#8697AC;
+  --input-bg:#F8FAFD;--bg2:#F8FAFD;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.04);
+  --shadow:0 6px 24px -10px rgba(15,23,42,.10);
+}
+body{transition:background .25s ease,color .25s ease}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text1);min-height:100vh}
 #s-login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#E0FAF5 0%,#EFF6FF 60%,#F0F4F8 100%)}
 .login-card{background:var(--card);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.1);padding:44px 40px;width:100%;max-width:420px}
@@ -245,6 +284,93 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .curva-row{display:grid;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
 .curva-nome{font-size:13px;font-weight:700;color:var(--text1)}
 .curva-equipe{font-size:11px;color:var(--text3)}
+
+/* ─── Feed CTA no topbar ─── */
+.feed-cta{
+  all:unset;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px 8px 12px;border-radius:999px;
+  background:var(--grad);color:#fff;
+  font-size:12.5px;font-weight:700;letter-spacing:.2px;
+  box-shadow:0 8px 22px -8px rgba(37,99,235,.55),0 2px 6px -2px rgba(0,201,167,.4);
+  transition:transform .18s cubic-bezier(.5,.1,.1,1),box-shadow .18s;
+  position:relative;overflow:hidden;isolation:isolate;flex-shrink:0;
+}
+.feed-cta::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);
+  transform:translateX(-120%);transition:transform .6s cubic-bezier(.5,.1,.1,1);z-index:-1;
+}
+.feed-cta:hover{transform:translateY(-2px);box-shadow:0 14px 30px -8px rgba(37,99,235,.7),0 4px 10px -2px rgba(0,201,167,.5)}
+.feed-cta:hover::before{transform:translateX(120%)}
+.feed-cta svg{width:15px;height:15px;flex-shrink:0}
+.feed-cta-dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:feed-pulse 1.8s ease-out infinite}
+@keyframes feed-pulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}70%{box-shadow:0 0 0 8px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.feed-cta-badge{font-size:9px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;background:rgba(255,255,255,.22);padding:2px 6px;border-radius:5px}
+@media (prefers-reduced-motion:reduce){.feed-cta-dot{animation:none}.feed-cta::before{display:none}}
+
+/* Badge "novo" na sidebar */
+.pill-new{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--grad);color:#fff;box-shadow:0 2px 6px -2px rgba(37,99,235,.5)}
+
+/* Botão de tema */
+.theme-toggle-btn{
+  width:40px;height:40px;border-radius:10px;
+  border:1.5px solid var(--border);background:var(--surface);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--text2);transition:all .2s;flex-shrink:0;
+}
+.theme-toggle-btn:hover{border-color:var(--border-strong);color:var(--text1)}
+.theme-toggle-btn svg{width:16px;height:16px}
+.theme-toggle-btn .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle-btn .icon-moon{display:none}
+:root[data-theme="dark"] .theme-toggle-btn .icon-sun{display:inline-block}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .theme-toggle-btn .icon-moon{display:none}
+  :root:not([data-theme="light"]) .theme-toggle-btn .icon-sun{display:inline-block}
+}
+
+/* ─── Página Feed (placeholder) ─── */
+.feed-wrap{max-width:640px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:14px;padding:8px 0}
+.feed-banner{
+  display:flex;gap:12px;align-items:center;padding:14px 18px;border-radius:14px;
+  background:var(--grad-soft);border:1px solid var(--border);color:var(--text1);font-size:13px;font-weight:500;line-height:1.5;
+}
+.feed-banner strong{color:var(--text1);font-weight:800}
+.feed-banner .em{padding:3px 8px;border-radius:6px;background:var(--grad);color:#fff;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;flex-shrink:0}
+.composer{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.composer-row{display:flex;gap:10px;align-items:flex-start}
+.composer textarea{
+  flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:13.5px;font-family:inherit;color:var(--text1);
+  resize:none;min-height:64px;line-height:1.5;
+}
+.composer textarea::placeholder{color:var(--text3)}
+.composer textarea:focus{outline:none;border-color:var(--mid);box-shadow:0 0 0 3px rgba(29,164,212,.15)}
+.composer-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-left:48px}
+.composer-actions{display:flex;gap:6px}
+.icon-btn{
+  all:unset;cursor:pointer;width:34px;height:34px;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--text3);
+  border:1px solid transparent;transition:all .15s;
+}
+.icon-btn:hover{background:var(--card-hover);color:var(--mid);border-color:var(--border)}
+.icon-btn svg{width:18px;height:18px}
+.btn-publish{
+  all:unset;cursor:pointer;padding:8px 18px;font-size:12.5px;font-weight:700;
+  background:var(--grad);color:#fff;border-radius:8px;
+  box-shadow:0 4px 12px -4px rgba(37,99,235,.5);transition:transform .12s;
+}
+.btn-publish:hover{transform:translateY(-1px)}
+.btn-publish:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.post{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.post-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.post-who{flex:1;min-width:0}
+.post-name{font-size:13.5px;font-weight:700;color:var(--text1);display:flex;align-items:center;gap:6px}
+.post-time{font-size:11px;color:var(--text3);margin-top:2px}
+.post-body{font-size:13.5px;line-height:1.55;color:var(--text1);margin-bottom:12px;white-space:pre-line}
+.post-actions{display:flex;gap:14px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);font-weight:600}
+.post-action{display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .12s}
+.post-action:hover{background:var(--card-hover);color:var(--text1)}
 </style>
 
 
@@ -289,7 +415,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           </button>
           <div class="topbar-title" id="topbar-title">Dashboard</div>
         </div>
+        <button class="feed-cta" onclick="abrirFeed()" title="Feed da equipe">
+          <span class="feed-cta-dot" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          <span>Feed da equipe</span>
+          <span class="feed-cta-badge">novo</span>
+        </button>
         <div style="display:flex;align-items:center;gap:10px">
+          <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro" aria-label="Alternar tema">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </button>
           <button class="notif-btn" onclick="toggleNotif()" id="notif-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>
             <span class="notif-dot" id="notif-dot"></span>
@@ -1061,6 +1197,91 @@ async function renderAniversariantes(hostEl){
   hostEl.appendChild(box)
 }
 
+// ── TEMA (light/dark) ──
+;(function initTheme(){
+  const saved=localStorage.getItem('mvcrm-theme')
+  if(saved==='light'||saved==='dark'){
+    document.documentElement.setAttribute('data-theme',saved)
+  }
+  // Sem saved: cai na preferência do sistema via @media
+})()
+window.toggleTheme=()=>{
+  const cur=document.documentElement.getAttribute('data-theme')
+  const sysDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches
+  const effective=cur||(sysDark?'dark':'light')
+  const next=effective==='dark'?'light':'dark'
+  document.documentElement.setAttribute('data-theme',next)
+  localStorage.setItem('mvcrm-theme',next)
+}
+
+// ── FEED (placeholder — rede social em breve) ──
+window.abrirFeed=()=>{
+  const b=document.querySelector('.sb-btn[data-feed-nav]')||document.querySelector('.sb-btn')
+  navTo('p-feed',b,'Feed da equipe')
+}
+
+async function loadFeed(){
+  const el=$('p-feed');if(!el)return
+  const fotoUrl=CU?.foto_url?`${CU.foto_url}${CU.foto_ver?'?v='+CU.foto_ver:''}`:null
+  const meuAvatar=fotoUrl
+    ?`<img src="${fotoUrl}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;display:block">`
+    :`<div class="av" style="width:40px;height:40px;font-size:13px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(CU?.nome||'?')}</div>`
+  el.innerHTML=`
+    <div class="feed-wrap">
+      <div class="feed-banner">
+        <span class="em">em breve</span>
+        <div>Este é o <strong>preview</strong> do Feed. Ainda não é funcional — a página vai permitir posts com texto, imagens, curtidas e comentários, tudo dentro do CRM.</div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-row">
+          <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0">${meuAvatar}</div>
+          <textarea placeholder="Compartilhe algo com o time…" disabled></textarea>
+        </div>
+        <div class="composer-foot">
+          <div class="composer-actions">
+            <button class="icon-btn" title="Foto" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+            <button class="icon-btn" title="Emoji" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
+          </div>
+          <button class="btn-publish" disabled>Publicar</button>
+        </div>
+      </div>
+
+      <div class="post">
+        <div class="post-head">
+          <div class="av" style="width:40px;height:40px;font-size:13px;background:linear-gradient(135deg,#F59E0B,#EA580C);color:#fff;border-radius:50%">M</div>
+          <div class="post-who">
+            <div class="post-name">Marco <span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--surface);color:var(--text3);border:1px solid var(--border)">consultor</span></div>
+            <div class="post-time">exemplo</div>
+          </div>
+        </div>
+        <div class="post-body">🚀 Fechei minha 5ª proposta do mês! Cliente indicado por outro do ano passado — vale muito a pena manter o relacionamento pós-venda.</div>
+        <div class="post-actions">
+          <span class="post-action">👏 15</span>
+          <span class="post-action">❤️ 9</span>
+          <span class="post-action" style="margin-left:auto">💬 3 comentários</span>
+        </div>
+      </div>
+
+      <div class="post">
+        <div class="post-head">
+          <div class="av" style="width:40px;height:40px;font-size:13px;background:linear-gradient(135deg,#00C9A7,#1DA4D4);color:#fff;border-radius:50%">B</div>
+          <div class="post-who">
+            <div class="post-name">Beher <span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,.14);color:#3B82F6;border:1px solid transparent">supervisor</span></div>
+            <div class="post-time">exemplo</div>
+          </div>
+        </div>
+        <div class="post-body">💡 Dica: quando cliente pede prazo pra pensar, agende follow-up pra 48h — não deixa esfriar. Se demorar mais, tá muito frio pra reativar.</div>
+        <div class="post-actions">
+          <span class="post-action">👏 22</span>
+          <span class="post-action">❤️ 11</span>
+          <span class="post-action" style="margin-left:auto">💬 8 comentários</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 async function notificarTodos(titulo,mensagem,tipo='info',sobreUsuarioId=null){
   // SEMPRE usar a RPC — tem security definer, retorna todos os usuários ignorando RLS
   // Fallback para query direta caso a RPC não exista ainda
@@ -1142,6 +1363,8 @@ function setupConsultor(){
     <div class="sb-section">Resultados</div>
     <button class="sb-btn" onclick="navTo('p-drives',this,'Drives')">📁 Drives</button>
     <button class="sb-btn" onclick="navTo('p-historico',this,'Histórico')">📋 Histórico</button>
+    <div class="sb-section">Rede social</div>
+    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-home" class="page active"></div>
@@ -1151,6 +1374,7 @@ function setupConsultor(){
     <div id="p-drives" class="page"></div>
     <div id="p-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
+    <div id="p-feed" class="page"></div>
   `
   loadCoHome()
 }
@@ -1172,6 +1396,8 @@ function setupSupervisor(){
     <button class="sb-btn" onclick="navTo('p-sv-recusas',this,'Recusas')">❌ Recusas</button>
     <button class="sb-btn" onclick="navTo('p-sv-engajamento',this,'Engajamento')">📊 Engajamento</button>
     <button class="sb-btn" onclick="navTo('p-sv-historico',this,'Histórico mensal')">📋 Histórico</button>
+    <div class="sb-section">Rede social</div>
+    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-sv-home" class="page active"></div>
@@ -1187,6 +1413,7 @@ function setupSupervisor(){
     <div id="p-sv-engajamento" class="page"></div>
     <div id="p-sv-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
+    <div id="p-feed" class="page"></div>
   `
   loadSvHome()
 }
@@ -1209,6 +1436,8 @@ function setupMaster(){
     <div class="sb-section">Sistema</div>
     <button class="sb-btn" onclick="navTo('p-ma-equipe',this,'Equipe')">👥 Equipe</button>
     <button class="sb-btn" onclick="navTo('p-ma-usuarios',this,'Usuários')">👤 Usuários</button>
+    <div class="sb-section">Rede social</div>
+    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-ma-home" class="page active"></div>
@@ -1225,6 +1454,7 @@ function setupMaster(){
     <div id="p-ma-usuarios" class="page"></div>
     <div id="p-ma-equipe" class="page"></div>
     <div id="p-ma-perfil" class="page"></div>
+    <div id="p-feed" class="page"></div>
   `
   loadMaHome()
 }
@@ -1241,7 +1471,8 @@ window.navTo=(id,btn,title)=>{
     'p-sv-metas':loadSvMetas,'p-sv-ranking':loadSvRanking,'p-sv-curvas':loadSvCurvas,'p-sv-prov':loadSvProv,'p-sv-recusas':loadSvRecusas,'p-sv-engajamento':loadSvEngajamento,'p-sv-historico':loadSvHistorico,
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
-    'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe
+    'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
+    'p-feed':loadFeed
   }
   if(map[id]) map[id]()
 }
