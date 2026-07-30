@@ -453,6 +453,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .composer-hint{font-size:11.5px;color:var(--text3);padding:0 4px}
 .composer-count{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
 .composer-count.over{color:var(--red);font-weight:700}
+
+/* Posts automáticos (voz institucional) */
+.post-auto{
+  border-color:transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,var(--grad) border-box;
+  border:1px solid transparent;
+  position:relative;
+}
+.post-auto::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:14px 0 0 14px;
+  background:var(--grad);
+}
+.featured-user{
+  display:flex;gap:12px;align-items:center;
+  padding:12px 14px;margin-bottom:12px;
+  background:var(--grad-soft);border-radius:12px;
+  border:1px solid var(--border);
+}
+.featured-nome{font-size:13.5px;font-weight:700;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.featured-role{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+.featured-tag{
+  font-size:10.5px;font-weight:700;letter-spacing:.3px;
+  padding:4px 10px;border-radius:999px;
+  background:var(--card);color:var(--text2);
+  border:1px solid var(--border);white-space:nowrap;flex-shrink:0;
+}
 </style>
 
 
@@ -973,6 +999,8 @@ async function iniciarApp(){
   if(CU.perfil==='master') setupMaster()
   else if(CU.perfil==='supervisor') setupSupervisor()
   else setupConsultor()
+  // Automações do Feed (aniversário pessoal + aniversário na empresa) — dispara 1x por sessão
+  _rodarAutomacoesFeed()
 }
 
 // ── NOTIFICAÇÕES ──
@@ -1305,6 +1333,88 @@ window.abrirFeed=()=>{
 // ═══ FEED (rede social interna) ═══
 const REACTION_EMOJI={heart:'❤️',clap:'👏',tada:'🎉',rocket:'🚀'}
 const REACTION_TYPES=['heart','clap','tada','rocket']
+
+// Mensagens da voz institucional MV Corretora (rotação aleatória)
+const MSG_META_BATIDA=[
+  '🎯 Meta batida! Parabéns, {NOME}! O resultado é a prova de que disciplina, foco e constância sempre vencem. Aproveite essa conquista e siga em busca da próxima!',
+  '🚀 Parabéns por bater a meta, {NOME}! Você mostrou que grandes resultados são construídos com atitude, persistência e vontade de vencer. Que essa seja apenas mais uma de muitas conquistas!',
+  '👏 Meta alcançada, {NOME}! O sucesso não acontece por acaso. Ele é conquistado por quem decide não desistir. Parabéns!',
+  '{NOME}, hoje você provou que metas não são limites, são desafios. Parabéns pela conquista! Continue elevando o padrão, porque quem entrega resultados abre caminho para oportunidades ainda maiores.',
+  '🏆 Mais uma meta conquistada, {NOME}! Cada venda, cada ligação e cada "não" superado trouxeram você até aqui. Comemore essa vitória, você merece!',
+  'Resultado entregue. Meta batida. Parabéns, {NOME}! Que essa conquista seja combustível para continuar crescendo, inspirando o time e mostrando que excelência é um hábito, não um acaso. 💪🔥'
+]
+const MSG_META_EQUIPE='🏆 A equipe {EQUIPE} bateu a meta! Parabéns pela conquista coletiva. Quando cada um dá o seu melhor, o time inteiro cresce. Vamos em busca de resultados ainda maiores! 🚀'
+const MSG_ANIVERSARIO=[
+  '🎂 Feliz aniversário, {NOME}! Que este novo ciclo seja repleto de conquistas — profissionais e pessoais. A MV Corretora agradece por fazer parte deste time e deseja um ano incrível! 🎉',
+  '🎈 Hoje é dia de comemorar você, {NOME}! Que esse novo ano de vida traga saúde, alegria e ainda mais realizações. Parabéns em nome de toda a família MV! 🥳',
+  '🎁 {NOME}, feliz aniversário! Que sua trajetória continue inspirando o time e que este novo ano seja marcado por vitórias, sorrisos e muitos momentos especiais. 🎊',
+  '🎂 {NOME}, hoje o dia é seu! Que essa nova volta ao redor do sol venha carregada de propósito, felicidade e conquistas. Toda a equipe MV te deseja um feliz aniversário! ✨'
+]
+const MSG_TEMPO_EMPRESA=[
+  '🏆 Hoje {NOME} completa {X} na MV Corretora! Sua dedicação, comprometimento e resultados fazem parte da história que estamos construindo juntos. Obrigado por caminhar com a gente! 🎯',
+  '🎉 Parabéns, {NOME}! Já são {X} de estrada na MV Corretora — e cada conquista sua é celebrada como se fosse nossa. Que venham muitos outros ciclos de crescimento! 🚀',
+  '⭐ {X} de MV para {NOME}! Sua trajetória é prova de que consistência, entrega e paixão pelo que faz constroem carreiras sólidas. Parabéns e obrigado por escolher construir com a gente! 🙌'
+]
+const _pickMsg=arr=>arr[Math.floor(Math.random()*arr.length)]
+const _formatXAnos=n=>n===1?'1 ano':`${n} anos`
+
+async function _postarConquistaMeta(consultorId,consultorNome){
+  const h=new Date(),m=h.getMonth()+1,a=h.getFullYear()
+  const inicioMes=`${a}-${String(m).padStart(2,'0')}-01T00:00:00`
+  const{count}=await sb.from('posts').select('id',{count:'exact',head:true})
+    .eq('sobre_usuario_id',consultorId).eq('tipo','conquista').eq('deletado',false).gte('criado_em',inicioMes)
+  if(count&&count>0)return
+  const conteudo=_pickMsg(MSG_META_BATIDA).replace('{NOME}',consultorNome)
+  await sb.from('posts').insert({autor_id:CU.id,conteudo,tipo:'conquista',sobre_usuario_id:consultorId})
+}
+
+async function _postarConquistaEquipe(supervisorId,equipeNome){
+  const h=new Date(),m=h.getMonth()+1,a=h.getFullYear()
+  const inicioMes=`${a}-${String(m).padStart(2,'0')}-01T00:00:00`
+  if(supervisorId){
+    const{count}=await sb.from('posts').select('id',{count:'exact',head:true})
+      .eq('sobre_usuario_id',supervisorId).eq('tipo','conquista').eq('deletado',false).gte('criado_em',inicioMes)
+    if(count&&count>0)return
+  }
+  const conteudo=MSG_META_EQUIPE.replace('{EQUIPE}',equipeNome)
+  await sb.from('posts').insert({autor_id:CU.id,conteudo,tipo:'conquista',sobre_usuario_id:supervisorId||null})
+}
+
+async function _rodarAutomacoesFeed(){
+  try{
+    const h=new Date(),dia=h.getDate(),mes=h.getMonth()+1,ano=h.getFullYear()
+    const hojeStr=h.toISOString().split('T')[0]
+    const{data:users}=await sb.from('usuarios').select('id,nome,perfil,data_nascimento,data_entrada').in('perfil',['consultor','supervisor'])
+    if(!users)return
+    for(const u of users){
+      if(u.data_nascimento){
+        const dn=new Date(u.data_nascimento+'T12:00')
+        if(dn.getDate()===dia&&dn.getMonth()+1===mes){
+          const{count}=await sb.from('posts').select('id',{count:'exact',head:true})
+            .eq('sobre_usuario_id',u.id).eq('tipo','aniversario').eq('deletado',false).gte('criado_em',hojeStr+'T00:00:00')
+          if(!count||count===0){
+            const conteudo=_pickMsg(MSG_ANIVERSARIO).replace('{NOME}',u.nome)
+            await sb.from('posts').insert({autor_id:CU.id,conteudo,tipo:'aniversario',sobre_usuario_id:u.id})
+          }
+        }
+      }
+      if(u.data_entrada){
+        const de=new Date(u.data_entrada+'T12:00')
+        if(de.getDate()===dia&&de.getMonth()+1===mes){
+          const anos=ano-de.getFullYear()
+          if(anos>=1){
+            const{count}=await sb.from('posts').select('id',{count:'exact',head:true})
+              .eq('sobre_usuario_id',u.id).eq('tipo','tempo_empresa').eq('deletado',false).gte('criado_em',hojeStr+'T00:00:00')
+            if(!count||count===0){
+              const conteudo=_pickMsg(MSG_TEMPO_EMPRESA).replace('{NOME}',u.nome).replace('{X}',_formatXAnos(anos))
+              await sb.from('posts').insert({autor_id:CU.id,conteudo,tipo:'tempo_empresa',sobre_usuario_id:u.id})
+            }
+          }
+        }
+      }
+    }
+  }catch(e){console.warn('automacoes feed:',e)}
+}
 const FEED_PAGE_SIZE=10
 let _feedOffset=0,_feedNoMore=false,_feedLoading=false
 
@@ -1348,7 +1458,8 @@ function _feedTimeAgo(iso){
 async function _podePostar(){
   if(CU.perfil!=='consultor')return{pode:true,texto:'Compartilhe algo com o time…',hint:''}
   const hoje=new Date().toISOString().split('T')[0]
-  const{count}=await sb.from('posts').select('id',{count:'exact',head:true}).eq('autor_id',CU.id).eq('deletado',false).gte('criado_em',hoje+'T00:00:00')
+  const{count}=await sb.from('posts').select('id',{count:'exact',head:true})
+    .eq('autor_id',CU.id).eq('tipo','user').eq('deletado',false).gte('criado_em',hoje+'T00:00:00')
   if(count&&count>0)return{pode:false,texto:'',hint:'Você já postou hoje. Volte amanhã!'}
   return{pode:true,texto:'Compartilhe algo com o time…',hint:'Você pode fazer 1 post por dia.'}
 }
@@ -1387,7 +1498,7 @@ async function _appendFeedPosts(){
   const loadMoreEl=$('feed-load-more')
   loadMoreEl.innerHTML='<div class="loading">Carregando…</div>'
   const{data,error}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
     .eq('deletado',false)
     .order('criado_em',{ascending:false})
     .range(_feedOffset,_feedOffset+FEED_PAGE_SIZE-1)
@@ -1412,8 +1523,11 @@ async function _appendFeedPosts(){
 }
 
 function _renderPost(p){
-  const display=_feedDisplayAutor(p.autor,40)
-  const podeApagar=p.autor_id===CU.id||CU.perfil==='master'||CU.perfil==='supervisor'
+  const isAuto=p.tipo&&p.tipo!=='user'
+  const display=isAuto
+    ?{nome:'MV Corretora',avatarHTML:`<div class="avatar-mv" style="width:40px;height:40px;font-size:12.5px">MV</div>`,roleTag:`<span class="role-tag master">oficial</span>`}
+    :_feedDisplayAutor(p.autor,40)
+  const podeApagar=(!isAuto&&p.autor_id===CU.id)||CU.perfil==='master'||CU.perfil==='supervisor'
   const curtidas=p.curtidas||[]
   const comentarios=(p.comentarios||[]).filter(c=>!c.deletado).sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em))
   const reactions=REACTION_TYPES.map(t=>{
@@ -1422,8 +1536,22 @@ function _renderPost(p){
     return{tipo:t,emoji:REACTION_EMOJI[t],count:list.length,ativo:!!eu}
   })
   const editado=p.editado_em?' · editado':''
+  // Card destacado da pessoa celebrada (só em posts automáticos com sobre)
+  const tipoIco={conquista:'🏆',aniversario:'🎂',tempo_empresa:'⭐'}
+  const tipoLabel={conquista:'Meta batida',aniversario:'Aniversário',tempo_empresa:'Aniversário na MV'}
+  const featured=isAuto&&p.sobre?`
+    <div class="featured-user">
+      <div style="width:38px;height:38px;flex-shrink:0">${_feedAvatarHTML(p.sobre,38)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="featured-nome">${_escapeFeed(p.sobre.nome||'')}</div>
+        <div class="featured-role">${p.sobre.perfil==='supervisor'?'Supervisor':'Consultor(a)'}</div>
+      </div>
+      <div class="featured-tag">${tipoIco[p.tipo]||''} ${tipoLabel[p.tipo]||''}</div>
+    </div>
+  `:''
+  const postClass=isAuto?`post post-auto post-${p.tipo}`:'post'
   return `
-    <div class="post" data-post-id="${p.id}">
+    <div class="${postClass}" data-post-id="${p.id}">
       <div class="post-head">
         <div style="width:40px;height:40px;flex-shrink:0">${display.avatarHTML}</div>
         <div class="post-who">
@@ -1433,6 +1561,7 @@ function _renderPost(p){
         ${podeApagar?`<button class="post-del-btn" onclick="apagarPost('${p.id}')" title="Excluir post">🗑</button>`:''}
       </div>
       <div class="post-body">${_escapeFeed(p.conteudo)}</div>
+      ${featured}
       <div class="post-reactions">
         ${reactions.map(r=>`<button class="react-btn ${r.ativo?'active':''}" onclick="curtirPost('${p.id}','${r.tipo}')">${r.emoji}${r.count?`<span class="n">${r.count}</span>`:''}</button>`).join('')}
       </div>
@@ -1472,7 +1601,7 @@ function _renderComment(c,postId){
 
 async function _refreshPost(postId){
   const{data}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
     .eq('id',postId).single()
   if(!data)return
   const old=document.querySelector(`[data-post-id="${postId}"]`)
@@ -1596,6 +1725,8 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
     if(!jaNotif?.length){
       await notificarTodos(tituloIndiv,`${consultorNome} atingiu ${fmt(real)} — meta de ${fmt(meta)}!`,'sucesso',consultorId)
     }
+    // Post automático no feed (dedup por mês)
+    _postarConquistaMeta(consultorId,consultorNome).catch(e=>console.warn('post conquista:',e))
   }
 
   // Checar meta da EQUIPE — usa RPC para realizado (contorna RLS) + metas_mensais para meta
@@ -1618,6 +1749,8 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
         if(!jaNotifEq?.length){
           const{data:sup}=await sb.from('usuarios').select('id').eq('perfil','supervisor').eq('equipe_id',equipeId).limit(1).maybeSingle()
           await notificarTodos(tituloEq,`A equipe ${equipeNome} atingiu ${fmt(realTotal)} de ${fmt(metaTotal)}! Parabéns a todos!`,'sucesso',sup?.id||null)
+          // Post automático no feed (dedup por mês por supervisor)
+          _postarConquistaEquipe(sup?.id||null,equipeNome).catch(e=>console.warn('post equipe:',e))
         }
       }
     }
