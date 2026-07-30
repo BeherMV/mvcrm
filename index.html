@@ -1013,16 +1013,19 @@ window.verPerfilDe=(userId)=>{
 }
 
 window.exportarEquipeCSV=async()=>{
-  const{data}=await sb.from('usuarios').select('nome,email,perfil,cpf,data_nascimento,data_entrada,equipes(nome)').in('perfil',['consultor','supervisor']).order('nome')
-  const headers=['Nome','Email','Perfil','CPF','Data de Nascimento','Data de Entrada','Equipe']
+  const{data}=await sb.from('usuarios').select('nome,email,perfil,cpf,cnpj,razao_social,pix,data_nascimento,data_entrada,equipes(nome)').in('perfil',['consultor','supervisor']).order('nome')
+  const headers=['Nome','Email','Perfil','Equipe','CPF','CNPJ','Razão Social','Chave PIX','Data de Nascimento','Data de Entrada']
   const rows=(data||[]).map(u=>[
     u.nome||'',
     u.email||'',
     u.perfil||'',
+    u.equipes?.nome||'',
     u.cpf?formatarCPF(u.cpf):'',
+    u.cnpj?formatarCNPJ(u.cnpj):'',
+    u.razao_social||'',
+    u.pix||'',
     u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'',
-    u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'',
-    u.equipes?.nome||''
+    u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):''
   ])
   const csv=[headers,...rows].map(r=>r.map(_csvEscape).join(';')).join('\r\n')
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'})
