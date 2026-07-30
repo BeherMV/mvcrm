@@ -1118,7 +1118,8 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
         const tituloEq=`🏆 Equipe ${equipeNome} bateu a meta!`
         const{data:jaNotifEq}=await sb.from('notificacoes').select('id').eq('titulo',tituloEq).gte('criada_em',hoje+'T00:00:00').limit(1)
         if(!jaNotifEq?.length){
-          await notificarTodos(tituloEq,`A equipe ${equipeNome} atingiu ${fmt(realTotal)} de ${fmt(metaTotal)}! Parabéns a todos!`,'sucesso')
+          const{data:sup}=await sb.from('usuarios').select('id').eq('perfil','supervisor').eq('equipe_id',equipeId).limit(1).maybeSingle()
+          await notificarTodos(tituloEq,`A equipe ${equipeNome} atingiu ${fmt(realTotal)} de ${fmt(metaTotal)}! Parabéns a todos!`,'sucesso',sup?.id||null)
         }
       }
     }
