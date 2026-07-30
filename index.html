@@ -515,6 +515,100 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .post-act-btn:hover{background:var(--card-hover);color:var(--text1)}
 .post-act-btn.del:hover{background:var(--crit-bg,#FEE2E2);color:var(--red)}
 .post-act-btn.den:hover{background:var(--warn-bg,#FEF3C7);color:var(--amber)}
+
+/* Imagem no post */
+.post-imagem{
+  width:100%;max-height:480px;object-fit:cover;
+  border-radius:10px;margin-bottom:12px;display:block;
+  border:1px solid var(--border);cursor:zoom-in;
+  background:var(--surface);
+}
+
+/* Enquete */
+.enquete-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;margin-bottom:12px;
+}
+.enquete-pergunta{
+  font-size:13.5px;font-weight:700;color:var(--text1);
+  margin-bottom:10px;line-height:1.4;
+}
+.enquete-opcao{
+  all:unset;cursor:pointer;
+  display:block;width:100%;
+  padding:9px 12px;margin-bottom:6px;
+  border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;color:var(--text1);
+  background:var(--card);
+  transition:all .15s;position:relative;overflow:hidden;
+}
+.enquete-opcao:hover:not(.voted):not(.disabled){border-color:var(--mid);background:var(--card-hover)}
+.enquete-opcao.disabled{cursor:default}
+.enquete-fill{
+  position:absolute;left:0;top:0;bottom:0;
+  background:var(--grad-soft);
+  transition:width .5s cubic-bezier(.5,.1,.1,1);z-index:0;
+}
+.enquete-opcao.voted .enquete-fill{background:var(--grad-soft);border-radius:6px}
+.enquete-opcao.voted{border-color:var(--mid);font-weight:600}
+.enquete-op-texto{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.enquete-op-pct{font-size:12px;color:var(--text2);font-weight:600;font-variant-numeric:tabular-nums}
+.enquete-foot{font-size:11px;color:var(--text3);margin-top:8px;text-align:right}
+
+/* Composer: previews de imagem/enquete */
+.composer-preview{
+  margin-top:10px;padding:10px;border-radius:10px;
+  background:var(--surface);border:1px dashed var(--border);
+  position:relative;
+}
+.composer-preview img{max-width:100%;max-height:200px;border-radius:8px;display:block}
+.composer-preview .remove-btn{
+  position:absolute;top:6px;right:6px;
+  width:26px;height:26px;border-radius:50%;
+  border:none;cursor:pointer;
+  background:rgba(0,0,0,.7);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;line-height:1;
+}
+.composer-preview.enquete-preview{padding:12px 14px}
+.composer-preview .pv-titulo{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.composer-preview .pv-pergunta{font-size:13px;font-weight:700;color:var(--text1);margin-bottom:6px}
+.composer-preview .pv-opcao{font-size:12px;color:var(--text2);padding:3px 0}
+
+/* Opções da enquete no modal */
+.enq-opcao-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.enq-opcao-row input{
+  flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;font-family:inherit;background:var(--bg2);
+}
+.enq-opcao-remove{
+  all:unset;cursor:pointer;
+  width:28px;height:28px;border-radius:6px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:14px;
+}
+.enq-opcao-remove:hover{background:var(--crit-bg);color:var(--red)}
+
+/* Composer icons: foto/enquete */
+.composer-icon-btn{
+  all:unset;cursor:pointer;
+  width:34px;height:34px;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:16px;
+  border:1px solid transparent;transition:all .15s;
+}
+.composer-icon-btn:hover{background:var(--card-hover);color:var(--mid);border-color:var(--border)}
+.composer-icon-btn.active{color:var(--mid);border-color:var(--mid);background:var(--grad-soft)}
+
+/* Overlay pra visualizar imagem em fullscreen */
+.img-lightbox{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.9);
+  display:none;align-items:center;justify-content:center;padding:20px;
+  cursor:zoom-out;
+}
+.img-lightbox.open{display:flex}
+.img-lightbox img{max-width:100%;max-height:100%;border-radius:8px}
 </style>
 
 
@@ -677,6 +771,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="modal-btns">
       <button class="btn btn-sec" onclick="closeModal(&#39;mod-agenda&#39;)">Cancelar</button>
       <button class="btn btn-pri" onclick="salvarAgendamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mod-enquete">
+  <div class="modal-box" style="max-width:460px">
+    <h3>Criar enquete</h3>
+    <div class="mfield">
+      <label>Pergunta</label>
+      <input type="text" id="enq-pergunta" maxlength="200" placeholder="Ex: Qual operadora tá mais complicada este mês?" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Opções (2 a 4)</div>
+    <div id="enq-opcoes-lista"></div>
+    <button class="btn btn-sec" onclick="_addOpcaoEnquete()" id="enq-add-btn" style="width:100%;margin-bottom:14px;padding:8px;font-size:12px">+ Adicionar opção</button>
+    <div class="alert-err" id="enq-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-enquete')">Cancelar</button>
+      <button class="btn btn-pri" onclick="confirmarEnquete()">Adicionar ao post</button>
     </div>
   </div>
 </div>
@@ -1054,6 +1166,8 @@ async function iniciarApp(){
   else setupConsultor()
   // Automações do Feed (aniversário pessoal + aniversário na empresa) — dispara 1x por sessão
   _rodarAutomacoesFeed()
+  // Realtime: liga o canal do feed pra receber posts/curtidas/comentários/votos ao vivo
+  _subscribeFeed()
 }
 
 // ── NOTIFICAÇÕES ──
@@ -1505,6 +1619,196 @@ async function _processarMencoes(conteudo,postId){
   await sb.from('notificacoes').insert(rows)
 }
 
+// Estado pendente do composer (imagem selecionada + enquete rascunho)
+let _composerImagem=null  // {dataUrl, blob}
+let _composerEnquete=null // {pergunta, opcoes:[{id,texto}]}
+let _feedChannel=null     // canal realtime do Supabase
+
+// Upload de imagem pro bucket posts-imagens
+async function _uploadPostImagem(dataUrl){
+  const blob=await(await fetch(dataUrl)).blob()
+  const path=`${CU.id}/${Date.now()}.jpg`
+  const{error}=await sb.storage.from('posts-imagens').upload(path,blob,{contentType:'image/jpeg',cacheControl:'3600'})
+  if(error)throw error
+  const{data}=sb.storage.from('posts-imagens').getPublicUrl(path)
+  return data.publicUrl
+}
+
+// Composer: seleção de imagem
+window.selecionarImagemPost=async(input)=>{
+  const f=input.files?.[0]
+  if(!f)return
+  if(!f.type.startsWith('image/')){mostrarToast('Erro','Envie um arquivo de imagem','alerta');return}
+  if(f.size>10*1024*1024){mostrarToast('Erro','Imagem grande demais (máx 10MB)','alerta');return}
+  try{
+    const dataUrl=await _redimensionarImagem(f,1200,0.85)
+    _composerImagem={dataUrl}
+    _renderComposerPreviews()
+  }catch(e){mostrarToast('Erro','Não consegui ler essa imagem','urgente')}
+}
+window.removerImagemPost=()=>{_composerImagem=null;_renderComposerPreviews()}
+
+// Composer: previews (imagem + enquete)
+function _renderComposerPreviews(){
+  const wrap=$('composer-previews');if(!wrap)return
+  let html=''
+  if(_composerImagem){
+    html+=`<div class="composer-preview">
+      <button class="remove-btn" onclick="removerImagemPost()" title="Remover imagem">×</button>
+      <img src="${_composerImagem.dataUrl}" alt="">
+    </div>`
+  }
+  if(_composerEnquete){
+    html+=`<div class="composer-preview enquete-preview">
+      <button class="remove-btn" onclick="removerEnquete()" title="Remover enquete">×</button>
+      <div class="pv-titulo">📊 Enquete</div>
+      <div class="pv-pergunta">${_escapeFeed(_composerEnquete.pergunta)}</div>
+      ${_composerEnquete.opcoes.map(o=>`<div class="pv-opcao">• ${_escapeFeed(o.texto)}</div>`).join('')}
+    </div>`
+  }
+  wrap.innerHTML=html
+}
+
+// Modal enquete
+window.abrirEnquete=()=>{
+  const existente=_composerEnquete
+  $('enq-pergunta').value=existente?.pergunta||''
+  const opcoes=existente?.opcoes||[{id:'a',texto:''},{id:'b',texto:''}]
+  _renderOpcoesEnquete(opcoes)
+  $('enq-err').style.display='none';$('enq-err').textContent=''
+  openModal('mod-enquete')
+}
+
+function _renderOpcoesEnquete(opcoes){
+  $('enq-opcoes-lista').innerHTML=opcoes.map((o,i)=>`
+    <div class="enq-opcao-row">
+      <input type="text" data-idx="${i}" value="${(o.texto||'').replace(/"/g,'&quot;')}" maxlength="80" placeholder="Opção ${i+1}">
+      ${opcoes.length>2?`<button class="enq-opcao-remove" onclick="_removeOpcaoEnquete(${i})" title="Remover">×</button>`:''}
+    </div>
+  `).join('')
+  $('enq-add-btn').style.display=opcoes.length>=4?'none':'block'
+}
+
+function _lerOpcoesEnquete(){
+  return[...document.querySelectorAll('#enq-opcoes-lista input')].map((inp,i)=>({
+    id:String.fromCharCode(97+i),
+    texto:inp.value.trim()
+  }))
+}
+
+window._addOpcaoEnquete=()=>{
+  const atual=_lerOpcoesEnquete()
+  if(atual.length>=4)return
+  atual.push({id:String.fromCharCode(97+atual.length),texto:''})
+  _renderOpcoesEnquete(atual)
+}
+
+window._removeOpcaoEnquete=(idx)=>{
+  const atual=_lerOpcoesEnquete()
+  if(atual.length<=2)return
+  atual.splice(idx,1)
+  // Reindexa ids
+  atual.forEach((o,i)=>o.id=String.fromCharCode(97+i))
+  _renderOpcoesEnquete(atual)
+}
+
+window.confirmarEnquete=()=>{
+  const pergunta=$('enq-pergunta').value.trim()
+  const err=$('enq-err')
+  if(!pergunta){err.textContent='Escreva a pergunta.';err.style.display='block';return}
+  if(pergunta.length>200){err.textContent='Pergunta muito longa (máx 200).';err.style.display='block';return}
+  const opcoes=_lerOpcoesEnquete().filter(o=>o.texto.length>0)
+  if(opcoes.length<2){err.textContent='Preencha pelo menos 2 opções.';err.style.display='block';return}
+  if(opcoes.some(o=>o.texto.length>80)){err.textContent='Opção muito longa (máx 80).';err.style.display='block';return}
+  _composerEnquete={pergunta,opcoes}
+  closeModal('mod-enquete')
+  _renderComposerPreviews()
+}
+
+window.removerEnquete=()=>{_composerEnquete=null;_renderComposerPreviews()}
+
+// Voto em enquete
+window.votarEnquete=async(postId,opcaoId)=>{
+  const{data:existente}=await sb.from('enquete_votos').select('id,opcao_id').eq('post_id',postId).eq('usuario_id',CU.id).maybeSingle()
+  let err
+  if(existente){
+    if(existente.opcao_id===opcaoId){
+      ;({error:err}=await sb.from('enquete_votos').delete().eq('id',existente.id))
+    }else{
+      ;({error:err}=await sb.from('enquete_votos').update({opcao_id:opcaoId}).eq('id',existente.id))
+    }
+  }else{
+    ;({error:err}=await sb.from('enquete_votos').insert({post_id:postId,opcao_id:opcaoId,usuario_id:CU.id}))
+  }
+  if(err){mostrarToast('Erro',err.message,'urgente');return}
+  await _refreshPost(postId)
+}
+
+// Lightbox pra imagem em fullscreen
+window.abrirImagemFull=(url)=>{
+  let lb=document.getElementById('img-lightbox')
+  if(!lb){
+    lb=document.createElement('div')
+    lb.id='img-lightbox';lb.className='img-lightbox'
+    lb.onclick=()=>lb.classList.remove('open')
+    lb.innerHTML='<img id="lb-img" alt="">'
+    document.body.appendChild(lb)
+  }
+  document.getElementById('lb-img').src=url
+  lb.classList.add('open')
+}
+
+// Realtime: assina eventos do feed
+function _subscribeFeed(){
+  if(_feedChannel)return
+  _feedChannel=sb.channel('feed-live')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>{
+      // Ignora se o próprio usuário postou (já vai recarregar via publicarPost)
+      if(payload.new?.autor_id===CU.id)return
+      if($('p-feed')?.classList.contains('active')){
+        loadFeed()
+      }
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'posts'},payload=>{
+      const nova=payload.new,antiga=payload.old
+      if(nova?.deletado&&!antiga?.deletado){
+        document.querySelector(`[data-post-id="${nova.id}"]`)?.remove()
+      }else if($('p-feed')?.classList.contains('active')){
+        _refreshPost(nova.id)
+      }
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'curtidas'},payload=>{
+      if(payload.new?.usuario_id===CU.id)return
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'curtidas'},payload=>{
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.old?.post_id)
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'curtidas'},payload=>{
+      if(payload.new?.usuario_id===CU.id)return
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'comentarios'},payload=>{
+      if(payload.new?.autor_id===CU.id)return
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'comentarios'},payload=>{
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'enquete_votos'},payload=>{
+      if(payload.new?.usuario_id===CU.id)return
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'enquete_votos'},payload=>{
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.old?.post_id)
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'enquete_votos'},payload=>{
+      if(payload.new?.usuario_id===CU.id)return
+      if($('p-feed')?.classList.contains('active'))_refreshPost(payload.new.post_id)
+    })
+    .subscribe()
+}
+
 // Notifica todos os masters (usado por denúncias)
 async function _notificarMasters(titulo,mensagem,sobreUsuarioId){
   const{data}=await sb.from('usuarios').select('id').eq('perfil','master')
@@ -1605,6 +1909,7 @@ async function _podePostar(){
 async function loadFeed(){
   const el=$('p-feed');if(!el)return
   _feedOffset=0;_feedNoMore=false;_feedLoading=false
+  _composerImagem=null;_composerEnquete=null
   el.innerHTML='<div class="feed-wrap"><div class="loading">Carregando feed…</div></div>'
   const perm=await _podePostar()
   const meuAvatar=_feedAvatarHTML(CU,40)
@@ -1615,8 +1920,16 @@ async function loadFeed(){
           <div style="width:40px;height:40px;flex-shrink:0">${meuAvatar}</div>
           <textarea id="feed-text" placeholder="${perm.texto||'Bloqueado hoje'}" maxlength="2000" oninput="_atualizarBtnPublicar()" ${perm.pode?'':'disabled'}></textarea>
         </div>
+        <div id="composer-previews"></div>
         <div class="composer-foot">
-          <div class="composer-hint">${perm.hint}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label class="composer-icon-btn" title="Adicionar imagem" ${perm.pode?'':'style="pointer-events:none;opacity:.4"'}>
+              📷
+              <input type="file" id="composer-img-input" accept="image/*" onchange="selecionarImagemPost(this)" style="display:none">
+            </label>
+            <button class="composer-icon-btn" onclick="abrirEnquete()" title="Criar enquete" ${perm.pode?'':'disabled'}>📊</button>
+            <div class="composer-hint" style="margin-left:6px">${perm.hint}</div>
+          </div>
           <div style="display:flex;align-items:center;gap:12px">
             <span class="composer-count" id="feed-char-count">0/2000</span>
             <button class="btn-publish" id="feed-publish-btn" onclick="publicarPost()" disabled>Publicar</button>
@@ -1636,7 +1949,7 @@ async function _appendFeedPosts(){
   const loadMoreEl=$('feed-load-more')
   loadMoreEl.innerHTML='<div class="loading">Carregando…</div>'
   const{data,error}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,enquete,imagem_url,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url)),enquete_votos(usuario_id,opcao_id)`)
     .eq('deletado',false)
     .order('sticky',{ascending:false})
     .order('criado_em',{ascending:false})
@@ -1715,6 +2028,8 @@ function _renderPost(p){
         <div class="post-acoes">${acoes}</div>
       </div>
       <div class="post-body">${_feedFormatBody(p.conteudo)}</div>
+      ${p.imagem_url?`<img class="post-imagem" src="${p.imagem_url}" alt="" onclick="abrirImagemFull('${p.imagem_url}')">`:''}
+      ${p.enquete?_renderEnquete(p):''}
       ${featured}
       <div class="post-reactions">
         ${reactions.map(r=>`<button class="react-btn ${r.ativo?'active':''}" onclick="curtirPost('${p.id}','${r.tipo}')">${r.emoji}${r.count?`<span class="n">${r.count}</span>`:''}</button>`).join('')}
@@ -1726,6 +2041,35 @@ function _renderPost(p){
           <input type="text" placeholder="Comentar…" maxlength="1000" onkeydown="if(event.key==='Enter'){comentarPost('${p.id}',this)}">
         </div>
       </div>
+    </div>
+  `
+}
+
+function _renderEnquete(p){
+  const enq=p.enquete
+  if(!enq?.opcoes?.length)return ''
+  const votos=p.enquete_votos||[]
+  const total=votos.length
+  const meuVoto=votos.find(v=>v.usuario_id===CU.id)?.opcao_id
+  const opts=enq.opcoes.map(o=>{
+    const cont=votos.filter(v=>v.opcao_id===o.id).length
+    const pct=total?Math.round(cont/total*100):0
+    const voted=meuVoto===o.id
+    return{...o,cont,pct,voted}
+  })
+  return `
+    <div class="enquete-wrap">
+      <div class="enquete-pergunta">📊 ${_escapeFeed(enq.pergunta)}</div>
+      ${opts.map(o=>`
+        <button class="enquete-opcao ${o.voted?'voted':''} ${meuVoto?'disabled':''}" onclick="votarEnquete('${p.id}','${o.id}')">
+          ${meuVoto?`<div class="enquete-fill" style="width:${o.pct}%"></div>`:''}
+          <div class="enquete-op-texto">
+            <span>${o.voted?'✓ ':''}${_escapeFeed(o.texto)}</span>
+            ${meuVoto?`<span class="enquete-op-pct">${o.pct}% · ${o.cont}</span>`:''}
+          </div>
+        </button>
+      `).join('')}
+      <div class="enquete-foot">${total} ${total===1?'voto':'votos'}${meuVoto?' · clique de novo pra desfazer':''}</div>
     </div>
   `
 }
@@ -1755,7 +2099,7 @@ function _renderComment(c,postId){
 
 async function _refreshPost(postId){
   const{data}=await sb.from('posts')
-    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url))`)
+    .select(`id,conteudo,criado_em,editado_em,autor_id,tipo,sobre_usuario_id,sticky,enquete,imagem_url,autor:usuarios!autor_id(id,nome,perfil,foto_url),sobre:usuarios!sobre_usuario_id(id,nome,perfil,foto_url),curtidas(usuario_id,tipo),comentarios(id,conteudo,criado_em,deletado,autor:usuarios!autor_id(id,nome,perfil,foto_url)),enquete_votos(usuario_id,opcao_id)`)
     .eq('id',postId).single()
   if(!data)return
   const old=document.querySelector(`[data-post-id="${postId}"]`)
@@ -1771,18 +2115,30 @@ window._atualizarBtnPublicar=()=>{
   const btn=$('feed-publish-btn'),cc=$('feed-char-count')
   const len=ta.value.trim().length
   const total=ta.value.length
-  btn.disabled=len===0||total>2000
+  // Habilita se tem texto OU imagem OU enquete (a pergunta da enquete substitui o corpo se vazio)
+  btn.disabled=(len===0&&!_composerImagem&&!_composerEnquete)||total>2000
   cc.textContent=`${total}/2000`
   cc.classList.toggle('over',total>2000)
 }
 
 window.publicarPost=async()=>{
   const ta=$('feed-text');if(!ta)return
-  const conteudo=ta.value.trim()
-  if(!conteudo)return
+  let conteudo=ta.value.trim()
+  // Se não tem texto mas tem enquete, usa a pergunta como conteúdo
+  if(!conteudo&&_composerEnquete)conteudo=_composerEnquete.pergunta
+  // Se não tem nada e não tem enquete/imagem, bloqueia
+  if(!conteudo&&!_composerImagem&&!_composerEnquete)return
+  if(!conteudo)conteudo=' '  // conteúdo é NOT NULL no schema, evita erro se só tem imagem
   if(conteudo.length>2000){mostrarToast('Post muito longo','Máximo 2000 caracteres','alerta');return}
   const btn=$('feed-publish-btn');btn.disabled=true;btn.textContent='Publicando…'
-  const{data,error}=await sb.from('posts').insert({autor_id:CU.id,conteudo}).select('id').single()
+  // Upload imagem primeiro (se houver)
+  let imagemUrl=null
+  if(_composerImagem){
+    try{imagemUrl=await _uploadPostImagem(_composerImagem.dataUrl)}
+    catch(e){btn.disabled=false;btn.textContent='Publicar';mostrarToast('Erro no upload',e.message||'','urgente');return}
+  }
+  const payload={autor_id:CU.id,conteudo,imagem_url:imagemUrl,enquete:_composerEnquete||null}
+  const{data,error}=await sb.from('posts').insert(payload).select('id').single()
   btn.textContent='Publicar'
   if(error){
     btn.disabled=false
@@ -1791,7 +2147,6 @@ window.publicarPost=async()=>{
     return
   }
   ta.value=''
-  // Notifica quem foi @mencionado (roda em background, não trava o refresh)
   if(data?.id) _processarMencoes(conteudo,data.id).catch(e=>console.warn('mencoes:',e))
   mostrarToast('Publicado!','','info')
   await loadFeed()
