@@ -609,6 +609,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 }
 .img-lightbox.open{display:flex}
 .img-lightbox img{max-width:100%;max-height:100%;border-radius:8px}
+
+/* Autocomplete de menções */
+.mention-dropdown{
+  margin-top:8px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:4px;
+  max-height:220px;overflow-y:auto;
+  box-shadow:var(--shadow);
+}
+.mention-item{
+  all:unset;cursor:pointer;
+  display:flex;gap:10px;align-items:center;
+  padding:8px 10px;border-radius:8px;
+  width:100%;box-sizing:border-box;
+  transition:background .1s;
+}
+.mention-item:hover,.mention-item:focus{background:var(--grad-soft)}
+.mention-nome{font-size:13px;font-weight:600;color:var(--text1);line-height:1.2}
+.mention-role{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+/* Painel de emojis */
+.emoji-picker{
+  margin-top:8px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:8px;
+  box-shadow:var(--shadow);
+}
+.emoji-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:2px;
+}
+@media (max-width:600px){.emoji-grid{grid-template-columns:repeat(8,1fr)}}
+.emoji-item{
+  all:unset;cursor:pointer;
+  aspect-ratio:1;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;line-height:1;
+  border-radius:6px;
+  transition:background .1s,transform .1s;
+}
+.emoji-item:hover{background:var(--card-hover);transform:scale(1.2)}
 </style>
 
 
@@ -1623,6 +1669,95 @@ async function _processarMencoes(conteudo,postId){
 let _composerImagem=null  // {dataUrl, blob}
 let _composerEnquete=null // {pergunta, opcoes:[{id,texto}]}
 let _feedChannel=null     // canal realtime do Supabase
+let _mentionCache=[]      // cache de usuarios pra autocomplete de menções
+
+// Emojis do picker (60 comuns em contexto de trabalho)
+const EMOJIS_PICKER=[
+  '😀','😃','😄','😁','😊','😍','🥰','🤩','😎','🤗','😜','😇',
+  '👍','👏','🙌','💪','🤝','👊','✋','🙏','👌','🤞','👀','🎯',
+  '❤️','🧡','💛','💚','💙','💜','🖤','💯','✨','🔥','⭐','💫',
+  '🎉','🎊','🎁','🎂','🥳','🍾','🥂','🎈','🏆','🥇','🏅','💎',
+  '🚀','📈','💰','💼','📊','📝','✅','❌','⚡','☕','☀️','🌟'
+]
+
+// Emoji picker
+window._toggleEmojiPicker=()=>{
+  const el=$('emoji-picker');if(!el)return
+  const abrindo=el.style.display==='none'||!el.style.display
+  if(abrindo){
+    el.innerHTML=`<div class="emoji-grid">${EMOJIS_PICKER.map(e=>`<button type="button" class="emoji-item" onclick="_insertEmoji('${e}')">${e}</button>`).join('')}</div>`
+    el.style.display='block'
+  }else{
+    el.style.display='none'
+  }
+}
+
+window._insertEmoji=(emoji)=>{
+  const ta=$('feed-text');if(!ta)return
+  const start=ta.selectionStart||ta.value.length
+  const end=ta.selectionEnd||ta.value.length
+  ta.value=ta.value.slice(0,start)+emoji+ta.value.slice(end)
+  const newPos=start+emoji.length
+  ta.focus()
+  ta.setSelectionRange(newPos,newPos)
+  _atualizarBtnPublicar()
+}
+
+// Autocomplete de menções
+async function _initMentionCache(){
+  if(_mentionCache.length)return
+  const{data}=await sb.from('usuarios').select('id,nome,foto_url,perfil').neq('id',CU.id).order('nome')
+  _mentionCache=(data||[]).filter(u=>u.nome)
+}
+
+window._checkMention=async()=>{
+  const ta=$('feed-text');if(!ta)return
+  const pos=ta.selectionStart
+  const before=ta.value.slice(0,pos)
+  const m=before.match(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)$/)
+  if(!m){_closeMentionDropdown();return}
+  await _initMentionCache()
+  const prefix=_semAcento(m[1])
+  const matches=_mentionCache.filter(u=>{
+    const first=_semAcento((u.nome||'').split(/\s+/)[0])
+    return first.startsWith(prefix)
+  }).slice(0,6)
+  if(!matches.length){_closeMentionDropdown();return}
+  const el=$('mention-dropdown')
+  el.innerHTML=matches.map(u=>{
+    const first=(u.nome||'').split(/\s+/)[0].replace(/'/g,"\\'")
+    const av=u.foto_url
+      ?`<img src="${u.foto_url}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block">`
+      :`<div class="av" style="width:28px;height:28px;font-size:10px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
+    const role=u.perfil==='master'?'MV Corretora':u.perfil==='supervisor'?'supervisor':'consultor'
+    return `<button type="button" class="mention-item" onmousedown="event.preventDefault()" onclick="_selectMention('${first}')">
+      <div style="width:28px;height:28px;flex-shrink:0">${av}</div>
+      <div><div class="mention-nome">${_escapeFeed(u.nome)}</div><div class="mention-role">${role}</div></div>
+    </button>`
+  }).join('')
+  el.style.display='block'
+}
+
+window._closeMentionDropdown=()=>{
+  const el=$('mention-dropdown')
+  if(el)el.style.display='none'
+}
+
+window._selectMention=(firstName)=>{
+  const ta=$('feed-text');if(!ta)return
+  const pos=ta.selectionStart
+  const before=ta.value.slice(0,pos)
+  const m=before.match(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)$/)
+  if(!m)return
+  const newBefore=before.slice(0,m.index)+'@'+firstName+' '
+  const rest=ta.value.slice(pos)
+  ta.value=newBefore+rest
+  const newPos=newBefore.length
+  ta.focus()
+  ta.setSelectionRange(newPos,newPos)
+  _closeMentionDropdown()
+  _atualizarBtnPublicar()
+}
 
 // Upload de imagem pro bucket posts-imagens
 async function _uploadPostImagem(dataUrl){
@@ -1918,11 +2053,14 @@ async function loadFeed(){
       <div class="composer ${perm.pode?'':'locked'}" id="feed-composer">
         <div class="composer-row">
           <div style="width:40px;height:40px;flex-shrink:0">${meuAvatar}</div>
-          <textarea id="feed-text" placeholder="${perm.texto||'Bloqueado hoje'}" maxlength="2000" oninput="_atualizarBtnPublicar()" ${perm.pode?'':'disabled'}></textarea>
+          <textarea id="feed-text" placeholder="${perm.texto||'Bloqueado hoje'}" maxlength="2000" oninput="_atualizarBtnPublicar();_checkMention()" onblur="setTimeout(_closeMentionDropdown,180)" ${perm.pode?'':'disabled'}></textarea>
         </div>
         <div id="composer-previews"></div>
+        <div id="mention-dropdown" class="mention-dropdown" style="display:none"></div>
+        <div id="emoji-picker" class="emoji-picker" style="display:none"></div>
         <div class="composer-foot">
           <div style="display:flex;align-items:center;gap:6px">
+            <button class="composer-icon-btn" onclick="_toggleEmojiPicker()" title="Inserir emoji" ${perm.pode?'':'disabled'}>😀</button>
             <label class="composer-icon-btn" title="Adicionar imagem" ${perm.pode?'':'style="pointer-events:none;opacity:.4"'}>
               📷
               <input type="file" id="composer-img-input" accept="image/*" onchange="selecionarImagemPost(this)" style="display:none">
