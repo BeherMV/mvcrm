@@ -655,6 +655,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   transition:background .1s,transform .1s;
 }
 .emoji-item:hover{background:var(--card-hover);transform:scale(1.2)}
+
+/* Menção @TODOS destacada */
+.mention.mention-all{
+  background:linear-gradient(135deg,#F59E0B,#EF4444);
+  color:#fff;
+  font-weight:800;
+  padding:1px 8px;
+}
+.mention-item.mention-todos{
+  background:var(--grad-soft);border:1px dashed var(--mid);
+}
+.mention-item.mention-todos .mention-nome{color:var(--mid);font-weight:800}
+
+/* Botão "Responder" no comentário */
+.comment-reply{
+  all:unset;cursor:pointer;
+  font-size:10.5px;font-weight:600;color:var(--mid);
+  margin-left:8px;padding:1px 8px;border-radius:5px;
+  transition:background .12s;
+}
+.comment-reply:hover{background:var(--grad-soft)}
+
+/* Animação de highlight quando post é aberto via notificação */
+@keyframes post-highlight{
+  0%,100%{box-shadow:none}
+  20%,80%{box-shadow:0 0 0 4px var(--mid),0 0 30px -5px var(--mid)}
+}
+.post.highlight{animation:post-highlight 2.4s ease}
 </style>
 
 
@@ -1238,8 +1266,8 @@ async function carregarNotificacoes(){
     const{data:us}=await sb.from('usuarios').select('id,nome,foto_url').in('id',uids)
     ;(us||[]).forEach(u=>{userMap[u.id]=u})
   }
-  const cores={sucesso:'#D1FAE5',info:'#EFF6FF',alerta:'#FEF3C7',urgente:'#FEE2E2'}
-  const ic={sucesso:'🏆',info:'ℹ️',alerta:'⚠️',urgente:'🔴'}
+  const cores={sucesso:'#D1FAE5',info:'#EFF6FF',alerta:'#FEF3C7',urgente:'#FEE2E2',mencao:'#F3E8FF'}
+  const ic={sucesso:'🏆',info:'ℹ️',alerta:'⚠️',urgente:'🔴',mencao:'📣'}
   $('notif-list').innerHTML=notifs.length?notifs.map(n=>{
     const sobre=n.sobre_usuario_id?userMap[n.sobre_usuario_id]:null
     const iconInner=sobre?.foto_url
@@ -1254,7 +1282,32 @@ async function carregarNotificacoes(){
     </div>`
   }).join(''):'<div class="empty">Nenhuma notificação</div>'
 }
-window.lerNotif=async id=>{await sb.from('notificacoes').update({lida:true}).eq('id',id);await carregarNotificacoes()}
+window.lerNotif=async id=>{
+  const{data:notif}=await sb.from('notificacoes').select('link_post_id').eq('id',id).maybeSingle()
+  await sb.from('notificacoes').update({lida:true}).eq('id',id)
+  await carregarNotificacoes()
+  if(notif?.link_post_id){
+    // Fecha painel de notificações
+    notifOpen=false
+    $('notif-panel')?.classList.remove('open')
+    // Navega pro Feed
+    abrirFeed()
+    // Espera o feed carregar e scrolla até o post com highlight
+    const postId=notif.link_post_id
+    let tentativas=0
+    const scroll=()=>{
+      const el=document.querySelector(`[data-post-id="${postId}"]`)
+      if(el){
+        el.scrollIntoView({behavior:'smooth',block:'center'})
+        el.classList.add('highlight')
+        setTimeout(()=>el.classList.remove('highlight'),2600)
+      }else if(tentativas++<10){
+        setTimeout(scroll,300)
+      }
+    }
+    setTimeout(scroll,600)
+  }
+}
 window.marcarTodasLidas=async()=>{await sb.from('notificacoes').update({lida:true}).eq('para_usuario',CU.id);await carregarNotificacoes()}
 window.limparNotificacoes=async()=>{
   if(!confirm('Apagar todas as notificações?'))return
@@ -1636,33 +1689,73 @@ function _escapeFeed(str){return String(str||'').replace(/&/g,'&amp;').replace(/
 // Normaliza pra comparação sem acento
 const _semAcento=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
 
-// Escapa + destaca @menções no corpo do post
+// Escapa + destaca @menções (incluindo @TODOS especial) no corpo do post/comentário
 function _feedFormatBody(str){
-  return _escapeFeed(str).replace(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)/g,'<span class="mention">@$1</span>')
+  return _escapeFeed(str)
+    .replace(/@TODOS\b/gi,'<span class="mention mention-all">@TODOS</span>')
+    .replace(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)/g,(match,p1)=>{
+      if(_semAcento(p1)==='todos')return match
+      return `<span class="mention">@${p1}</span>`
+    })
 }
 
-// Detecta @menções e notifica os usuários batidos
+// Detecta @menções e notifica os usuários batidos (com link pro post)
 async function _processarMencoes(conteudo,postId){
+  const temTodos=/@TODOS\b/i.test(conteudo)
   const matches=[...conteudo.matchAll(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)/g)]
-  if(!matches.length)return
-  const tokens=[...new Set(matches.map(m=>_semAcento(m[1])))]
-  const{data:users}=await sb.from('usuarios').select('id,nome').neq('id',CU.id)
-  if(!users)return
-  const mencionados=new Set()
-  users.forEach(u=>{
-    const palavras=(u.nome||'').split(/\s+/).map(_semAcento)
-    if(tokens.some(t=>palavras.some(p=>p===t)))mencionados.add(u.id)
-  })
-  if(!mencionados.size)return
-  const rows=[...mencionados].map(uid=>({
-    para_usuario:uid,
-    titulo:`${CU.nome} mencionou você no Feed`,
-    mensagem:conteudo.slice(0,120)+(conteudo.length>120?'…':''),
-    tipo:'info',
-    lida:false,
-    sobre_usuario_id:CU.id
-  }))
-  await sb.from('notificacoes').insert(rows)
+  const tokens=[...new Set(matches.map(m=>_semAcento(m[1])).filter(t=>t!=='todos'))]
+  if(!temTodos&&!tokens.length)return
+
+  const notifs=[]
+
+  if(temTodos){
+    // Notifica TODOS os usuários (menos o próprio) — usa RPC pra contornar RLS quando existir
+    let ids=[]
+    const{data:rpcUsers,error:rpcErr}=await sb.rpc('get_todos_usuarios_ids')
+    if(!rpcErr&&rpcUsers?.length){
+      ids=rpcUsers.map(u=>u.id)
+    }else{
+      const{data}=await sb.from('usuarios').select('id')
+      ids=(data||[]).map(u=>u.id)
+    }
+    ids.filter(id=>id!==CU.id).forEach(id=>{
+      notifs.push({
+        para_usuario:id,
+        titulo:`📣 ${CU.nome} chamou toda a MV`,
+        mensagem:conteudo.slice(0,140)+(conteudo.length>140?'…':''),
+        tipo:'mencao',
+        lida:false,
+        sobre_usuario_id:CU.id,
+        link_post_id:postId
+      })
+    })
+  }else if(tokens.length){
+    const{data:users}=await sb.from('usuarios').select('id,nome').neq('id',CU.id)
+    if(!users)return
+    const mencionados=new Set()
+    users.forEach(u=>{
+      const palavras=(u.nome||'').split(/\s+/).map(_semAcento)
+      if(tokens.some(t=>palavras.some(p=>p===t)))mencionados.add(u.id)
+    })
+    if(!mencionados.size)return
+    ;[...mencionados].forEach(uid=>{
+      notifs.push({
+        para_usuario:uid,
+        titulo:`📣 ${CU.nome} mencionou você no Feed`,
+        mensagem:conteudo.slice(0,140)+(conteudo.length>140?'…':''),
+        tipo:'mencao',
+        lida:false,
+        sobre_usuario_id:CU.id,
+        link_post_id:postId
+      })
+    })
+  }
+
+  if(!notifs.length)return
+  // Insere em lotes de 50
+  for(let i=0;i<notifs.length;i+=50){
+    await sb.from('notificacoes').insert(notifs.slice(i,i+50))
+  }
 }
 
 // Estado pendente do composer (imagem selecionada + enquete rascunho)
@@ -1710,53 +1803,64 @@ async function _initMentionCache(){
   _mentionCache=(data||[]).filter(u=>u.nome)
 }
 
-window._checkMention=async()=>{
-  const ta=$('feed-text');if(!ta)return
-  const pos=ta.selectionStart
-  const before=ta.value.slice(0,pos)
+window._checkMention=async(inputId,dropdownId)=>{
+  inputId=inputId||'feed-text'
+  dropdownId=dropdownId||'mention-dropdown'
+  const inp=$(inputId),dd=$(dropdownId)
+  if(!inp||!dd)return
+  const pos=inp.selectionStart||0
+  const before=inp.value.slice(0,pos)
   const m=before.match(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)$/)
-  if(!m){_closeMentionDropdown();return}
+  if(!m){dd.style.display='none';return}
   await _initMentionCache()
   const prefix=_semAcento(m[1])
+  const mostrarTodos=prefix===''||'todos'.startsWith(prefix)
   const matches=_mentionCache.filter(u=>{
     const first=_semAcento((u.nome||'').split(/\s+/)[0])
     return first.startsWith(prefix)
-  }).slice(0,6)
-  if(!matches.length){_closeMentionDropdown();return}
-  const el=$('mention-dropdown')
-  el.innerHTML=matches.map(u=>{
+  }).slice(0,5)
+  if(!mostrarTodos&&!matches.length){dd.style.display='none';return}
+  const itemTodos=mostrarTodos?`<button type="button" class="mention-item mention-todos" onmousedown="event.preventDefault()" onclick="_selectMention('TODOS','${inputId}','${dropdownId}')">
+    <div class="avatar-mv" style="width:28px;height:28px;font-size:12px">📣</div>
+    <div><div class="mention-nome">@TODOS</div><div class="mention-role">notifica toda a MV</div></div>
+  </button>`:''
+  const itensUsuarios=matches.map(u=>{
     const first=(u.nome||'').split(/\s+/)[0].replace(/'/g,"\\'")
     const av=u.foto_url
       ?`<img src="${u.foto_url}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block">`
       :`<div class="av" style="width:28px;height:28px;font-size:10px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
     const role=u.perfil==='master'?'MV Corretora':u.perfil==='supervisor'?'supervisor':'consultor'
-    return `<button type="button" class="mention-item" onmousedown="event.preventDefault()" onclick="_selectMention('${first}')">
+    return `<button type="button" class="mention-item" onmousedown="event.preventDefault()" onclick="_selectMention('${first}','${inputId}','${dropdownId}')">
       <div style="width:28px;height:28px;flex-shrink:0">${av}</div>
       <div><div class="mention-nome">${_escapeFeed(u.nome)}</div><div class="mention-role">${role}</div></div>
     </button>`
   }).join('')
-  el.style.display='block'
+  dd.innerHTML=itemTodos+itensUsuarios
+  dd.style.display='block'
 }
 
-window._closeMentionDropdown=()=>{
-  const el=$('mention-dropdown')
+window._closeMentionDropdown=(dropdownId)=>{
+  const el=$(dropdownId||'mention-dropdown')
   if(el)el.style.display='none'
 }
 
-window._selectMention=(firstName)=>{
-  const ta=$('feed-text');if(!ta)return
-  const pos=ta.selectionStart
-  const before=ta.value.slice(0,pos)
+window._selectMention=(nome,inputId,dropdownId)=>{
+  inputId=inputId||'feed-text'
+  const inp=$(inputId)
+  if(!inp)return
+  const pos=inp.selectionStart||inp.value.length
+  const before=inp.value.slice(0,pos)
   const m=before.match(/@([a-zA-ZÀ-ſ][a-zA-Z0-9À-ſ]*)$/)
   if(!m)return
-  const newBefore=before.slice(0,m.index)+'@'+firstName+' '
-  const rest=ta.value.slice(pos)
-  ta.value=newBefore+rest
+  const newBefore=before.slice(0,m.index)+'@'+nome+' '
+  const rest=inp.value.slice(pos)
+  inp.value=newBefore+rest
   const newPos=newBefore.length
-  ta.focus()
-  ta.setSelectionRange(newPos,newPos)
-  _closeMentionDropdown()
-  _atualizarBtnPublicar()
+  inp.focus()
+  inp.setSelectionRange(newPos,newPos)
+  const dd=$(dropdownId||'mention-dropdown')
+  if(dd)dd.style.display='none'
+  if(inputId==='feed-text')_atualizarBtnPublicar()
 }
 
 // Upload de imagem pro bucket posts-imagens
@@ -2176,8 +2280,12 @@ function _renderPost(p){
         ${comentarios.map(c=>_renderComment(c,p.id)).join('')}
         <div class="add-comment">
           <div style="width:28px;height:28px;flex-shrink:0">${_feedAvatarHTML(CU,28)}</div>
-          <input type="text" placeholder="Comentar…" maxlength="1000" onkeydown="if(event.key==='Enter'){comentarPost('${p.id}',this)}">
+          <input type="text" id="cmt-input-${p.id}" placeholder="Comentar… (use @ pra mencionar)" maxlength="1000"
+            oninput="_checkMention('cmt-input-${p.id}','mention-dd-${p.id}')"
+            onblur="setTimeout(()=>_closeMentionDropdown('mention-dd-${p.id}'),180)"
+            onkeydown="if(event.key==='Enter'&&!$('mention-dd-${p.id}').style.display.includes('block')){comentarPost('${p.id}',this)}">
         </div>
+        <div id="mention-dd-${p.id}" class="mention-dropdown" style="display:none"></div>
       </div>
     </div>
   `
@@ -2220,6 +2328,7 @@ function _renderComment(c,postId){
     ?`<div class="avatar-mv" style="width:28px;height:28px;font-size:9px">MV</div>`
     :_feedAvatarHTML(autor,28)
   const podeApagar=autor?.id===CU.id||CU.perfil==='master'||CU.perfil==='supervisor'
+  const podeResponder=autor&&autor.id!==CU.id&&!isMaster
   return `
     <div class="comment" data-comment-id="${c.id}">
       <div style="width:28px;height:28px;flex-shrink:0">${avatarHTML}</div>
@@ -2227,12 +2336,22 @@ function _renderComment(c,postId){
         <div class="comment-head">
           <span class="comment-name">${_escapeFeed(nome)}</span>
           <span class="comment-time">${_feedTimeAgo(c.criado_em)}</span>
+          ${podeResponder?`<button class="comment-reply" onclick="responderComentario('${postId}','${(autor.nome||'').replace(/'/g,"\\'").split(/\s+/)[0]}')">Responder</button>`:''}
           ${podeApagar?`<button class="comment-del" onclick="apagarComentario('${c.id}','${postId}')" title="Excluir">×</button>`:''}
         </div>
-        <div class="comment-text">${_escapeFeed(c.conteudo)}</div>
+        <div class="comment-text">${_feedFormatBody(c.conteudo)}</div>
       </div>
     </div>
   `
+}
+
+window.responderComentario=(postId,firstName)=>{
+  const inp=$(`cmt-input-${postId}`)
+  if(!inp)return
+  const prefix=`@${firstName} `
+  if(!inp.value.startsWith(prefix))inp.value=prefix+inp.value
+  inp.focus()
+  inp.setSelectionRange(inp.value.length,inp.value.length)
 }
 
 async function _refreshPost(postId){
@@ -2315,6 +2434,8 @@ window.comentarPost=async(postId,inputEl)=>{
   inputEl.disabled=false
   if(error){mostrarToast('Erro',error.message,'urgente');return}
   inputEl.value=''
+  // Processa menções do comentário (roda em background)
+  _processarMencoes(conteudo,postId).catch(e=>console.warn('mencoes cmt:',e))
   await _refreshPost(postId)
 }
 
