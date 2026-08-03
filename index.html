@@ -68,8 +68,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .brand-tag{font-size:11px;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-weight:500}
 .lfield{margin-bottom:18px}
 .lfield label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-.lfield input{width:100%;height:46px;padding:0 16px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;color:var(--text1);background:#FAFBFC;outline:none;transition:all .2s}
-.lfield input:focus{border-color:var(--mid);background:#fff;box-shadow:0 0 0 4px rgba(29,164,212,.08)}
+.lfield input{width:100%;height:46px;padding:0 16px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;color:var(--text1);background:var(--input-bg);outline:none;transition:all .2s}
+.lfield input:focus{border-color:var(--mid);background:var(--card);box-shadow:0 0 0 4px rgba(29,164,212,.15)}
 .btn-login{width:100%;height:46px;background:linear-gradient(135deg,#00C9A7,#2563EB);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s}
 .btn-login:hover{opacity:.92}
 .btn-login:disabled{opacity:.6;cursor:not-allowed}
@@ -129,7 +129,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-sm{padding:5px 12px;font-size:12px}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
 .p-ok{background:#D1FAE5;color:#065F46}.p-wn{background:#FEF3C7;color:#92400E}.p-lw{background:#FEE2E2;color:#991B1B}
-.p-info{background:#EFF6FF;color:#1E40AF}.p-tl{background:#E0FAF5;color:#065F46}.p-gray{background:#F1F5F9;color:#475569}
+.p-info{background:#EFF6FF;color:#1E40AF}.p-tl{background:#E0FAF5;color:#065F46}.p-gray{background:#F1F5F9;color:var(--text2)}
 .row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);transition:all .1s;border-radius:6px}
 .row:hover{background:var(--bg);padding-left:8px;padding-right:8px}
 .row:last-child{border-bottom:none}
@@ -181,9 +181,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .modal-box h3{font-size:17px;font-weight:800;margin-bottom:20px}
 .mfield{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
 .mfield label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
-.mfield input,.mfield select,.mfield textarea{padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:#FAFBFC;color:var(--text1);font-size:13px;outline:none;font-family:inherit;transition:all .2s}
+.mfield input,.mfield select,.mfield textarea{padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text1);font-size:13px;outline:none;font-family:inherit;transition:all .2s}
 .mfield input,.mfield select{height:42px}
-.mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--mid);background:#fff;box-shadow:0 0 0 4px rgba(29,164,212,.08)}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{border-color:var(--mid);background:var(--card);box-shadow:0 0 0 4px rgba(29,164,212,.15)}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 .alert-ok{display:none;background:#D1FAE5;border:1.5px solid #6EE7B7;border-radius:10px;padding:10px 14px;font-size:13px;color:#065F46;margin-bottom:12px}
 .alert-err{display:none;background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;padding:10px 14px;font-size:13px;color:#991B1B;margin-bottom:12px}
@@ -3149,14 +3149,14 @@ window.abrirFollowUpIA=async(leadId)=>{
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
         <div style="flex:1;min-width:120px">
           <label style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Canal</label>
-          <select id="fup-canal" style="width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#FAFBFC;font-family:inherit">
+          <select id="fup-canal" style="width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);font-family:inherit">
             <option value="whatsapp">WhatsApp</option>
             <option value="ligacao">Roteiro de ligação</option>
           </select>
         </div>
         <div style="flex:1;min-width:120px">
           <label style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Tom</label>
-          <select id="fup-tom" style="width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#FAFBFC;font-family:inherit">
+          <select id="fup-tom" style="width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);font-family:inherit">
             <option value="profissional">Profissional</option>
             <option value="descontraido">Descontraído</option>
             <option value="urgente">Urgente</option>
@@ -3364,16 +3364,16 @@ window.novaInteracao=async leadId=>{
   overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)'
   overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 25px 80px rgba(0,0,0,.2)">
     <h3 style="font-size:17px;font-weight:800;margin-bottom:20px;color:#0F172A">Registrar interação</h3>
-    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Tipo</label>
-      <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#FAFBFC;font-family:inherit">
+    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Tipo</label>
+      <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit">
         <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>Proposta</option><option>Fechamento</option><option>Follow-up</option><option>Nota</option>
       </select>
     </div>
-    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Observação</label>
-      <textarea id="ni-obs" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#FAFBFC;font-family:inherit;resize:vertical" placeholder="Descreva o que aconteceu..."></textarea>
+    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Observação</label>
+      <textarea id="ni-obs" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit;resize:vertical" placeholder="Descreva o que aconteceu..."></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px;border-radius:8px;border:1.5px solid #E2E8F0;background:#F0F4F8;cursor:pointer;font-size:13px;font-weight:600;color:#475569">Cancelar</button>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2)">Cancelar</button>
       <button id="ni-salvar" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#00C9A7,#1DA4D4);color:#fff;cursor:pointer;font-size:13px;font-weight:600">Salvar</button>
     </div>
   </div>`
@@ -3987,14 +3987,14 @@ window.novaInteracaoSv=async leadId=>{
   overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)'
   overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px">
     <h3 style="font-size:17px;font-weight:800;margin-bottom:20px">Registrar interação</h3>
-    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#475569;text-transform:uppercase;display:block;margin-bottom:6px">Tipo</label>
-      <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#FAFBFC;font-family:inherit">
+    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px">Tipo</label>
+      <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit">
         <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>Proposta</option><option>Fechamento</option><option>Follow-up</option><option>Nota</option>
       </select></div>
-    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#475569;text-transform:uppercase;display:block;margin-bottom:6px">Observação</label>
-      <textarea id="ni-obs" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;background:#FAFBFC;font-family:inherit;resize:vertical" placeholder="Descreva o que aconteceu..."></textarea></div>
+    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px">Observação</label>
+      <textarea id="ni-obs" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit;resize:vertical" placeholder="Descreva o que aconteceu..."></textarea></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px;border-radius:8px;border:1.5px solid #E2E8F0;background:#F0F4F8;cursor:pointer;font-size:13px;font-weight:600;color:#475569">Cancelar</button>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2)">Cancelar</button>
       <button id="ni-salvar" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#00C9A7,#1DA4D4);color:#fff;cursor:pointer;font-size:13px;font-weight:600">Salvar</button>
     </div></div>`
   document.body.appendChild(overlay)
@@ -5290,12 +5290,12 @@ window.abrirModalDrive=(id,nome,link,operadora)=>{
     <div class="followup-box" style="max-width:440px">
       <div style="font-size:17px;font-weight:800;margin-bottom:20px">${editando?'Editar drive':'Novo drive'}</div>
       <div class="mfield"><label>Operadora</label>
-        <select id="drv-op" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:#FAFBFC;font-family:inherit">
+        <select id="drv-op" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit">
           ${ops.map(o=>`<option value="${o}" ${o===(operadora||'Unimed')?'selected':''}>${o}</option>`).join('')}
         </select>
       </div>
-      <div class="mfield" style="margin-top:12px"><label>Nome do arquivo/pasta</label><input type="text" id="drv-nome" value="${nome||''}" placeholder="Ex: Tabela de preços 2026" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;width:100%;font-family:inherit;background:#FAFBFC"></div>
-      <div class="mfield" style="margin-top:12px"><label>Link do Google Drive</label><input type="url" id="drv-link" value="${link||''}" placeholder="https://drive.google.com/..." style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;width:100%;font-family:inherit;background:#FAFBFC"></div>
+      <div class="mfield" style="margin-top:12px"><label>Nome do arquivo/pasta</label><input type="text" id="drv-nome" value="${nome||''}" placeholder="Ex: Tabela de preços 2026" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;width:100%;font-family:inherit;background:var(--bg2)"></div>
+      <div class="mfield" style="margin-top:12px"><label>Link do Google Drive</label><input type="url" id="drv-link" value="${link||''}" placeholder="https://drive.google.com/..." style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;width:100%;font-family:inherit;background:var(--bg2)"></div>
       <div id="drv-err" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
         <button onclick="this.closest('.followup-overlay').remove()" class="btn btn-sec">Cancelar</button>
