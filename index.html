@@ -1005,11 +1005,14 @@ async function _autoFecharMesAnterior(){
       // Quem já tem meta cadastrada naquele mês?
       const{data:existentes}=await sb.from('metas_mensais').select('consultor_id').in('consultor_id',ids).eq('mes',m).eq('ano',a)
       const jaTem=new Set((existentes||[]).map(x=>x.consultor_id))
-      // Materializar as que faltam com o valor default do usuário (senão 17k / 70)
+      // Materializar as que faltam com o MESMO fallback que calcMetaEq usa
+      // quando o mês está aberto (17k/70), pra preservar exatamente o que
+      // aparecia enquanto o mês estava vivo. NÃO usa usuarios.meta_vendas
+      // porque esse campo é sobrescrito ao longo do tempo.
       const paraInserir=ativos.filter(u=>!jaTem.has(u.id)).map(u=>({
         consultor_id:u.id,mes:m,ano:a,
-        meta_vendas:Number(u.meta_vendas||17000),
-        meta_cotacoes:Number(u.meta_cotacoes||70)
+        meta_vendas:17000,
+        meta_cotacoes:70
       }))
       if(paraInserir.length){
         const{error:insErr}=await sb.from('metas_mensais').insert(paraInserir)
