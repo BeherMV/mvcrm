@@ -3362,8 +3362,8 @@ window.novaInteracao=async leadId=>{
   // Criar modal inline para registrar interação
   const overlay=document.createElement('div')
   overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)'
-  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 25px 80px rgba(0,0,0,.2)">
-    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px;color:#0F172A">Registrar interação</h3>
+  overlay.innerHTML=`<div style="background:var(--card);border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 25px 80px rgba(0,0,0,.2)">
+    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px;color:var(--text1)">Registrar interação</h3>
     <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Tipo</label>
       <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit">
         <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>Proposta</option><option>Fechamento</option><option>Follow-up</option><option>Nota</option>
@@ -3985,8 +3985,8 @@ window.verHistLeadSv=async(id,nome)=>{
 window.novaInteracaoSv=async leadId=>{
   const overlay=document.createElement('div')
   overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)'
-  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px">
-    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px">Registrar interação</h3>
+  overlay.innerHTML=`<div style="background:var(--card);border-radius:16px;padding:28px;width:100%;max-width:440px">
+    <h3 style="font-size:17px;font-weight:800;margin-bottom:20px;color:var(--text1)">Registrar interação</h3>
     <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px">Tipo</label>
       <select id="ni-tipo" style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg2);font-family:inherit">
         <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>Proposta</option><option>Fechamento</option><option>Follow-up</option><option>Nota</option>
@@ -4598,17 +4598,17 @@ async function loadMaHome(fMes=null,fAno=null){
   const pctGlobal=metaGlobal>0?Math.round(receitaTotal/metaGlobal*100):0
   const pctGlobalOk=receitaTotal>=(metaGlobal*DU_HOJE/DU_TOTAL)
   el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;margin-bottom:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--grad-soft);border:1.5px solid var(--mid);border-radius:14px;padding:16px 20px;margin-bottom:4px">
       <div>
-        <div style="font-size:15px;font-weight:700">Painel Master — visão consolidada</div>
-        <div style="font-size:13px;color:#1E40AF;margin-top:3px">${equipes.length} equipes · ${consAtivosTotal.length} consultores · ${new Date(a,m-1,1).toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text1)">Painel Master — visão consolidada</div>
+        <div style="font-size:13px;color:var(--mid);margin-top:3px;font-weight:600">${equipes.length} equipes · ${consAtivosTotal.length} consultores · ${new Date(a,m-1,1).toLocaleString('pt-BR',{month:'long',year:'numeric'})}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button onclick="gerarApresentacao(${m},${a})" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;border:1.5px solid #1E8FCC;color:#1E8FCC;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        <button onclick="gerarApresentacao(${m},${a})" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--card);border:1.5px solid var(--mid);color:var(--mid);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           Gerar apresentação
         </button>
-        <select onchange="loadMaHome(...this.value.split('-').map(Number))" style="height:34px;padding:0 12px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;background:#fff;outline:none;font-weight:600">
+        <select onchange="loadMaHome(...this.value.split('-').map(Number))" style="height:34px;padding:0 12px;border:1.5px solid var(--mid);border-radius:8px;font-size:13px;background:var(--card);color:var(--text1);outline:none;font-weight:600">
           ${meses.map(x=>`<option value="${x.m}-${x.a}" ${x.m===m&&x.a===a?'selected':''}>${String(x.m).padStart(2,'0')}/${x.a}</option>`).join('')}
         </select>
       </div>
