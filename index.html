@@ -984,6 +984,51 @@ async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
 // ativo_meta: true ou null = ativo, false = inativo
 function consAtivos(cons){ return (cons||[]).filter(c=>c.ativo_meta!==false) }
 
+// Auto-fechamento do mês anterior — roda 1x por sessão (só master/supervisor por causa do RLS)
+// Materializa metas faltantes com fallback e trava o mês. Depois disso, os valores nunca mudam.
+async function _autoFecharMesAnterior(){
+  if(!CU||(CU.perfil!=='master'&&CU.perfil!=='supervisor'))return
+  const h=new Date()
+  // mês atual = h.getMonth()+1 (base 1); mês anterior:
+  let m=h.getMonth(),a=h.getFullYear()
+  if(m===0){m=12;a=a-1}
+  // já travado? nada a fazer
+  const travado=await isMesTravado(m,a)
+  if(travado)return
+  console.log(`[auto-fechar] fechando mês ${m}/${a}`)
+  try{
+    // Buscar consultores + supervisores ativos
+    const{data:usuarios}=await sb.from('usuarios').select('id,meta_vendas,meta_cotacoes,ativo_meta,perfil').in('perfil',['consultor','supervisor'])
+    const ativos=(usuarios||[]).filter(u=>u.ativo_meta!==false)
+    if(ativos.length){
+      const ids=ativos.map(u=>u.id)
+      // Quem já tem meta cadastrada naquele mês?
+      const{data:existentes}=await sb.from('metas_mensais').select('consultor_id').in('consultor_id',ids).eq('mes',m).eq('ano',a)
+      const jaTem=new Set((existentes||[]).map(x=>x.consultor_id))
+      // Materializar as que faltam com o valor default do usuário (senão 17k / 70)
+      const paraInserir=ativos.filter(u=>!jaTem.has(u.id)).map(u=>({
+        consultor_id:u.id,mes:m,ano:a,
+        meta_vendas:Number(u.meta_vendas||17000),
+        meta_cotacoes:Number(u.meta_cotacoes||70)
+      }))
+      if(paraInserir.length){
+        const{error:insErr}=await sb.from('metas_mensais').insert(paraInserir)
+        if(insErr){console.warn('[auto-fechar] erro materializar metas:',insErr);return}
+        console.log(`[auto-fechar] materializou ${paraInserir.length} metas`)
+      }
+    }
+    // Travar o mês
+    const{error:trErr}=await sb.from('meses_travados').insert({mes:m,ano:a})
+    if(trErr){
+      // Se falhou por unique/race, tudo bem (outro user já travou)
+      if(!trErr.message?.includes('duplicate'))console.warn('[auto-fechar] erro travar:',trErr)
+      return
+    }
+    invalidarCacheMes(m,a)
+    console.log(`[auto-fechar] mês ${m}/${a} travado`)
+  }catch(e){console.warn('[auto-fechar] erro:',e)}
+}
+
 // Dias úteis reais (exclui sáb e dom)
 function getDiasUteisDoMes(ano,mes){
   const total=new Date(ano,mes,0).getDate()
@@ -1242,6 +1287,8 @@ async function iniciarApp(){
   _rodarAutomacoesFeed()
   // Realtime: liga o canal do feed pra receber posts/curtidas/comentários/votos ao vivo
   _subscribeFeed()
+  // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
+  _autoFecharMesAnterior()
 }
 
 // ── NOTIFICAÇÕES ──
