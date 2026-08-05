@@ -656,6 +656,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 }
 .emoji-item:hover{background:var(--card-hover);transform:scale(1.2)}
 
+/* Bordas decorativas de conquista mensal (prata, ouro, roxa) */
+.av-frame{
+  position:relative;
+  display:inline-flex;flex-shrink:0;
+  width:var(--size,40px);height:var(--size,40px);
+}
+.av-frame-prata::after,.av-frame-ouro::after,.av-frame-roxa::after{
+  content:'';position:absolute;
+  inset:calc(var(--size,40px) * -0.20);
+  background-repeat:no-repeat;background-position:center;background-size:contain;
+  pointer-events:none;z-index:2;
+}
+.av-frame-prata::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-prata.png)}
+.av-frame-ouro::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-ouro.png)}
+.av-frame-roxa::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-roxa.png)}
+
 /* Menção @TODOS destacada */
 .mention.mention-all{
   background:linear-gradient(135deg,#F59E0B,#EF4444);
@@ -984,6 +1000,37 @@ async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
 // ativo_meta: true ou null = ativo, false = inativo
 function consAtivos(cons){ return (cons||[]).filter(c=>c.ativo_meta!==false) }
 
+// ── BORDAS DE CONQUISTA (moldura mensal por realizado) ──
+// Regras: prata >= 17k, ouro >= 22k, roxa = 1º do ranking do mês (vence tudo).
+let _bordasCache={}  // {userId: 'prata'|'ouro'|'roxa'|null}
+async function _recalcularBordas(){
+  try{
+    const m=mesAtual(),a=anoAtual()
+    const{data:leads}=await sb.from('leads')
+      .select('consultor_id,valor_meta')
+      .eq('status','Proposta').eq('mes_fechamento',m).eq('ano_fechamento',a)
+    const receita={}
+    ;(leads||[]).forEach(l=>{
+      receita[l.consultor_id]=(receita[l.consultor_id]||0)+Number(l.valor_meta||0)
+    })
+    const ranking=Object.entries(receita).sort(([,x],[,y])=>y-x)
+    const top1=ranking[0]?.[0]||null
+    const nova={}
+    for(const[uid,r]of Object.entries(receita)){
+      if(uid===top1) nova[uid]='roxa'
+      else if(r>=22000) nova[uid]='ouro'
+      else if(r>=17000) nova[uid]='prata'
+    }
+    _bordasCache=nova
+  }catch(e){console.warn('bordas:',e)}
+}
+function _tierBorda(userId){return userId?_bordasCache[userId]||null:null}
+function _wrapAvatarBorda(userId,size,innerHTML){
+  const tier=_tierBorda(userId)
+  if(!tier)return innerHTML
+  return `<div class="av-frame av-frame-${tier}" style="--size:${size}px">${innerHTML}</div>`
+}
+
 // Auto-fechamento do mês anterior — roda 1x por sessão (só master/supervisor por causa do RLS)
 // Materializa metas faltantes com fallback e trava o mês. Depois disso, os valores nunca mudam.
 async function _autoFecharMesAnterior(){
@@ -1055,6 +1102,16 @@ function aplicarAvatar(el,user){
     el.innerHTML=`<img src="${user.foto_url}${v?'?v='+v:''}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
   }else{
     el.textContent=ini(user?.nome||'')
+  }
+  // Aplica/remove borda de conquista (moldura)
+  const tier=_tierBorda(user?.id)
+  el.classList.remove('av-frame','av-frame-prata','av-frame-ouro','av-frame-roxa')
+  if(tier){
+    el.classList.add('av-frame','av-frame-'+tier)
+    el.style.setProperty('--size',(el.offsetWidth||38)+'px')
+    el.style.overflow='visible'
+  }else{
+    el.style.overflow='hidden'
   }
 }
 
@@ -1292,6 +1349,8 @@ async function iniciarApp(){
   _subscribeFeed()
   // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
   _autoFecharMesAnterior()
+  // Bordas de conquista mensal (prata/ouro/roxa) — refresh do cache no login
+  _recalcularBordas()
 }
 
 // ── NOTIFICAÇÕES ──
@@ -1447,7 +1506,9 @@ async function loadMeuPerfil(userId,containerId){
   const mesesAbr=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
   const melhorLabel=stats.melhorK?`${mesesAbr[Number(stats.melhorK.split('-')[1])-1]}/${stats.melhorK.split('-')[0]}`:'—'
   const fotoUrl=u.foto_url?`${u.foto_url}${u.id===CU.id&&CU.foto_ver?'?v='+CU.foto_ver:''}`:null
-  const foto=fotoUrl?`<img src="${fotoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:100%;height:100%;font-size:32px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
+  const fotoInner=fotoUrl?`<img src="${fotoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:100%;height:100%;font-size:32px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
+  const _tierPf=_tierBorda(u.id)
+  const foto=_tierPf?`<div class="av-frame av-frame-${_tierPf}" style="--size:100px;width:100%;height:100%">${fotoInner}</div>`:fotoInner
   const tempo=u.data_entrada?_tempoNaMV(u.data_entrada):''
   const roleTxt=u.perfil==='master'?'Master':u.perfil==='supervisor'?'Supervisor':'Consultor(a)'
   const equipeTxt=u.equipes?.nome?` · Equipe ${u.equipes.nome}`:''
@@ -2153,10 +2214,10 @@ window.enviarDenuncia=async()=>{
 
 function _feedAvatarHTML(user,size){
   const s=size+'px'
-  if(user?.foto_url){
-    return `<img src="${user.foto_url}" alt="" style="width:${s};height:${s};object-fit:cover;border-radius:50%;display:block">`
-  }
-  return `<div class="av" style="width:${s};height:${s};font-size:${Math.round(size*0.34)}px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(user?.nome||'?')}</div>`
+  const inner=user?.foto_url
+    ?`<img src="${user.foto_url}" alt="" style="width:${s};height:${s};object-fit:cover;border-radius:50%;display:block">`
+    :`<div class="av" style="width:${s};height:${s};font-size:${Math.round(size*0.34)}px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(user?.nome||'?')}</div>`
+  return _wrapAvatarBorda(user?.id,size,inner)
 }
 
 function _feedDisplayAutor(autor,size){
@@ -2529,6 +2590,8 @@ async function notificarTodos(titulo,mensagem,tipo='info',sobreUsuarioId=null){
 }
 
 async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
+  // Reavalia bordas de conquista sempre que meta é checada (roda pós-save de lead)
+  _recalcularBordas().then(()=>{if(CU)aplicarAvatar($('sb-av'),CU)})
   const m=mesAtual(),a=anoAtual()
   const[metaRes,leadsRes]=await Promise.all([
     sb.from('metas_mensais').select('meta_vendas').eq('consultor_id',consultorId).eq('mes',m).eq('ano',a).maybeSingle(),
