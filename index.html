@@ -1000,6 +1000,31 @@ async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
 // ativo_meta: true ou null = ativo, false = inativo
 function consAtivos(cons){ return (cons||[]).filter(c=>c.ativo_meta!==false) }
 
+// ── SOM DE VENDA POR EQUIPE ──
+// Cada equipe tem um jingle. Nome normalizado (lowercase, sem acento, hifens) + extensao mapeada.
+const SONS_EQUIPES_EXT={
+  'a-elite':'mp3',
+  'aguias':'ogg',
+  'dracarys':'mp3',
+  'hunters':'mp3',
+  'tigers':'mp3'
+}
+const SONS_URL_BASE=`${SB_URL}/storage/v1/object/public/sons-equipes`
+function _slugEquipe(nome){
+  return String(nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().replace(/\s+/g,'-')
+}
+function _tocarSomEquipe(equipeNome){
+  if(!equipeNome)return
+  const slug=_slugEquipe(equipeNome)
+  const ext=SONS_EQUIPES_EXT[slug]
+  if(!ext)return
+  try{
+    const audio=new Audio(`${SONS_URL_BASE}/${slug}.${ext}`)
+    audio.volume=0.7
+    audio.play().catch(e=>console.warn('som bloqueado pelo browser:',e))
+  }catch(e){console.warn('erro som:',e)}
+}
+
 // ── BORDAS DE CONQUISTA (moldura mensal por realizado) ──
 // Regras: prata >= 17k, ouro >= 22k, roxa = 1º do ranking do mês (vence tudo).
 let _bordasCache={}  // {userId: 'prata'|'ouro'|'roxa'|null}
@@ -3193,6 +3218,7 @@ window.salvarLead=async()=>{
   if(status==='Proposta'){
     // Verificar meta individual SEMPRE, e meta da equipe se tiver equipe
     const equipeNome=CU.equipe_id?(await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single()).data?.nome||'':'';
+    _tocarSomEquipe(equipeNome)
     await verificarMetas(CU.id,CU.nome,CU.equipe_id||null,equipeNome)
   }
   $('ml-ok').textContent=id?'Lead atualizado!':'Lead cadastrado!';$('ml-ok').style.display='block'
