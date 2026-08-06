@@ -3173,6 +3173,9 @@ window.salvarLead=async()=>{
   if(isNovo){dados.consultor_id=CU.id;dados.mes_cotacao=m;dados.ano_cotacao=a}
   // Salvar dados do plano em Pela Boa, Ard Documento e Proposta
   if(['Pela Boa','Ard Documento','Proposta'].includes(status)){
+    // Migração pro mês atual: quando o lead entra nesses status "quentes",
+    // ele passa a compor o funil do mês corrente (mesmo se veio de meses passados)
+    dados.mes_cotacao=m;dados.ano_cotacao=a
     const tipo=$('ml-tipo').value,op=$('ml-operadora').value,val=Number($('ml-valor').value)||0,vidas=Number($('ml-vidas').value)||1
     if(tipo==='Adesão'&&OPS_SEM_ADESAO.includes(op)){$('ml-err').textContent=op+' não trabalha com Adesão. Selecione PF ou PME.';$('ml-err').style.display='block';_salvandoLead=false;return}
     if(status==='Proposta'){
