@@ -1006,13 +1006,20 @@ let _bordasCache={}  // {userId: 'prata'|'ouro'|'roxa'|null}
 async function _recalcularBordas(){
   try{
     const m=mesAtual(),a=anoAtual()
-    const{data:leads}=await sb.from('leads')
-      .select('consultor_id,valor_meta')
-      .eq('status','Proposta').eq('mes_fechamento',m).eq('ano_fechamento',a)
+    // Prefere RPC agregada (contorna RLS pra ver todo mundo). Se não existir, cai no fallback.
     const receita={}
-    ;(leads||[]).forEach(l=>{
-      receita[l.consultor_id]=(receita[l.consultor_id]||0)+Number(l.valor_meta||0)
-    })
+    const{data:rpcData,error:rpcErr}=await sb.rpc('get_receita_mes',{p_mes:m,p_ano:a})
+    if(!rpcErr&&Array.isArray(rpcData)){
+      rpcData.forEach(r=>{receita[r.consultor_id]=Number(r.receita||0)})
+    }else{
+      // Fallback: query direta (limitada pelo RLS)
+      const{data:leads}=await sb.from('leads')
+        .select('consultor_id,valor_meta')
+        .eq('status','Proposta').eq('mes_fechamento',m).eq('ano_fechamento',a)
+      ;(leads||[]).forEach(l=>{
+        receita[l.consultor_id]=(receita[l.consultor_id]||0)+Number(l.valor_meta||0)
+      })
+    }
     const ranking=Object.entries(receita).sort(([,x],[,y])=>y-x)
     const top1=ranking[0]?.[0]||null
     const nova={}
@@ -1350,7 +1357,8 @@ async function iniciarApp(){
   // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
   _autoFecharMesAnterior()
   // Bordas de conquista mensal (prata/ouro/roxa) — refresh do cache no login
-  _recalcularBordas()
+  // Após terminar, reaplica avatar da sidebar pra pintar a borda (o 1º render rodou antes do cache existir)
+  _recalcularBordas().then(()=>{if(CU)aplicarAvatar($('sb-av'),CU)})
 }
 
 // ── NOTIFICAÇÕES ──
