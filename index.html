@@ -4510,7 +4510,7 @@ async function loadSvRanking(fMes=null,fAno=null){
     <div class="g2">
       <div>${ranking.map((r,i)=>`<div class="rank-row">
         <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
-        <div class="av" style="width:34px;height:34px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(r.c.nome)}</div>
+        <div style="width:34px;height:34px;flex-shrink:0">${_feedAvatarHTML(r.c,34)}</div>
         <div class="ri">
           <div class="rn" style="display:flex;align-items:center;gap:6px">${r.c.nome}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
           <div class="rm">${fmt(r.real)} · ${r.pct}%</div>
@@ -4809,7 +4809,7 @@ window.gerarApresentacao=async(mes,ano)=>{
   const[eqRes,svRes,consRes,metasRes,leadsRes,leadsF]=await Promise.all([
     sb.from('equipes').select('*').order('nome'),
     sb.from('usuarios').select('id,nome,equipe_id').eq('perfil','supervisor'),
-    sb.from('usuarios').select('id,equipe_id,ativo_meta,nome,equipes(nome)').eq('perfil','consultor'),
+    sb.from('usuarios').select('id,equipe_id,ativo_meta,nome,foto_url,equipes(nome)').eq('perfil','consultor'),
     sb.from('metas_mensais').select('*').eq('mes',m).eq('ano',a),
     sb.from('leads').select('consultor_id,valor_meta,status,mes_fechamento,ano_fechamento,mes_cotacao,ano_cotacao').eq('mes_cotacao',m).eq('ano_cotacao',a),
     sb.from('leads').select('consultor_id,valor_meta,status,mes_fechamento,ano_fechamento').eq('mes_fechamento',m).eq('ano_fechamento',a).eq('status','Proposta')
@@ -4842,8 +4842,22 @@ window.gerarApresentacao=async(mes,ano)=>{
     const real=fechados.filter(l=>l.consultor_id===c.id).reduce((s,l)=>s+Number(l.valor_meta||0),0)
     const meta=(metas.find(x=>x.consultor_id===c.id)||{meta_vendas:17000}).meta_vendas
     const pct=meta>0?Math.round(real/meta*100):0
-    return{nome:c.nome,equipe:c.equipes?.nome||'',real,meta,pct}
+    return{id:c.id,nome:c.nome,foto_url:c.foto_url,equipe:c.equipes?.nome||'',real,meta,pct}
   }).sort((a,b)=>b.real-a.real).slice(0,5)
+
+  // Pre-fetch das fotos + bordas dos top 5 pra embutir no PPTX (em paralelo)
+  const _urlToDataUrl=async url=>{
+    try{const r=await fetch(url);if(!r.ok)return null;const b=await r.blob();return await new Promise((res,rej)=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(b)})}catch(e){return null}
+  }
+  const BADGES_URL=`${SB_URL}/storage/v1/object/public/badges`
+  const rkImgs=await Promise.all(ranking.map(async r=>{
+    const tier=_bordasCache[r.id]
+    const[fotoData,bordaData]=await Promise.all([
+      r.foto_url?_urlToDataUrl(r.foto_url):Promise.resolve(null),
+      tier?_urlToDataUrl(`${BADGES_URL}/borda-${tier}.png`):Promise.resolve(null)
+    ])
+    return{foto:fotoData,borda:bordaData}
+  }))
 
   const FUNIL_GRUPOS=[
     null, // Leads = total de todos os leads do mês
@@ -4985,7 +4999,20 @@ window.gerarApresentacao=async(mes,ano)=>{
       s5.addText(MEDALS[i],{x:0.1,y:y+0.15,w:0.65,h:0.42,fontSize:20,bold:true,color:VERDE,fontFace:'Arial',align:'center',margin:0})
     }
     s5.addImage({data:_IBS[Math.min(i,4)],x:0.85,y:y+0.04,w:BAR_W_RK,h:ROW_H-0.08})
-    s5.addText(`${r.nome}  ·  ${fmtR(r.real)}`,{x:1.05,y:y+0.14,w:BAR_W_RK-0.3,h:ROW_H-0.25,fontSize:14,bold:true,color:WHITE,fontFace:'Arial',valign:'middle',margin:0})
+    // Foto do consultor (circular) sobre o início da barra
+    const AV_SZ=0.5,AV_X=0.95,AV_Y=y+(ROW_H-AV_SZ)/2
+    const rkImg=rkImgs[i]
+    if(rkImg?.foto){
+      s5.addImage({data:rkImg.foto,x:AV_X,y:AV_Y,w:AV_SZ,h:AV_SZ,rounding:true})
+    }
+    // Borda decorativa (prata/ouro/roxa) por cima, se tem tier
+    if(rkImg?.borda){
+      const BS=0.72,OFS=(BS-AV_SZ)/2
+      s5.addImage({data:rkImg.borda,x:AV_X-OFS,y:AV_Y-OFS,w:BS,h:BS})
+    }
+    // Nome + valor deslocados pra depois do avatar
+    const TXT_X=AV_X+AV_SZ+0.18
+    s5.addText(`${r.nome}  ·  ${fmtR(r.real)}`,{x:TXT_X,y:y+0.14,w:BAR_W_RK-(TXT_X-0.85)-0.1,h:ROW_H-0.25,fontSize:14,bold:true,color:WHITE,fontFace:'Arial',valign:'middle',margin:0})
     s5.addText(r.pct+'% da meta',{x:0.85+BAR_W_RK+0.12,y:y+0.22,w:1.5,h:0.28,fontSize:11,color:GRAY,fontFace:'Calibri',margin:0})
   })
 
@@ -5029,7 +5056,7 @@ async function loadMaRanking(fMes=null,fAno=null){
     <div class="g2">
       <div>${ranking.map((r,i)=>`<div class="rank-row">
         <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
-        <div class="av" style="width:34px;height:34px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(r.c.nome)}</div>
+        <div style="width:34px;height:34px;flex-shrink:0">${_feedAvatarHTML(r.c,34)}</div>
         <div class="ri">
           <div class="rn" style="display:flex;align-items:center;gap:6px">${r.c.nome}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
           <div class="rm">${r.c.equipes?.nome||'—'} · ${r.pct}%</div>
