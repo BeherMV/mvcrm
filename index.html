@@ -1617,17 +1617,23 @@ async function loadComissaoEquipe(){
   const totBruto=totAtivos.reduce((s,p)=>s+Number(p.valor_bruto||0),0)
   const porStatus=st=>totAtivos.filter(p=>p.status===st).reduce((s,p)=>s+Number(p.valor_bruto||0),0)
   const meses6=_provAgregaPorMes(filtered,6)
+  const chavesMeses=meses6.map(m=>`${m.ano}-${String(m.mes).padStart(2,'0')}`)
   const porCons={}
   totAtivos.forEach(p=>{
-    if(!porCons[p.consultor_id])porCons[p.consultor_id]={qtd:0,total:0,em_processo:0,a_receber:0,confirmada:0}
+    if(!porCons[p.consultor_id])porCons[p.consultor_id]={qtd:0,total:0,em_processo:0,a_receber:0,confirmada:0,mensal:{}}
     const c=porCons[p.consultor_id]
     c.qtd++;c.total+=Number(p.valor_bruto||0)
     c[p.status]=(c[p.status]||0)+Number(p.valor_bruto||0)
+    ;(p.provisionamento_parcelas||[]).forEach(parc=>{
+      const k=`${parc.ano}-${String(parc.mes).padStart(2,'0')}`
+      c.mensal[k]=(c.mensal[k]||0)+Number(parc.valor||0)
+    })
   })
   const consList=Object.entries(porCons).map(([id,d])=>{
     const cons=consultores.find(c=>c.id===id)
-    return{id,nome:cons?.nome||'—',equipe:cons?.equipes?.nome||'',...d}
-  }).sort((a,b)=>b.total-a.total)
+    const totalPeriodo=chavesMeses.reduce((s,k)=>s+(d.mensal[k]||0),0)
+    return{id,nome:cons?.nome||'—',equipe:cons?.equipes?.nome||'',totalPeriodo,...d}
+  }).sort((a,b)=>b.totalPeriodo-a.totalPeriodo)
   const consOptions=isMaster
     ?consultores.filter(c=>fEq==='todas'||c.equipe_id===fEq)
     :consultores
@@ -1692,19 +1698,20 @@ async function loadComissaoEquipe(){
           <table class="prov-tabela">
             <thead><tr>
               <th>Consultor</th>${isMaster?'<th>Equipe</th>':''}<th style="text-align:right">Vendas</th>
-              <th style="text-align:right">Em processo</th>
-              <th style="text-align:right">A receber</th>
-              <th style="text-align:right">Confirmada</th>
-              <th style="text-align:right">Total ativo</th>
+              ${meses6.map(m=>`<th style="text-align:right">${_mesesAbr[m.mes]}/${String(m.ano).slice(-2)}</th>`).join('')}
+              <th style="text-align:right">Total 6m</th>
+              <th style="text-align:right">Pagamento 60%</th>
             </tr></thead>
             <tbody>${consList.map(c=>`<tr>
               <td><strong>${_escapeFeed(c.nome)}</strong></td>
               ${isMaster?`<td style="color:var(--text2)">${_escapeFeed(c.equipe||'—')}</td>`:''}
               <td class="num" style="text-align:right">${c.qtd}</td>
-              <td class="num" style="text-align:right;color:#F59E0B">${c.em_processo?fmt(c.em_processo):'—'}</td>
-              <td class="num" style="text-align:right;color:#3B82F6">${c.a_receber?fmt(c.a_receber):'—'}</td>
-              <td class="num" style="text-align:right;color:#10B981">${c.confirmada?fmt(c.confirmada):'—'}</td>
-              <td class="num" style="text-align:right;font-weight:700">${fmt(c.total)}</td>
+              ${chavesMeses.map(k=>{
+                const v=c.mensal[k]||0
+                return `<td class="num" style="text-align:right;${v?'':'color:var(--text3);opacity:.4'}">${v?fmt(v):'—'}</td>`
+              }).join('')}
+              <td class="num" style="text-align:right;font-weight:700">${c.totalPeriodo?fmt(c.totalPeriodo):'—'}</td>
+              <td class="num" style="text-align:right;font-weight:700;color:var(--mid)">${c.totalPeriodo?fmt(c.totalPeriodo*0.6):'—'}</td>
             </tr>`).join('')}</tbody>
           </table>
         </div>
