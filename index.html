@@ -737,21 +737,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 }
 .emoji-item:hover{background:var(--card-hover);transform:scale(1.2)}
 
-/* Bordas decorativas de conquista mensal (prata, ouro, roxa) */
-.av-frame{
-  position:relative;
-  display:inline-flex;flex-shrink:0;
-  width:var(--size,40px);height:var(--size,40px);
-}
-.av-frame-prata::after,.av-frame-ouro::after,.av-frame-roxa::after{
-  content:'';position:absolute;
-  inset:calc(var(--size,40px) * -0.20);
-  background-repeat:no-repeat;background-position:center;background-size:contain;
-  pointer-events:none;z-index:2;
-}
-.av-frame-prata::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-prata.png)}
-.av-frame-ouro::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-ouro.png)}
-.av-frame-roxa::after{background-image:url(https://nfldasoaverzplbowjdn.supabase.co/storage/v1/object/public/badges/borda-roxa.png)}
+/* (bordas decorativas removidas — visual nao agradou) */
 
 /* Menção @TODOS destacada */
 .mention.mention-all{
@@ -1152,7 +1138,7 @@ async function _recalcularBordas(){
     _bordasCache=nova
   }catch(e){console.warn('bordas:',e)}
 }
-function _tierBorda(userId){return userId?_bordasCache[userId]||null:null}
+function _tierBorda(userId){return null}  /* molduras desativadas — visual não agradou */
 
 // ═══ PROVISIONAMENTO ═══
 const PROV_STATUS_LABELS={em_processo:'Em processo',a_receber:'A receber',confirmada:'Confirmada'}
