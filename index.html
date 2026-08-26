@@ -285,6 +285,87 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .curva-nome{font-size:13px;font-weight:700;color:var(--text1)}
 .curva-equipe{font-size:11px;color:var(--text3)}
 
+/* ─── Provisionamento ─── */
+.prov-status{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;
+  border:1px solid transparent;
+}
+.prov-status.em_processo{background:#FEF3C7;color:#92400E;border-color:#FDE68A}
+.prov-status.a_receber{background:#DBEAFE;color:#1E40AF;border-color:#BFDBFE}
+.prov-status.confirmada{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
+.prov-status.declinio{background:#FEE2E2;color:#991B1B;border-color:#FCA5A5}
+.prov-status .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+.prov-tabela{width:100%;border-collapse:collapse;font-size:13px}
+.prov-tabela th{text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.prov-tabela td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.prov-tabela tr:hover td{background:var(--bg2)}
+.prov-tabela tr.declinio td{opacity:.55}
+.prov-tabela .num{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.prov-tabela .parc{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:5px;font-size:11px;background:var(--bg2);color:var(--text2);cursor:pointer;font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.prov-tabela .parc.pago{background:#D1FAE5;color:#065F46}
+.prov-tabela .parc.pago::before{content:"✓";font-weight:700}
+.prov-tabela .parc.vazio{opacity:.35;cursor:default}
+.prov-tabela .acoes{display:flex;gap:4px;justify-content:flex-end}
+.prov-tabela .acoes button{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.prov-tabela .acoes button:hover{border-color:var(--border-strong);color:var(--text1)}
+.prov-tabela .acoes button.del:hover{color:var(--red);border-color:var(--red)}
+
+.prov-resumo{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;
+}
+.prov-resumo .box{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.prov-resumo .box .lab{font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+.prov-resumo .box .val{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text1);letter-spacing:-.5px}
+.prov-resumo .box .sub{font-size:11px;color:var(--text3)}
+.prov-resumo .box.confirmada{border-left:3px solid #10B981}
+.prov-resumo .box.a_receber{border-left:3px solid #3B82F6}
+.prov-resumo .box.em_processo{border-left:3px solid #F59E0B}
+.prov-resumo .box.total{border-left:3px solid var(--mid)}
+
+.prov-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.prov-filtros{display:flex;gap:6px;flex-wrap:wrap}
+.prov-filtros button{padding:6px 12px;border:1px solid var(--border);background:var(--card);color:var(--text2);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.prov-filtros button.on{background:var(--grad);color:#fff;border-color:transparent}
+.prov-acoes-topo{display:flex;gap:8px}
+
+.parc-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.parc-inputs .mfield label{font-size:10.5px}
+.parc-inputs input{padding:7px 10px;font-size:12px}
+
+/* Widget mini Capa (master) */
+.prov-capa{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.prov-capa-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.prov-capa table{width:100%;border-collapse:collapse;font-size:12px}
+.prov-capa th{text-align:right;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:6px 8px;border-bottom:1px solid var(--border)}
+.prov-capa th:first-child{text-align:left}
+.prov-capa td{padding:8px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.prov-capa td:first-child{text-align:left;font-family:inherit;font-weight:600;color:var(--text1)}
+.prov-capa td.pgto{color:var(--mid);font-weight:700}
+.prov-capa tr.mes-atual td{background:var(--grad-soft)}
+
+/* Widget stacked bar (supervisor) */
+.prov-stack{display:flex;flex-direction:column;gap:10px}
+.prov-stack-row{display:grid;grid-template-columns:60px 1fr 90px;align-items:center;gap:10px}
+.prov-stack-mes{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.prov-stack-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--bg2)}
+.prov-stack-bar .seg{height:100%;transition:width .4s}
+.prov-stack-bar .seg.em_processo{background:#F59E0B}
+.prov-stack-bar .seg.a_receber{background:#3B82F6}
+.prov-stack-bar .seg.confirmada{background:#10B981}
+.prov-stack-val{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;color:var(--text1)}
+.prov-stack-legend{display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text2)}
+.prov-stack-legend span{display:inline-flex;align-items:center;gap:5px}
+.prov-stack-legend span::before{content:"";width:10px;height:10px;border-radius:2px;display:inline-block}
+.prov-stack-legend .em_processo::before{background:#F59E0B}
+.prov-stack-legend .a_receber::before{background:#3B82F6}
+.prov-stack-legend .confirmada::before{background:#10B981}
+
 /* ─── Feed CTA no topbar ─── */
 .feed-cta{
   all:unset;cursor:pointer;
@@ -865,6 +946,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
+<div class="modal-overlay" id="mod-prov">
+  <div class="modal-box" style="max-width:520px">
+    <h3 id="mod-prov-title">Registrar comissão</h3>
+    <input type="hidden" id="mp-id">
+    <input type="hidden" id="mp-lead-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="mfield" style="grid-column:span 2"><label>Empresa / Pessoa</label><input type="text" id="mp-empresa" placeholder="Nome do cliente"></div>
+      <div class="mfield"><label>CPF / CNPJ</label><input type="text" id="mp-doc" placeholder="opcional"></div>
+      <div class="mfield"><label>Operadora</label><input type="text" id="mp-operadora" placeholder="Ex: Amil"></div>
+      <div class="mfield"><label>Valor bruto (R$)</label><input type="number" step="0.01" id="mp-valor" placeholder="0,00"></div>
+      <div class="mfield"><label>Status</label>
+        <select id="mp-status">
+          <option value="em_processo">Em processo</option>
+          <option value="a_receber">A receber</option>
+          <option value="confirmada">Confirmada</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfield">
+      <label>Parcelas <span style="font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0">— até 3, deixe em branco pra pular</span></label>
+      <div class="parc-inputs">
+        <div class="mfield" style="margin-bottom:0"><label>1ª PG (MM/AAAA)</label><input type="text" id="mp-p1" placeholder="Ex: 08/2026"></div>
+        <div class="mfield" style="margin-bottom:0"><label>2ª PG</label><input type="text" id="mp-p2" placeholder="opcional"></div>
+        <div class="mfield" style="margin-bottom:0"><label>3ª PG</label><input type="text" id="mp-p3" placeholder="opcional"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Valor divide igual entre as parcelas. Pra ajustar valores individuais, edite depois na tabela.</div>
+    </div>
+    <div class="mfield"><label>Observações</label><textarea id="mp-obs" rows="2" placeholder="opcional"></textarea></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:12px">
+      <input type="checkbox" id="mp-declinio"> Marcar como declínio (não conta nos totais)
+    </label>
+    <div class="alert-err" id="mp-err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-sec" onclick="closeModal('mod-prov')">Cancelar</button>
+      <button class="btn btn-pri" onclick="salvarProvisionamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="mod-enquete">
   <div class="modal-box" style="max-width:460px">
     <h3>Criar enquete</h3>
@@ -1032,6 +1152,476 @@ async function _recalcularBordas(){
   }catch(e){console.warn('bordas:',e)}
 }
 function _tierBorda(userId){return userId?_bordasCache[userId]||null:null}
+
+// ═══ PROVISIONAMENTO ═══
+const PROV_STATUS_LABELS={em_processo:'Em processo',a_receber:'A receber',confirmada:'Confirmada'}
+const PROV_STATUS_CORES={em_processo:'#F59E0B',a_receber:'#3B82F6',confirmada:'#10B981'}
+let _provAtual={filtro:'todos',dados:[]}
+
+function _parseMesAno(str){
+  // Aceita "MM/YYYY" ou "MM-YYYY" ou vazio
+  if(!str||!String(str).trim())return null
+  const m=String(str).trim().match(/^(\d{1,2})[\/\-\.](\d{4})$/)
+  if(!m)return null
+  const mes=parseInt(m[1],10),ano=parseInt(m[2],10)
+  if(mes<1||mes>12||ano<2020||ano>2100)return null
+  return{mes,ano}
+}
+
+function _fmtMesAno(mes,ano){return `${String(mes).padStart(2,'0')}/${ano}`}
+
+async function _provFetchDoUser(userId){
+  const{data,error}=await sb.from('provisionamentos')
+    .select('*,provisionamento_parcelas(*)')
+    .eq('consultor_id',userId)
+    .order('criado_em',{ascending:false})
+  if(error){console.warn('prov fetch:',error);return[]}
+  return data||[]
+}
+
+async function _provFetchDaEquipe(equipeId){
+  if(!equipeId)return[]
+  const{data:cons}=await sb.from('usuarios').select('id').eq('equipe_id',equipeId)
+  const ids=(cons||[]).map(c=>c.id)
+  if(!ids.length)return[]
+  const{data}=await sb.from('provisionamentos').select('*,provisionamento_parcelas(*)').in('consultor_id',ids).eq('declinio',false)
+  return data||[]
+}
+
+async function _provFetchTodos(){
+  const{data}=await sb.from('provisionamentos').select('*,provisionamento_parcelas(*)').eq('declinio',false)
+  return data||[]
+}
+
+// Agrega parcelas dos próximos N meses por status
+function _provAgregaPorMes(items,mesesAFrente=6){
+  const hoje=new Date()
+  const mAtual=hoje.getMonth()+1,aAtual=hoje.getFullYear()
+  const meses=[]
+  for(let i=0;i<mesesAFrente;i++){
+    let mm=mAtual+i,aa=aAtual
+    while(mm>12){mm-=12;aa++}
+    meses.push({mes:mm,ano:aa,em_processo:0,a_receber:0,confirmada:0,total:0,qtd:0})
+  }
+  ;(items||[]).forEach(p=>{
+    if(p.declinio)return
+    const st=p.status||'em_processo'
+    ;(p.provisionamento_parcelas||[]).forEach(parc=>{
+      const idx=meses.findIndex(mx=>mx.mes===parc.mes&&mx.ano===parc.ano)
+      if(idx<0)return
+      const v=Number(parc.valor||0)
+      meses[idx][st]=(meses[idx][st]||0)+v
+      meses[idx].total+=v
+      meses[idx].qtd++
+    })
+  })
+  return meses
+}
+
+const _mesesAbr=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+
+// ── Modal: abrir vazio ou editando existente
+window.abrirProv=(id,leadPreset)=>{
+  $('mp-id').value=id||''
+  $('mp-lead-id').value=leadPreset?.lead_id||''
+  $('mp-err').style.display='none';$('mp-err').textContent=''
+  if(id){
+    // Editando — carrega
+    _preencherModalProv(id)
+    $('mod-prov-title').textContent='Editar comissão'
+  }else{
+    $('mp-empresa').value=leadPreset?.empresa||''
+    $('mp-doc').value=leadPreset?.doc||''
+    $('mp-operadora').value=leadPreset?.operadora||''
+    $('mp-valor').value=leadPreset?.valor||''
+    $('mp-status').value='em_processo'
+    $('mp-declinio').checked=false
+    $('mp-obs').value=''
+    // Data padrão: mes_fechamento+1
+    const h=new Date()
+    const m1=h.getMonth()+2 // próximo mês
+    let mm=m1,aa=h.getFullYear()
+    if(mm>12){mm-=12;aa++}
+    $('mp-p1').value=_fmtMesAno(mm,aa)
+    let m2=mm+1,a2=aa;if(m2>12){m2-=12;a2++}
+    $('mp-p2').value=_fmtMesAno(m2,a2)
+    let m3=m2+1,a3=a2;if(m3>12){m3-=12;a3++}
+    $('mp-p3').value=_fmtMesAno(m3,a3)
+    $('mod-prov-title').textContent='Registrar comissão'
+  }
+  openModal('mod-prov')
+}
+
+async function _preencherModalProv(id){
+  const{data:p}=await sb.from('provisionamentos').select('*,provisionamento_parcelas(*)').eq('id',id).single()
+  if(!p)return
+  $('mp-empresa').value=p.empresa||''
+  $('mp-doc').value=p.documento||''
+  $('mp-operadora').value=p.operadora||''
+  $('mp-valor').value=p.valor_bruto||''
+  $('mp-status').value=p.status||'em_processo'
+  $('mp-declinio').checked=!!p.declinio
+  $('mp-obs').value=p.observacoes||''
+  const parcs=(p.provisionamento_parcelas||[]).sort((a,b)=>a.ordem-b.ordem)
+  $('mp-p1').value=parcs[0]?_fmtMesAno(parcs[0].mes,parcs[0].ano):''
+  $('mp-p2').value=parcs[1]?_fmtMesAno(parcs[1].mes,parcs[1].ano):''
+  $('mp-p3').value=parcs[2]?_fmtMesAno(parcs[2].mes,parcs[2].ano):''
+}
+
+window.salvarProvisionamento=async()=>{
+  const id=$('mp-id').value||null
+  const empresa=$('mp-empresa').value.trim()
+  const documento=$('mp-doc').value.trim()||null
+  const operadora=$('mp-operadora').value.trim()||null
+  const valor_bruto=Number($('mp-valor').value)||0
+  const status=$('mp-status').value
+  const declinio=$('mp-declinio').checked
+  const observacoes=$('mp-obs').value.trim()||null
+  const lead_id=$('mp-lead-id').value||null
+  const err=$('mp-err')
+  if(!empresa){err.textContent='Empresa é obrigatória';err.style.display='block';return}
+  if(valor_bruto<=0){err.textContent='Valor bruto deve ser maior que zero';err.style.display='block';return}
+  const p1=_parseMesAno($('mp-p1').value)
+  const p2=_parseMesAno($('mp-p2').value)
+  const p3=_parseMesAno($('mp-p3').value)
+  const parcelas=[p1,p2,p3].filter(Boolean)
+  if(!parcelas.length){err.textContent='Informe pelo menos a 1ª parcela (formato MM/AAAA)';err.style.display='block';return}
+  // Divide igual
+  const vParc=Number((valor_bruto/parcelas.length).toFixed(2))
+  const payload={consultor_id:CU.id,lead_id:lead_id||null,empresa,documento,operadora,valor_bruto,status,declinio,declinio_em:declinio?new Date().toISOString():null,observacoes,editado_em:new Date().toISOString()}
+  try{
+    let provId=id
+    if(id){
+      const{error}=await sb.from('provisionamentos').update(payload).eq('id',id)
+      if(error)throw error
+      // Reescreve parcelas: deleta e reinsere (simples)
+      await sb.from('provisionamento_parcelas').delete().eq('provisionamento_id',id)
+    }else{
+      const{data,error}=await sb.from('provisionamentos').insert(payload).select('id').single()
+      if(error)throw error
+      provId=data.id
+    }
+    const parcRows=parcelas.map((pr,i)=>({provisionamento_id:provId,ordem:i+1,mes:pr.mes,ano:pr.ano,valor:vParc,pago:false}))
+    if(parcRows.length){
+      const{error:eP}=await sb.from('provisionamento_parcelas').insert(parcRows)
+      if(eP)throw eP
+    }
+    closeModal('mod-prov')
+    mostrarToast('Comissão salva',`${empresa} · ${fmt(valor_bruto)}`,'sucesso')
+    if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+  }catch(e){
+    err.textContent='Erro: '+(e.message||e);err.style.display='block'
+  }
+}
+
+window.excluirProv=async(id,empresa)=>{
+  if(!confirm(`Excluir provisionamento de "${empresa}"?\nEsta ação não pode ser desfeita.`))return
+  const{error}=await sb.from('provisionamentos').delete().eq('id',id)
+  if(error){mostrarToast('Erro',error.message,'urgente');return}
+  mostrarToast('Excluído','','info')
+  if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+}
+
+window.alternarDeclinio=async(id)=>{
+  const{data:atual}=await sb.from('provisionamentos').select('declinio').eq('id',id).single()
+  const novo=!atual?.declinio
+  await sb.from('provisionamentos').update({declinio:novo,declinio_em:novo?new Date().toISOString():null}).eq('id',id)
+  if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+}
+
+window.togglePagoParcela=async(parcId)=>{
+  const{data:atual}=await sb.from('provisionamento_parcelas').select('pago').eq('id',parcId).single()
+  const novo=!atual?.pago
+  await sb.from('provisionamento_parcelas').update({pago:novo,pago_em:novo?new Date().toISOString():null}).eq('id',parcId)
+  if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+}
+
+window.mudarStatusProv=async(id,novo)=>{
+  await sb.from('provisionamentos').update({status:novo,editado_em:new Date().toISOString()}).eq('id',id)
+  if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+}
+
+// ── CSV Export/Import ──
+window.exportarProvCSV=async()=>{
+  const items=await _provFetchDoUser(CU.id)
+  const headers=['empresa','documento','operadora','valor_bruto','mes_ano_1','mes_ano_2','mes_ano_3','status','declinio','observacoes']
+  const rows=items.map(p=>{
+    const ps=(p.provisionamento_parcelas||[]).sort((a,b)=>a.ordem-b.ordem)
+    return[
+      p.empresa||'',p.documento||'',p.operadora||'',p.valor_bruto,
+      ps[0]?_fmtMesAno(ps[0].mes,ps[0].ano):'',
+      ps[1]?_fmtMesAno(ps[1].mes,ps[1].ano):'',
+      ps[2]?_fmtMesAno(ps[2].mes,ps[2].ano):'',
+      p.status||'em_processo',
+      p.declinio?'SIM':'NAO',
+      p.observacoes||''
+    ]
+  })
+  const csv=[headers,...rows].map(r=>r.map(_csvEscape).join(';')).join('\r\n')
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'})
+  const a=document.createElement('a')
+  a.href=URL.createObjectURL(blob);a.download=`provisionamento-${CU.nome.split(' ')[0].toLowerCase()}-${new Date().toISOString().slice(0,10)}.csv`
+  document.body.appendChild(a);a.click();a.remove()
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+  mostrarToast('CSV exportado',`${items.length} vendas`,'info')
+}
+
+window.importarProvCSV=(input)=>{
+  const f=input.files?.[0]
+  if(!f)return
+  const reader=new FileReader()
+  reader.onload=async e=>{
+    const txt=String(e.target.result||'').replace(/^﻿/,'')
+    const lines=txt.split(/\r?\n/).filter(l=>l.trim())
+    if(lines.length<2){mostrarToast('CSV vazio','Sem linhas para importar','alerta');return}
+    // Detecta separador (; ou ,)
+    const sep=lines[0].includes(';')?';':','
+    const header=lines[0].split(sep).map(h=>h.trim().toLowerCase())
+    const idx=k=>header.indexOf(k)
+    const iEmp=idx('empresa'),iDoc=idx('documento'),iOp=idx('operadora'),iV=idx('valor_bruto'),iP1=idx('mes_ano_1'),iP2=idx('mes_ano_2'),iP3=idx('mes_ano_3'),iSt=idx('status'),iDe=idx('declinio'),iOb=idx('observacoes')
+    if(iEmp<0||iV<0){mostrarToast('CSV inválido','Precisa das colunas empresa e valor_bruto','urgente');return}
+    let ok=0,erros=0
+    for(let li=1;li<lines.length;li++){
+      const cells=_csvSplit(lines[li],sep)
+      const empresa=(cells[iEmp]||'').trim()
+      const valor=Number((cells[iV]||'').replace(',','.'))||0
+      if(!empresa||valor<=0){erros++;continue}
+      const p1=iP1>=0?_parseMesAno(cells[iP1]):null
+      const p2=iP2>=0?_parseMesAno(cells[iP2]):null
+      const p3=iP3>=0?_parseMesAno(cells[iP3]):null
+      const parcelas=[p1,p2,p3].filter(Boolean)
+      if(!parcelas.length){erros++;continue}
+      let status=(iSt>=0?cells[iSt]:'em_processo').trim().toLowerCase().replace(/\s+/g,'_').replace('à','a').replace('í','i').replace('ç','c')
+      if(!['em_processo','a_receber','confirmada'].includes(status))status='em_processo'
+      const declinio=iDe>=0?/^(sim|s|1|true)$/i.test((cells[iDe]||'').trim()):false
+      const{data,error}=await sb.from('provisionamentos').insert({
+        consultor_id:CU.id,empresa,documento:iDoc>=0?(cells[iDoc]||'').trim()||null:null,
+        operadora:iOp>=0?(cells[iOp]||'').trim()||null:null,
+        valor_bruto:valor,status,declinio,declinio_em:declinio?new Date().toISOString():null,
+        observacoes:iOb>=0?(cells[iOb]||'').trim()||null:null
+      }).select('id').single()
+      if(error){erros++;continue}
+      const vp=Number((valor/parcelas.length).toFixed(2))
+      await sb.from('provisionamento_parcelas').insert(parcelas.map((pr,i)=>({provisionamento_id:data.id,ordem:i+1,mes:pr.mes,ano:pr.ano,valor:vp,pago:false})))
+      ok++
+    }
+    input.value=''
+    mostrarToast('Import concluído',`${ok} importadas${erros?` · ${erros} com erro`:''}`,ok?'sucesso':'alerta')
+    if($('p-comissao')?.classList.contains('active'))loadMinhaComissao()
+  }
+  reader.readAsText(f,'utf-8')
+}
+
+async function loadMinhaComissao(){
+  const el=$('p-comissao');if(!el)return
+  el.innerHTML='<div class="loading">Carregando comissões...</div>'
+  const items=await _provFetchDoUser(CU.id)
+  _provAtual.dados=items
+  const filtro=_provAtual.filtro||'todos'
+  const filtered=items.filter(p=>{
+    if(filtro==='todos')return true
+    if(filtro==='ativos')return !p.declinio
+    if(filtro==='declinio')return p.declinio
+    if(['em_processo','a_receber','confirmada'].includes(filtro))return !p.declinio&&p.status===filtro
+    return true
+  })
+  // Agrega próximos 3 meses (só ativos)
+  const meses3=_provAgregaPorMes(items,3)
+  const totAtivos=items.filter(p=>!p.declinio)
+  const totBruto=totAtivos.reduce((s,p)=>s+Number(p.valor_bruto||0),0)
+  const porStatus=(st)=>totAtivos.filter(p=>p.status===st).reduce((s,p)=>s+Number(p.valor_bruto||0),0)
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div>
+        <div style="font-size:20px;font-weight:800">Minha comissão</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${items.length} vendas provisionadas · ${totAtivos.length} ativas</div>
+      </div>
+      <button class="btn btn-pri" onclick="abrirProv()">+ Nova venda</button>
+    </div>
+
+    <div class="prov-resumo">
+      <div class="box confirmada"><div class="lab">Confirmada</div><div class="val">${fmt(porStatus('confirmada'))}</div><div class="sub">agregado bruto</div></div>
+      <div class="box a_receber"><div class="lab">A receber</div><div class="val">${fmt(porStatus('a_receber'))}</div><div class="sub">agregado bruto</div></div>
+      <div class="box em_processo"><div class="lab">Em processo</div><div class="val">${fmt(porStatus('em_processo'))}</div><div class="sub">agregado bruto</div></div>
+      <div class="box total"><div class="lab">Total ativo</div><div class="val">${fmt(totBruto)}</div><div class="sub">${totAtivos.length} vendas</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><span class="card-title">Próximos 3 meses</span><span style="font-size:11px;color:var(--text3)">agenciamento previsto</span></div>
+      <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:8px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Mês</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Em processo</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">A receber</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Confirmada</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Total</th></tr>
+        </thead>
+        <tbody>
+          ${meses3.map(m=>`<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px;font-weight:600">${_mesesAbr[m.mes]}/${m.ano}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#F59E0B">${m.em_processo?fmt(m.em_processo):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#3B82F6">${m.a_receber?fmt(m.a_receber):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#10B981">${m.confirmada?fmt(m.confirmada):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--text1)">${m.total?fmt(m.total):'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prov-toolbar">
+      <div class="prov-filtros">
+        <button class="${filtro==='todos'?'on':''}" onclick="_setFiltroProv('todos')">Todos</button>
+        <button class="${filtro==='ativos'?'on':''}" onclick="_setFiltroProv('ativos')">Ativos</button>
+        <button class="${filtro==='em_processo'?'on':''}" onclick="_setFiltroProv('em_processo')">Em processo</button>
+        <button class="${filtro==='a_receber'?'on':''}" onclick="_setFiltroProv('a_receber')">A receber</button>
+        <button class="${filtro==='confirmada'?'on':''}" onclick="_setFiltroProv('confirmada')">Confirmada</button>
+        <button class="${filtro==='declinio'?'on':''}" onclick="_setFiltroProv('declinio')">Declínio</button>
+      </div>
+      <div class="prov-acoes-topo">
+        <label class="btn btn-sec" style="cursor:pointer">
+          📥 Importar CSV
+          <input type="file" accept=".csv" onchange="importarProvCSV(this)" style="display:none">
+        </label>
+        <button class="btn btn-sec" onclick="exportarProvCSV()">📤 Exportar CSV</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      ${filtered.length?`
+        <div style="overflow-x:auto">
+          <table class="prov-tabela">
+            <thead><tr>
+              <th>Empresa</th><th>Operadora</th><th style="text-align:right">Valor bruto</th>
+              <th>1ª PG</th><th>2ª PG</th><th>3ª PG</th>
+              <th>Status</th><th></th>
+            </tr></thead>
+            <tbody>${filtered.map(_renderLinhaProv).join('')}</tbody>
+          </table>
+        </div>
+      `:'<div class="empty" style="padding:32px 0;text-align:center;color:var(--text3)">Nenhuma venda com esse filtro</div>'}
+    </div>
+  `
+}
+
+function _renderLinhaProv(p){
+  const parcs=(p.provisionamento_parcelas||[]).sort((a,b)=>a.ordem-b.ordem)
+  const parcCell=(o)=>{
+    const parc=parcs[o-1]
+    if(!parc)return `<span class="parc vazio">—</span>`
+    return `<span class="parc ${parc.pago?'pago':''}" onclick="togglePagoParcela('${parc.id}')" title="${parc.pago?'Clique para desmarcar como pago':'Clique para marcar como pago'} · ${fmt(parc.valor)}">${_fmtMesAno(parc.mes,parc.ano)}</span>`
+  }
+  const statusPill=p.declinio
+    ?`<span class="prov-status declinio">Declínio</span>`
+    :`<select onchange="mudarStatusProv('${p.id}',this.value)" style="border:0;background:transparent;font-family:inherit;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:5px;cursor:pointer;background:${p.status==='confirmada'?'#D1FAE5':p.status==='a_receber'?'#DBEAFE':'#FEF3C7'};color:${p.status==='confirmada'?'#065F46':p.status==='a_receber'?'#1E40AF':'#92400E'}">
+        <option value="em_processo" ${p.status==='em_processo'?'selected':''}>Em processo</option>
+        <option value="a_receber" ${p.status==='a_receber'?'selected':''}>A receber</option>
+        <option value="confirmada" ${p.status==='confirmada'?'selected':''}>Confirmada</option>
+      </select>`
+  return `<tr class="${p.declinio?'declinio':''}">
+    <td><strong>${_escapeFeed(p.empresa||'')}</strong>${p.documento?`<div style="font-size:11px;color:var(--text3)">${_escapeFeed(p.documento)}</div>`:''}</td>
+    <td>${_escapeFeed(p.operadora||'—')}</td>
+    <td class="num" style="text-align:right;font-weight:700">${fmt(p.valor_bruto)}</td>
+    <td>${parcCell(1)}</td>
+    <td>${parcCell(2)}</td>
+    <td>${parcCell(3)}</td>
+    <td>${statusPill}</td>
+    <td>
+      <div class="acoes">
+        <button onclick="abrirProv('${p.id}')" title="Editar">✎</button>
+        <button onclick="alternarDeclinio('${p.id}')" title="${p.declinio?'Reativar':'Declinar'}">${p.declinio?'↺':'⊘'}</button>
+        <button class="del" onclick="excluirProv('${p.id}','${(p.empresa||'').replace(/'/g,"\\'")}')" title="Excluir">🗑</button>
+      </div>
+    </td>
+  </tr>`
+}
+
+window._setFiltroProv=(f)=>{_provAtual.filtro=f;loadMinhaComissao()}
+
+async function _renderWidgetProvMaster(hostEl){
+  if(!hostEl)return
+  try{
+    const items=await _provFetchTodos()
+    if(!items.length)return
+    const meses=_provAgregaPorMes(items,6)
+    const totalPeriodo=meses.reduce((s,m)=>s+m.total,0)
+    if(totalPeriodo<=0)return
+    const box=document.createElement('div')
+    box.className='card prov-capa'
+    box.style.marginTop='14px'
+    box.innerHTML=`
+      <div class="prov-capa-head">
+        <span class="card-title">💰 Provisionamento — próximos 6 meses</span>
+        <span style="font-size:11px;color:var(--text3)">agenciamento previsto · pagamento = 60%</span>
+      </div>
+      <table>
+        <thead><tr><th>Mês</th><th>Em processo</th><th>A receber</th><th>Confirmada</th><th>Total</th><th>Pagamento (60%)</th></tr></thead>
+        <tbody>
+          ${meses.map((m,i)=>`<tr class="${i===0?'mes-atual':''}">
+            <td>${_mesesAbr[m.mes]}/${m.ano}</td>
+            <td style="color:#F59E0B">${m.em_processo?fmt(m.em_processo):'—'}</td>
+            <td style="color:#3B82F6">${m.a_receber?fmt(m.a_receber):'—'}</td>
+            <td style="color:#10B981">${m.confirmada?fmt(m.confirmada):'—'}</td>
+            <td style="font-weight:700;color:var(--text1)">${m.total?fmt(m.total):'—'}</td>
+            <td class="pgto">${m.total?fmt(m.total*0.6):'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    `
+    hostEl.appendChild(box)
+  }catch(e){console.warn('widget prov master:',e)}
+}
+
+async function _renderWidgetProvSupervisor(hostEl,equipeId,equipeNome){
+  if(!hostEl||!equipeId)return
+  try{
+    const items=await _provFetchDaEquipe(equipeId)
+    if(!items.length)return
+    const meses=_provAgregaPorMes(items,6)
+    const maxTotal=Math.max(...meses.map(m=>m.total),1)
+    if(maxTotal<=0)return
+    const totalPeriodo=meses.reduce((s,m)=>s+m.total,0)
+    const box=document.createElement('div')
+    box.className='card'
+    box.style.marginTop='14px'
+    box.innerHTML=`
+      <div class="card-head">
+        <span class="card-title">💰 Agenciamento previsto — Equipe ${_escapeFeed(equipeNome||'')}</span>
+        <span style="font-size:11px;color:var(--text3)">próximos 6 meses · total ${fmt(totalPeriodo)}</span>
+      </div>
+      <div class="prov-stack">
+        ${meses.map(m=>{
+          const wEP=m.total?(m.em_processo/maxTotal*100):0
+          const wAR=m.total?(m.a_receber/maxTotal*100):0
+          const wCF=m.total?(m.confirmada/maxTotal*100):0
+          return `<div class="prov-stack-row">
+            <div class="prov-stack-mes">${_mesesAbr[m.mes]}/${String(m.ano).slice(-2)}</div>
+            <div class="prov-stack-bar">
+              <div class="seg em_processo" style="width:${wEP}%" title="Em processo: ${fmt(m.em_processo)}"></div>
+              <div class="seg a_receber" style="width:${wAR}%" title="A receber: ${fmt(m.a_receber)}"></div>
+              <div class="seg confirmada" style="width:${wCF}%" title="Confirmada: ${fmt(m.confirmada)}"></div>
+            </div>
+            <div class="prov-stack-val">${m.total?fmt(m.total):'—'}</div>
+          </div>`
+        }).join('')}
+      </div>
+      <div class="prov-stack-legend">
+        <span class="em_processo">Em processo</span>
+        <span class="a_receber">A receber</span>
+        <span class="confirmada">Confirmada</span>
+      </div>
+    `
+    hostEl.appendChild(box)
+  }catch(e){console.warn('widget prov sup:',e)}
+}
+
+function _csvSplit(line,sep){
+  // Split simples respeitando aspas
+  const out=[];let cur='',inQ=false
+  for(let i=0;i<line.length;i++){
+    const c=line[i]
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}
+    else if(c===sep&&!inQ){out.push(cur);cur=''}
+    else cur+=c
+  }
+  out.push(cur)
+  return out
+}
 function _wrapAvatarBorda(userId,size,innerHTML){
   const tier=_tierBorda(userId)
   if(!tier)return innerHTML
@@ -2663,6 +3253,8 @@ function setupConsultor(){
     <button class="sb-btn" onclick="navTo('p-historico',this,'Histórico')">📋 Histórico</button>
     <div class="sb-section">Rede social</div>
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
+    <div class="sb-section">Financeiro</div>
+    <button class="sb-btn" onclick="navTo('p-comissao',this,'Minha comissão')">💰 Minha comissão</button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-home" class="page active"></div>
@@ -2673,6 +3265,7 @@ function setupConsultor(){
     <div id="p-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
     <div id="p-feed" class="page"></div>
+    <div id="p-comissao" class="page"></div>
   `
   loadCoHome()
 }
@@ -2696,9 +3289,12 @@ function setupSupervisor(){
     <button class="sb-btn" onclick="navTo('p-sv-historico',this,'Histórico mensal')">📋 Histórico</button>
     <div class="sb-section">Rede social</div>
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
+    <div class="sb-section">Financeiro</div>
+    <button class="sb-btn" onclick="navTo('p-comissao',this,'Minha comissão')">💰 Minha comissão</button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-sv-home" class="page active"></div>
+    <div id="p-comissao" class="page"></div>
     <div id="p-sv-consultores" class="page"></div>
     <div id="p-sv-funil" class="page"></div>
     <div id="p-sv-meus-leads" class="page"></div>
@@ -2770,7 +3366,7 @@ window.navTo=(id,btn,title)=>{
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
-    'p-feed':loadFeed
+    'p-feed':loadFeed,'p-comissao':loadMinhaComissao
   }
   if(map[id]) map[id]()
 }
@@ -3194,6 +3790,16 @@ window.salvarLead=async()=>{
     // Verificar meta individual SEMPRE, e meta da equipe se tiver equipe
     const equipeNome=CU.equipe_id?(await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single()).data?.nome||'':'';
     await verificarMetas(CU.id,CU.nome,CU.equipe_id||null,equipeNome)
+    // Oferece registrar comissão prevista (só em novas propostas)
+    if(isNovo){
+      const preset={
+        lead_id:null,
+        empresa:$('ml-empresa').value.trim()||$('ml-nome').value.trim(),
+        operadora:$('ml-operadora').value.trim(),
+        valor:dados.valor_meta||dados.valor||0
+      }
+      setTimeout(()=>abrirProv(null,preset),1600)
+    }
   }
   $('ml-ok').textContent=id?'Lead atualizado!':'Lead cadastrado!';$('ml-ok').style.display='block'
   setTimeout(()=>{closeModal('mod-lead');loadLeads();loadCoHome();_salvandoLead=false},1400)
@@ -3790,6 +4396,11 @@ async function loadSvHome(fMes=null,fAno=null){
     newChart('c-sv-rv',{type:'bar',data:{labels:consStats.map(x=>x.c.nome.split(' ')[0]),datasets:[{data:consStats.map(x=>x.real),backgroundColor:cores,borderRadius:8,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:11},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
   },100)
   renderAniversariantes($('p-sv-home'))
+  ;(async()=>{
+    let nomeEq=''
+    if(CU.equipe_id){const{data}=await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single();nomeEq=data?.nome||''}
+    _renderWidgetProvSupervisor($('p-sv-home'),CU.equipe_id,nomeEq)
+  })()
 }
 
 // Abrir dashboard do consultor
@@ -4721,6 +5332,7 @@ async function loadMaHome(fMes=null,fAno=null){
     newChart('c-ma-rv',{type:'bar',data:{labels:eqStats.map(e=>e.eq.nome),datasets:[{data:eqStats.map(e=>e.real),backgroundColor:cores,borderRadius:8,barPercentage:.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'R$ '+c.raw.toLocaleString('pt-BR')}}},scales:{x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#94A3B8',font:{size:10},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'}}}}})
   },100)
   renderAniversariantes($('p-ma-home'))
+  _renderWidgetProvMaster($('p-ma-home'))
 }
 
 async function loadMaEquipes(){
