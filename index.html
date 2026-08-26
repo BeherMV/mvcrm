@@ -1314,6 +1314,21 @@ window.salvarProvisionamento=async()=>{
   }
 }
 
+// Numero de parcelas segue a mesma regra de calcMeta:
+// multiplicador (meses) da operadora conforme tipo.
+function _parcelasPorRegra(tipo,op){
+  if(op==='Unimed'){
+    if(tipo==='PME')return 3
+    if(tipo==='Adesão')return 2
+    return 1
+  }
+  if(op==='Qualicorp')return 1
+  if(op==='MedSênior')return 2
+  if(op==='Leve Saúde')return tipo==='PME'?2:1
+  if(tipo==='PME')return PME_MULT[op]||1
+  return 1
+}
+
 // Auto-cria provisionamento silencioso quando lead vira Proposta.
 // Idempotente: se ja existe registro pra esse lead_id, nao duplica.
 async function _autoCriarProvisionamento(leadId,dadosLead){
@@ -1324,15 +1339,17 @@ async function _autoCriarProvisionamento(leadId,dadosLead){
   if(count&&count>0)return
   const mF=Number(dadosLead?.mes_fechamento)||mesAtual()
   const aF=Number(dadosLead?.ano_fechamento)||anoAtual()
-  // 3 meses seguintes ao fechamento
+  const operadora=dadosLead?.operadora||$('ml-operadora')?.value.trim()||null
+  const tipo=dadosLead?.tipo||$('ml-tipo')?.value||null
+  // Numero de parcelas segue regra da operadora × tipo (igual calcMeta)
+  const nParcelas=_parcelasPorRegra(tipo,operadora)
   const parcelas=[]
   let m=mF,a=aF
-  for(let i=0;i<3;i++){
+  for(let i=0;i<nParcelas;i++){
     m++;if(m>12){m=1;a++}
     parcelas.push({mes:m,ano:a})
   }
   const empresa=$('ml-empresa')?.value.trim()||$('ml-nome')?.value.trim()||'(sem nome)'
-  const operadora=dadosLead?.operadora||$('ml-operadora')?.value.trim()||null
   const{data:prov,error}=await sb.from('provisionamentos').insert({
     consultor_id:CU.id,lead_id:leadId,
     empresa,operadora,valor_bruto,status:'em_processo'
@@ -1342,7 +1359,7 @@ async function _autoCriarProvisionamento(leadId,dadosLead){
   await sb.from('provisionamento_parcelas').insert(parcelas.map((p,i)=>({
     provisionamento_id:prov.id,ordem:i+1,mes:p.mes,ano:p.ano,valor:vParc,pago:false
   })))
-  mostrarToast('Comissão criada',`${empresa} · 3 parcelas de ${fmt(vParc)} em Minha comissão`,'info')
+  mostrarToast('Comissão criada',`${empresa} · ${nParcelas} parcela${nParcelas>1?'s':''} de ${fmt(vParc)} em Minha comissão`,'info')
 }
 
 window.excluirProv=async(id,empresa)=>{
