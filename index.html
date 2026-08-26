@@ -952,7 +952,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <input type="hidden" id="mp-id">
     <input type="hidden" id="mp-lead-id">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="mfield" style="grid-column:span 2"><label>Empresa / Pessoa</label><input type="text" id="mp-empresa" placeholder="Nome do cliente"></div>
+      <div class="mfield"><label>Nome</label><input type="text" id="mp-empresa" placeholder="Nome da pessoa/contato"></div>
+      <div class="mfield"><label>Razão social</label><input type="text" id="mp-razao" placeholder="Empresa (se PJ)"></div>
       <div class="mfield"><label>CPF / CNPJ</label><input type="text" id="mp-doc" placeholder="opcional"></div>
       <div class="mfield"><label>Operadora</label><input type="text" id="mp-operadora" placeholder="Ex: Amil"></div>
       <div class="mfield"><label>Valor bruto (R$)</label><input type="number" step="0.01" id="mp-valor" placeholder="0,00"></div>
@@ -1231,6 +1232,7 @@ window.abrirProv=(id,leadPreset)=>{
     $('mod-prov-title').textContent='Editar comissão'
   }else{
     $('mp-empresa').value=leadPreset?.empresa||''
+    $('mp-razao').value=leadPreset?.razao||''
     $('mp-doc').value=leadPreset?.doc||''
     $('mp-operadora').value=leadPreset?.operadora||''
     $('mp-valor').value=leadPreset?.valor||''
@@ -1256,6 +1258,7 @@ async function _preencherModalProv(id){
   const{data:p}=await sb.from('provisionamentos').select('*,provisionamento_parcelas(*)').eq('id',id).single()
   if(!p)return
   $('mp-empresa').value=p.empresa||''
+  $('mp-razao').value=p.razao_social||''
   $('mp-doc').value=p.documento||''
   $('mp-operadora').value=p.operadora||''
   $('mp-valor').value=p.valor_bruto||''
@@ -1271,6 +1274,7 @@ async function _preencherModalProv(id){
 window.salvarProvisionamento=async()=>{
   const id=$('mp-id').value||null
   const empresa=$('mp-empresa').value.trim()
+  const razao_social=$('mp-razao').value.trim()||null
   const documento=$('mp-doc').value.trim()||null
   const operadora=$('mp-operadora').value.trim()||null
   const valor_bruto=Number($('mp-valor').value)||0
@@ -1288,7 +1292,7 @@ window.salvarProvisionamento=async()=>{
   if(!parcelas.length){err.textContent='Informe pelo menos a 1ª parcela (formato MM/AAAA)';err.style.display='block';return}
   // Cada parcela = 60% da fatura (valor_bruto = fatura mensal do cliente)
   const vParc=Number((valor_bruto*0.6).toFixed(2))
-  const payload={consultor_id:CU.id,lead_id:lead_id||null,empresa,documento,operadora,valor_bruto,status,declinio,declinio_em:declinio?new Date().toISOString():null,observacoes,editado_em:new Date().toISOString()}
+  const payload={consultor_id:CU.id,lead_id:lead_id||null,empresa,razao_social,documento,operadora,valor_bruto,status,declinio,declinio_em:declinio?new Date().toISOString():null,observacoes,editado_em:new Date().toISOString()}
   try{
     let provId=id
     if(id){
@@ -1349,10 +1353,12 @@ async function _autoCriarProvisionamento(leadId,dadosLead){
     m++;if(m>12){m=1;a++}
     parcelas.push({mes:m,ano:a})
   }
-  const empresa=$('ml-empresa')?.value.trim()||$('ml-nome')?.value.trim()||'(sem nome)'
+  // Nome = quem contatou (ml-nome do lead). Razão social = empresa (só se PJ, ml-empresa preenchido).
+  const empresa=$('ml-nome')?.value.trim()||'(sem nome)'
+  const razao_social=$('ml-empresa')?.value.trim()||null
   const{data:prov,error}=await sb.from('provisionamentos').insert({
     consultor_id:CU.id,lead_id:leadId,
-    empresa,operadora,valor_bruto,status:'em_processo'
+    empresa,razao_social,operadora,valor_bruto,status:'em_processo'
   }).select('id').single()
   if(error){console.warn('prov insert:',error);return}
   const vParc=Number((valor_bruto*0.6).toFixed(2))
@@ -1392,11 +1398,11 @@ window.mudarStatusProv=async(id,novo)=>{
 // ── CSV Export/Import ──
 window.exportarProvCSV=async()=>{
   const items=await _provFetchDoUser(CU.id)
-  const headers=['empresa','documento','operadora','valor_bruto','mes_ano_1','mes_ano_2','mes_ano_3','status','declinio','observacoes']
+  const headers=['nome','razao_social','documento','operadora','valor_bruto','mes_ano_1','mes_ano_2','mes_ano_3','status','declinio','observacoes']
   const rows=items.map(p=>{
     const ps=(p.provisionamento_parcelas||[]).sort((a,b)=>a.ordem-b.ordem)
     return[
-      p.empresa||'',p.documento||'',p.operadora||'',p.valor_bruto,
+      p.empresa||'',p.razao_social||'',p.documento||'',p.operadora||'',p.valor_bruto,
       ps[0]?_fmtMesAno(ps[0].mes,ps[0].ano):'',
       ps[1]?_fmtMesAno(ps[1].mes,ps[1].ano):'',
       ps[2]?_fmtMesAno(ps[2].mes,ps[2].ano):'',
@@ -1558,7 +1564,7 @@ function _renderLinhaProv(p){
         <option value="confirmada" ${p.status==='confirmada'?'selected':''}>Confirmada</option>
       </select>`
   return `<tr class="${p.declinio?'declinio':''}">
-    <td><strong>${_escapeFeed(p.empresa||'')}</strong>${p.documento?`<div style="font-size:11px;color:var(--text3)">${_escapeFeed(p.documento)}</div>`:''}</td>
+    <td><strong>${_escapeFeed(p.empresa||'')}</strong>${p.razao_social?`<div style="font-size:11px;color:var(--text2)">${_escapeFeed(p.razao_social)}</div>`:''}${p.documento?`<div style="font-size:10.5px;color:var(--text3);margin-top:2px">${_escapeFeed(p.documento)}</div>`:''}</td>
     <td>${_escapeFeed(p.operadora||'—')}</td>
     <td class="num" style="text-align:right;font-weight:700">${fmt(p.valor_bruto)}</td>
     <td>${parcCell(1)}</td>
@@ -1576,6 +1582,136 @@ function _renderLinhaProv(p){
 }
 
 window._setFiltroProv=(f)=>{_provAtual.filtro=f;loadMinhaComissao()}
+
+let _comEqAtual={filtroConsultor:'todos',filtroEquipe:'todas'}
+window._setFiltroComEq=(campo,val)=>{
+  if(campo==='consultor')_comEqAtual.filtroConsultor=val
+  if(campo==='equipe'){_comEqAtual.filtroEquipe=val;_comEqAtual.filtroConsultor='todos'}
+  loadComissaoEquipe()
+}
+
+async function loadComissaoEquipe(){
+  const el=$('p-com-eq');if(!el)return
+  el.innerHTML='<div class="loading">Carregando...</div>'
+  const isMaster=CU.perfil==='master'
+  let items=[],consultores=[],equipes=[]
+  if(isMaster){
+    const{data:allCons}=await sb.from('usuarios').select('id,nome,equipe_id,equipes(nome)').in('perfil',['consultor','supervisor']).order('nome')
+    consultores=allCons||[]
+    const{data:allEqs}=await sb.from('equipes').select('*').order('nome')
+    equipes=allEqs||[]
+    items=await _provFetchTodos()
+  }else{
+    const{data:eqCons}=await sb.from('usuarios').select('id,nome,equipe_id').eq('equipe_id',CU.equipe_id).order('nome')
+    consultores=eqCons||[]
+    items=await _provFetchDaEquipe(CU.equipe_id)
+  }
+  const fCons=_comEqAtual.filtroConsultor,fEq=_comEqAtual.filtroEquipe
+  let filtered=items
+  if(isMaster&&fEq!=='todas'){
+    const idsEq=consultores.filter(c=>c.equipe_id===fEq).map(c=>c.id)
+    filtered=filtered.filter(p=>idsEq.includes(p.consultor_id))
+  }
+  if(fCons!=='todos')filtered=filtered.filter(p=>p.consultor_id===fCons)
+  const totAtivos=filtered.filter(p=>!p.declinio)
+  const totBruto=totAtivos.reduce((s,p)=>s+Number(p.valor_bruto||0),0)
+  const porStatus=st=>totAtivos.filter(p=>p.status===st).reduce((s,p)=>s+Number(p.valor_bruto||0),0)
+  const meses6=_provAgregaPorMes(filtered,6)
+  const porCons={}
+  totAtivos.forEach(p=>{
+    if(!porCons[p.consultor_id])porCons[p.consultor_id]={qtd:0,total:0,em_processo:0,a_receber:0,confirmada:0}
+    const c=porCons[p.consultor_id]
+    c.qtd++;c.total+=Number(p.valor_bruto||0)
+    c[p.status]=(c[p.status]||0)+Number(p.valor_bruto||0)
+  })
+  const consList=Object.entries(porCons).map(([id,d])=>{
+    const cons=consultores.find(c=>c.id===id)
+    return{id,nome:cons?.nome||'—',equipe:cons?.equipes?.nome||'',...d}
+  }).sort((a,b)=>b.total-a.total)
+  const consOptions=isMaster
+    ?consultores.filter(c=>fEq==='todas'||c.equipe_id===fEq)
+    :consultores
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div>
+        <div style="font-size:20px;font-weight:800">${isMaster?'Provisionamento geral':'Comissão da equipe'}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${totAtivos.length} vendas ativas · ${consList.length} consultores com vendas</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isMaster&&equipes.length?`
+          <select onchange="_setFiltroComEq('equipe',this.value)" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text1);font-family:inherit;font-size:13px">
+            <option value="todas" ${fEq==='todas'?'selected':''}>Todas as equipes</option>
+            ${equipes.map(e=>`<option value="${e.id}" ${fEq===e.id?'selected':''}>${_escapeFeed(e.nome)}</option>`).join('')}
+          </select>
+        `:''}
+        <select onchange="_setFiltroComEq('consultor',this.value)" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text1);font-family:inherit;font-size:13px">
+          <option value="todos" ${fCons==='todos'?'selected':''}>Todos consultores</option>
+          ${consOptions.map(c=>`<option value="${c.id}" ${fCons===c.id?'selected':''}>${_escapeFeed(c.nome)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="prov-resumo">
+      <div class="box confirmada"><div class="lab">Confirmada</div><div class="val">${fmt(porStatus('confirmada'))}</div></div>
+      <div class="box a_receber"><div class="lab">A receber</div><div class="val">${fmt(porStatus('a_receber'))}</div></div>
+      <div class="box em_processo"><div class="lab">Em processo</div><div class="val">${fmt(porStatus('em_processo'))}</div></div>
+      <div class="box total"><div class="lab">Total ativo</div><div class="val">${fmt(totBruto)}</div><div class="sub">${totAtivos.length} vendas</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><span class="card-title">Próximos 6 meses</span><span style="font-size:11px;color:var(--text3)">agenciamento previsto · pagamento = 60%</span></div>
+      <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:8px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Mês</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Em processo</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">A receber</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Confirmada</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Total</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Pagamento 60%</th>
+        </tr></thead>
+        <tbody>
+          ${meses6.map(m=>`<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px;font-weight:600">${_mesesAbr[m.mes]}/${m.ano}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#F59E0B">${m.em_processo?fmt(m.em_processo):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#3B82F6">${m.a_receber?fmt(m.a_receber):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:#10B981">${m.confirmada?fmt(m.confirmada):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--text1)">${m.total?fmt(m.total):'—'}</td>
+            <td style="padding:8px;text-align:right;font-family:ui-monospace,Menlo,monospace;color:var(--mid);font-weight:600">${m.total?fmt(m.total*0.6):'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span class="card-title">Por consultor</span>
+        <span style="font-size:11px;color:var(--text3)">${consList.length} com vendas</span>
+      </div>
+      ${consList.length?`
+        <div style="overflow-x:auto">
+          <table class="prov-tabela">
+            <thead><tr>
+              <th>Consultor</th>${isMaster?'<th>Equipe</th>':''}<th style="text-align:right">Vendas</th>
+              <th style="text-align:right">Em processo</th>
+              <th style="text-align:right">A receber</th>
+              <th style="text-align:right">Confirmada</th>
+              <th style="text-align:right">Total ativo</th>
+            </tr></thead>
+            <tbody>${consList.map(c=>`<tr>
+              <td><strong>${_escapeFeed(c.nome)}</strong></td>
+              ${isMaster?`<td style="color:var(--text2)">${_escapeFeed(c.equipe||'—')}</td>`:''}
+              <td class="num" style="text-align:right">${c.qtd}</td>
+              <td class="num" style="text-align:right;color:#F59E0B">${c.em_processo?fmt(c.em_processo):'—'}</td>
+              <td class="num" style="text-align:right;color:#3B82F6">${c.a_receber?fmt(c.a_receber):'—'}</td>
+              <td class="num" style="text-align:right;color:#10B981">${c.confirmada?fmt(c.confirmada):'—'}</td>
+              <td class="num" style="text-align:right;font-weight:700">${fmt(c.total)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+      `:'<div class="empty" style="padding:32px 0;text-align:center;color:var(--text3)">Nenhum consultor com vendas nesse filtro</div>'}
+    </div>
+  `
+}
 
 async function _renderWidgetProvMaster(hostEl){
   if(!hostEl)return
@@ -3335,10 +3471,12 @@ function setupSupervisor(){
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
     <div class="sb-section">Financeiro</div>
     <button class="sb-btn" onclick="navTo('p-comissao',this,'Minha comissão')">💰 Minha comissão</button>
+    <button class="sb-btn" onclick="navTo('p-com-eq',this,'Comissão da equipe')">👥 Comissão da equipe</button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-sv-home" class="page active"></div>
     <div id="p-comissao" class="page"></div>
+    <div id="p-com-eq" class="page"></div>
     <div id="p-sv-consultores" class="page"></div>
     <div id="p-sv-funil" class="page"></div>
     <div id="p-sv-meus-leads" class="page"></div>
@@ -3374,6 +3512,8 @@ function setupMaster(){
     <div class="sb-section">Sistema</div>
     <button class="sb-btn" onclick="navTo('p-ma-equipe',this,'Equipe')">👥 Equipe</button>
     <button class="sb-btn" onclick="navTo('p-ma-usuarios',this,'Usuários')">👤 Usuários</button>
+    <div class="sb-section">Financeiro</div>
+    <button class="sb-btn" onclick="navTo('p-com-eq',this,'Provisionamento geral')">💰 Provisionamento</button>
     <div class="sb-section">Rede social</div>
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
   `
@@ -3393,6 +3533,7 @@ function setupMaster(){
     <div id="p-ma-equipe" class="page"></div>
     <div id="p-ma-perfil" class="page"></div>
     <div id="p-feed" class="page"></div>
+    <div id="p-com-eq" class="page"></div>
   `
   loadMaHome()
 }
@@ -3410,7 +3551,7 @@ window.navTo=(id,btn,title)=>{
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
-    'p-feed':loadFeed,'p-comissao':loadMinhaComissao
+    'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe
   }
   if(map[id]) map[id]()
 }
