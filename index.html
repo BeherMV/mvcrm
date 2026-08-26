@@ -971,7 +971,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="mfield" style="margin-bottom:0"><label>2ª PG</label><input type="text" id="mp-p2" placeholder="opcional"></div>
         <div class="mfield" style="margin-bottom:0"><label>3ª PG</label><input type="text" id="mp-p3" placeholder="opcional"></div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px">Valor divide igual entre as parcelas. Pra ajustar valores individuais, edite depois na tabela.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Valor bruto = fatura mensal do cliente. Cada parcela recebe <strong>60%</strong> desse valor. Ex.: fatura R$ 1.000 → 3 parcelas de R$ 600.</div>
     </div>
     <div class="mfield"><label>Observações</label><textarea id="mp-obs" rows="2" placeholder="opcional"></textarea></div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:12px">
@@ -1286,8 +1286,8 @@ window.salvarProvisionamento=async()=>{
   const p3=_parseMesAno($('mp-p3').value)
   const parcelas=[p1,p2,p3].filter(Boolean)
   if(!parcelas.length){err.textContent='Informe pelo menos a 1ª parcela (formato MM/AAAA)';err.style.display='block';return}
-  // Divide igual
-  const vParc=Number((valor_bruto/parcelas.length).toFixed(2))
+  // Cada parcela = 60% da fatura (valor_bruto = fatura mensal do cliente)
+  const vParc=Number((valor_bruto*0.6).toFixed(2))
   const payload={consultor_id:CU.id,lead_id:lead_id||null,empresa,documento,operadora,valor_bruto,status,declinio,declinio_em:declinio?new Date().toISOString():null,observacoes,editado_em:new Date().toISOString()}
   try{
     let provId=id
@@ -1312,6 +1312,37 @@ window.salvarProvisionamento=async()=>{
   }catch(e){
     err.textContent='Erro: '+(e.message||e);err.style.display='block'
   }
+}
+
+// Auto-cria provisionamento silencioso quando lead vira Proposta.
+// Idempotente: se ja existe registro pra esse lead_id, nao duplica.
+async function _autoCriarProvisionamento(leadId,dadosLead){
+  if(!leadId)return
+  const valor_bruto=Number(dadosLead?.valor||0)
+  if(!valor_bruto)return
+  const{count}=await sb.from('provisionamentos').select('id',{count:'exact',head:true}).eq('lead_id',leadId)
+  if(count&&count>0)return
+  const mF=Number(dadosLead?.mes_fechamento)||mesAtual()
+  const aF=Number(dadosLead?.ano_fechamento)||anoAtual()
+  // 3 meses seguintes ao fechamento
+  const parcelas=[]
+  let m=mF,a=aF
+  for(let i=0;i<3;i++){
+    m++;if(m>12){m=1;a++}
+    parcelas.push({mes:m,ano:a})
+  }
+  const empresa=$('ml-empresa')?.value.trim()||$('ml-nome')?.value.trim()||'(sem nome)'
+  const operadora=dadosLead?.operadora||$('ml-operadora')?.value.trim()||null
+  const{data:prov,error}=await sb.from('provisionamentos').insert({
+    consultor_id:CU.id,lead_id:leadId,
+    empresa,operadora,valor_bruto,status:'em_processo'
+  }).select('id').single()
+  if(error){console.warn('prov insert:',error);return}
+  const vParc=Number((valor_bruto*0.6).toFixed(2))
+  await sb.from('provisionamento_parcelas').insert(parcelas.map((p,i)=>({
+    provisionamento_id:prov.id,ordem:i+1,mes:p.mes,ano:p.ano,valor:vParc,pago:false
+  })))
+  mostrarToast('Comissão criada',`${empresa} · 3 parcelas de ${fmt(vParc)} em Minha comissão`,'info')
 }
 
 window.excluirProv=async(id,empresa)=>{
@@ -1425,8 +1456,8 @@ async function loadMinhaComissao(){
     if(['em_processo','a_receber','confirmada'].includes(filtro))return !p.declinio&&p.status===filtro
     return true
   })
-  // Agrega próximos 3 meses (só ativos)
-  const meses3=_provAgregaPorMes(items,3)
+  // Agrega próximos 6 meses (só ativos)
+  const meses3=_provAgregaPorMes(items,6)
   const totAtivos=items.filter(p=>!p.declinio)
   const totBruto=totAtivos.reduce((s,p)=>s+Number(p.valor_bruto||0),0)
   const porStatus=(st)=>totAtivos.filter(p=>p.status===st).reduce((s,p)=>s+Number(p.valor_bruto||0),0)
@@ -1447,7 +1478,7 @@ async function loadMinhaComissao(){
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><span class="card-title">Próximos 3 meses</span><span style="font-size:11px;color:var(--text3)">agenciamento previsto</span></div>
+      <div class="card-head"><span class="card-title">Próximos 6 meses</span><span style="font-size:11px;color:var(--text3)">agenciamento previsto</span></div>
       <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:8px">
         <thead>
           <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Mês</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Em processo</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">A receber</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Confirmada</th><th style="text-align:right;padding:6px 8px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Total</th></tr>
@@ -1474,10 +1505,6 @@ async function loadMinhaComissao(){
         <button class="${filtro==='declinio'?'on':''}" onclick="_setFiltroProv('declinio')">Declínio</button>
       </div>
       <div class="prov-acoes-topo">
-        <label class="btn btn-sec" style="cursor:pointer">
-          📥 Importar CSV
-          <input type="file" accept=".csv" onchange="importarProvCSV(this)" style="display:none">
-        </label>
         <button class="btn btn-sec" onclick="exportarProvCSV()">📤 Exportar CSV</button>
       </div>
     </div>
@@ -3784,22 +3811,21 @@ window.salvarLead=async()=>{
     }
   }
   if(status==='Negativa') dados={...dados,motivo_perda:motivo}
-  const{error}=id?await sb.from('leads').update(dados).eq('id',id):await sb.from('leads').insert(dados)
-  if(error){$('ml-err').textContent='Erro: '+error.message;$('ml-err').style.display='block';return}
+  let leadIdReal=id
+  if(id){
+    const{error}=await sb.from('leads').update(dados).eq('id',id)
+    if(error){$('ml-err').textContent='Erro: '+error.message;$('ml-err').style.display='block';return}
+  }else{
+    const{data,error}=await sb.from('leads').insert(dados).select('id').single()
+    if(error){$('ml-err').textContent='Erro: '+error.message;$('ml-err').style.display='block';return}
+    leadIdReal=data?.id
+  }
   if(status==='Proposta'){
     // Verificar meta individual SEMPRE, e meta da equipe se tiver equipe
     const equipeNome=CU.equipe_id?(await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single()).data?.nome||'':'';
     await verificarMetas(CU.id,CU.nome,CU.equipe_id||null,equipeNome)
-    // Oferece registrar comissão prevista (só em novas propostas)
-    if(isNovo){
-      const preset={
-        lead_id:null,
-        empresa:$('ml-empresa').value.trim()||$('ml-nome').value.trim(),
-        operadora:$('ml-operadora').value.trim(),
-        valor:dados.valor_meta||dados.valor||0
-      }
-      setTimeout(()=>abrirProv(null,preset),1600)
-    }
+    // Auto-cria provisionamento (silencioso, idempotente por lead_id)
+    _autoCriarProvisionamento(leadIdReal,dados).catch(e=>console.warn('auto prov:',e))
   }
   $('ml-ok').textContent=id?'Lead atualizado!':'Lead cadastrado!';$('ml-ok').style.display='block'
   setTimeout(()=>{closeModal('mod-lead');loadLeads();loadCoHome();_salvandoLead=false},1400)
