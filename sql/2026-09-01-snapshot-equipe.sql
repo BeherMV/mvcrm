@@ -67,19 +67,24 @@ $$;
 grant execute on function public.fechar_mes(int, int) to authenticated;
 
 -- 4) RPC: meta total da equipe usando SNAPSHOT (composição congelada)
+-- Filtra perfil='consultor' para manter comportamento antigo (supervisor não conta na meta da equipe)
 create or replace function public.get_meta_equipe_snapshot(p_equipe_id uuid, p_mes int, p_ano int)
 returns numeric
 language sql
 security definer
 set search_path = public
 as $$
-  select coalesce(sum(meta_vendas), 0)
-  from metas_mensais
-  where equipe_id = p_equipe_id and mes = p_mes and ano = p_ano
+  select coalesce(sum(mm.meta_vendas), 0)
+  from metas_mensais mm
+  join usuarios u on u.id = mm.consultor_id
+  where mm.equipe_id = p_equipe_id
+    and mm.mes = p_mes
+    and mm.ano = p_ano
+    and u.perfil = 'consultor'
 $$;
 grant execute on function public.get_meta_equipe_snapshot(uuid, int, int) to authenticated;
 
--- 5) RPC: realizado da equipe usando SNAPSHOT (só leads de quem estava na equipe naquele mês)
+-- 5) RPC: realizado da equipe usando SNAPSHOT (só leads de consultores da equipe naquele mês)
 create or replace function public.get_realizado_equipe_snapshot(p_equipe_id uuid, p_mes int, p_ano int)
 returns numeric
 language sql
@@ -88,9 +93,11 @@ set search_path = public
 as $$
   select coalesce(sum(l.valor_meta), 0)
   from leads l
+  join usuarios u on u.id = l.consultor_id
   where l.status = 'Proposta'
     and l.mes_fechamento = p_mes
     and l.ano_fechamento = p_ano
+    and u.perfil = 'consultor'
     and l.consultor_id in (
       select consultor_id from metas_mensais
       where equipe_id = p_equipe_id and mes = p_mes and ano = p_ano
