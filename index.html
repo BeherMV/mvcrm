@@ -1086,6 +1086,10 @@ function invalidarCacheMes(mes,ano){delete _mesesTravadosCache[`${mes}-${ano}`]}
 async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
   const travado=await isMesTravado(mes,ano)
   if(travado&&equipe_id){
+    // 1º: total pré-computado (imutável) na tabela snapshots_equipe_mes
+    const{data:snap}=await sb.from('snapshots_equipe_mes').select('meta_total').eq('equipe_id',equipe_id).eq('mes',mes).eq('ano',ano).maybeSingle()
+    if(snap) return Number(snap.meta_total||0)
+    // Fallback: recalcula via snapshot de equipe_id
     const{data,error}=await sb.rpc('get_meta_equipe_snapshot',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
     if(!error) return Number(data||0)
   }
@@ -1109,6 +1113,10 @@ async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
 async function realizadoEq(equipe_id,mes,ano){
   const travado=await isMesTravado(mes,ano)
   if(travado){
+    // 1º: total pré-computado (imutável)
+    const{data:snap}=await sb.from('snapshots_equipe_mes').select('realizado_total').eq('equipe_id',equipe_id).eq('mes',mes).eq('ano',ano).maybeSingle()
+    if(snap) return Number(snap.realizado_total||0)
+    // Fallback
     const{data,error}=await sb.rpc('get_realizado_equipe_snapshot',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
     if(!error) return Number(data||0)
   }
