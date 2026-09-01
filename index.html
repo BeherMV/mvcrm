@@ -1081,27 +1081,39 @@ async function isMesTravado(mes,ano){
 function invalidarCacheMes(mes,ano){delete _mesesTravadosCache[`${mes}-${ano}`]}
 
 // Calcula meta total de uma equipe para um dado mês/ano
-// Mês travado: soma só quem tem registro (sem fallback) — congela a meta no estado do travamento
-// Mês aberto: soma todos os consultores ativos com fallback 17000
+// Mês travado: usa SNAPSHOT — soma metas_mensais.equipe_id daquele mês (composição congelada)
+// Mês aberto: soma composição atual da equipe + fallback 17000 pra quem não tem meta
 async function calcMetaEq(idsConsultores,mes,ano,equipe_id=null){
+  const travado=await isMesTravado(mes,ano)
+  if(travado&&equipe_id){
+    const{data,error}=await sb.rpc('get_meta_equipe_snapshot',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
+    if(!error) return Number(data||0)
+  }
   if(!idsConsultores.length) return 0
   let metasEq=[]
-  // Buscar metas diretamente por ids — inclui supervisor se estiver em idsConsultores
   const{data}=await sb.from('metas_mensais').select('meta_vendas,consultor_id').in('consultor_id',idsConsultores).eq('mes',mes).eq('ano',ano)
   metasEq=data||[]
-  // Para consultores sem acesso (RLS), complementar via RPC
   if(equipe_id&&metasEq.length<idsConsultores.length){
     const{data:rpcData}=await sb.rpc('get_metas_equipe',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
     ;(rpcData||[]).forEach(r=>{
       if(!metasEq.find(x=>x.consultor_id===r.consultor_id)) metasEq.push(r)
     })
   }
-  const travado=await isMesTravado(mes,ano)
   return idsConsultores.reduce((s,cid)=>{
     const reg=metasEq.find(x=>x.consultor_id===cid)
-    if(travado) return s+Number(reg?.meta_vendas||0)
     return s+Number(reg?.meta_vendas||17000)
   },0)
+}
+
+// Realizado de uma equipe: mês travado usa snapshot (composição congelada), aberto usa RPC atual
+async function realizadoEq(equipe_id,mes,ano){
+  const travado=await isMesTravado(mes,ano)
+  if(travado){
+    const{data,error}=await sb.rpc('get_realizado_equipe_snapshot',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
+    if(!error) return Number(data||0)
+  }
+  const{data:rpc}=await sb.rpc('get_resultado_equipe_ativos',{p_equipe_id:equipe_id,p_mes:mes,p_ano:ano})
+  return Number(rpc?.[0]?.realizado_total||0)
 }
 
 // ativo_meta: true ou null = ativo, false = inativo
@@ -3568,13 +3580,11 @@ async function loadCoHome(){
     const{data:consEq}=await sb.rpc('get_consultores_equipe',{p_equipe_id:CU.equipe_id})
     const todosEq=(consEq||[])
     const idsEq=todosEq.filter(c=>c.ativo_meta!==false).map(c=>c.id)
-    // RPC security definer — busca realizado apenas dos consultores com ativo_meta = true
-    const[resultEq]=await Promise.all([
-      sb.rpc('get_resultado_equipe_ativos',{p_equipe_id:CU.equipe_id,p_mes:m,p_ano:a})
+    // Realizado + Meta via helpers — respeitam snapshot em meses travados
+    const[realEqTotal,metaEqTotal]=await Promise.all([
+      realizadoEq(CU.equipe_id,m,a),
+      calcMetaEq(idsEq,m,a,CU.equipe_id)
     ])
-    const realEqTotal=Number(resultEq.data?.[0]?.realizado_total||0)
-    // Meta via calcMetaEq — respeita travamento do mês
-    const metaEqTotal=await calcMetaEq(idsEq,m,a,CU.equipe_id)
     const eqPct=metaEqTotal>0?Math.min(Math.round(realEqTotal/metaEqTotal*100),100):0
     const eqOk=realEqTotal>=(metaEqTotal*DU_HOJE/DU_TOTAL)
     const pessoalOk=realizado>=(metaVnd*DU_HOJE/DU_TOTAL)
@@ -5411,11 +5421,11 @@ async function loadMaHome(fMes=null,fAno=null){
     const consEqAtivos=consEq.filter(c=>c.ativo_meta!==false)
     const sv=svMap[eq.id]
     const idsConsultores=consEqAtivos.map(c=>c.id)
-    // RPC para realizado — apenas consultores com ativo_meta = true
-    const{data:rpcData}=await sb.rpc('get_resultado_equipe_ativos',{p_equipe_id:eq.id,p_mes:m,p_ano:a})
-    const real=Number(rpcData?.[0]?.realizado_total||0)
-    // Meta via calcMetaEq — respeita travamento do mês, apenas ativos
-    const metaTotal=await calcMetaEq(idsConsultores,m,a,eq.id)
+    // Realizado + Meta via helpers — respeitam snapshot em meses travados
+    const[real,metaTotal]=await Promise.all([
+      realizadoEq(eq.id,m,a),
+      calcMetaEq(idsConsultores,m,a,eq.id)
+    ])
     const pct=metaTotal>0?Math.round(real/metaTotal*100):0
     const st=pct>=pctDU?'ok':pct>=(pctDU*0.6)?'wn':'lw'
     return{eq,real,metaTotal,pct,st,nCons:consEqAtivos.length,sv}
@@ -5587,9 +5597,10 @@ window.gerarApresentacao=async(mes,ano)=>{
   const eqStats=await Promise.all(equipes.map(async eq=>{
     const consEq=cons.filter(c=>c.equipe_id===eq.id&&c.ativo_meta!==false)
     const ids=consEq.map(c=>c.id)
-    const{data:rpc}=await sb.rpc('get_resultado_equipe_ativos',{p_equipe_id:eq.id,p_mes:m,p_ano:a})
-    const real=Number(rpc?.[0]?.realizado_total||0)
-    const meta=await calcMetaEq(ids,m,a,eq.id)
+    const[real,meta]=await Promise.all([
+      realizadoEq(eq.id,m,a),
+      calcMetaEq(ids,m,a,eq.id)
+    ])
     const pct=meta>0?Math.round(real/meta*100):0
     return{eq,real,meta,pct,sv:svMap[eq.id],nCons:ids.length}
   }))
