@@ -1581,7 +1581,7 @@ function _renderLinhaProv(p){
       <div class="acoes">
         <button onclick="abrirProv('${p.id}')" title="Editar">✎</button>
         <button onclick="alternarDeclinio('${p.id}')" title="${p.declinio?'Reativar':'Declinar'}">${p.declinio?'↺':'⊘'}</button>
-        <button class="del" onclick="excluirProv('${p.id}','${(p.empresa||'').replace(/'/g,"\\'")}')" title="Excluir">🗑</button>
+        <button class="del" onclick="excluirProv('${p.id}',${_js(p.empresa||'')})" title="Excluir">🗑</button>
       </div>
     </td>
   </tr>`
@@ -1860,7 +1860,7 @@ function aplicarAvatar(el,user){
   if(!el)return
   if(user?.foto_url){
     const v=user.foto_ver||''
-    el.innerHTML=`<img src="${user.foto_url}${v?'?v='+v:''}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
+    el.innerHTML=`<img src="${_safeUrl(user.foto_url)}${v?'?v='+v:''}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`
   }else{
     el.textContent=ini(user?.nome||'')
   }
@@ -1896,7 +1896,7 @@ window.abrirUploadFoto=()=>{
   $('uf-input').value=''
   $('uf-preview').removeAttribute('data-pending')
   if(CU.foto_url){
-    $('uf-preview').innerHTML=`<img src="${CU.foto_url}?v=${Date.now()}" style="width:120px;height:120px;object-fit:cover;border-radius:50%;display:block">`
+    $('uf-preview').innerHTML=`<img src="${_safeUrl(CU.foto_url)}?v=${Date.now()}" style="width:120px;height:120px;object-fit:cover;border-radius:50%;display:block">`
   }else{
     $('uf-preview').innerHTML=`<div class="av" style="width:120px;height:120px;font-size:36px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(CU.nome)}</div>`
   }
@@ -2138,14 +2138,14 @@ async function carregarNotificacoes(){
   $('notif-list').innerHTML=notifs.length?notifs.map(n=>{
     const sobre=n.sobre_usuario_id?userMap[n.sobre_usuario_id]:null
     const iconInner=sobre?.foto_url
-      ?`<img src="${sobre.foto_url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
+      ?`<img src="${_safeUrl(sobre.foto_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
       :(ic[n.tipo]||'ℹ️')
     const iconStyle=sobre?.foto_url
       ?`background:${cores[n.tipo]||'#EFF6FF'};padding:0;overflow:hidden;border-radius:50%`
       :`background:${cores[n.tipo]||'#EFF6FF'}`
     return `<div class="notif-item${n.lida?'':' unread'}" onclick="lerNotif('${n.id}')">
       <div class="notif-icon" style="${iconStyle}">${iconInner}</div>
-      <div><div class="notif-text"><strong>${n.titulo}</strong>${n.mensagem?'<br><span style="color:var(--text2);font-size:12px">'+n.mensagem+'</span>':''}</div><div class="notif-time">${new Date(n.criada_em).toLocaleString('pt-BR')}</div></div>
+      <div><div class="notif-text"><strong>${_esc(n.titulo)}</strong>${n.mensagem?'<br><span style="color:var(--text2);font-size:12px">'+_esc(n.mensagem)+'</span>':''}</div><div class="notif-time">${new Date(n.criada_em).toLocaleString('pt-BR')}</div></div>
     </div>`
   }).join(''):'<div class="empty">Nenhuma notificação</div>'
 }
@@ -2269,7 +2269,7 @@ async function loadMeuPerfil(userId,containerId){
   const foto=_tierPf?`<div class="av-frame av-frame-${_tierPf}" style="--size:100px;width:100%;height:100%">${fotoInner}</div>`:fotoInner
   const tempo=u.data_entrada?_tempoNaMV(u.data_entrada):''
   const roleTxt=u.perfil==='master'?'Master':u.perfil==='supervisor'?'Supervisor':'Consultor(a)'
-  const equipeTxt=u.equipes?.nome?` · Equipe ${u.equipes.nome}`:''
+  const equipeTxt=u.equipes?.nome?` · Equipe ${_esc(u.equipes.nome)}`:''
   const statsTitle=u.perfil==='supervisor'?'Números da equipe':'Meus números'
   el.innerHTML=`
     <div class="card" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
@@ -2278,7 +2278,7 @@ async function loadMeuPerfil(userId,containerId){
         ${ro?'':`<button onclick="abrirUploadFoto()" title="Trocar foto" style="position:absolute;right:0;bottom:0;width:34px;height:34px;border-radius:50%;background:var(--mid);color:#fff;border:2.5px solid var(--card);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0">📷</button>`}
       </div>
       <div style="flex:1;min-width:200px">
-        <div style="font-size:20px;font-weight:800">${u.nome||'—'}</div>
+        <div style="font-size:20px;font-weight:800">${_esc(u.nome||'—')}</div>
         <div style="font-size:13px;color:var(--text3);margin-top:2px">${roleTxt}${equipeTxt}</div>
         ${tempo?`<div style="font-size:12px;color:var(--text2);margin-top:6px">🗓️ ${tempo} na MV</div>`:''}
         ${ro?'<div style="font-size:11px;color:var(--text3);margin-top:6px;text-transform:uppercase;letter-spacing:.4px">Modo leitura</div>':''}
@@ -2288,15 +2288,15 @@ async function loadMeuPerfil(userId,containerId){
     <div class="card">
       <div class="card-head"><span class="card-title">Dados pessoais</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
-        <div class="mfield"><label>Nome completo</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.nome||'—'}</div>`:`<input id="pf-nome" type="text" value="${(u.nome||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>Nome completo</label>${ro?`<div style="padding:9px 0;font-size:14px">${_esc(u.nome||'—')}</div>`:`<input id="pf-nome" type="text" value="${_esc(u.nome)}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>CPF</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.cpf?formatarCPF(u.cpf):'—'}</div>`:`<input id="pf-cpf" type="text" value="${u.cpf?formatarCPF(u.cpf):''}" placeholder="000.000.000-00" oninput="_maskCPF(this)" maxlength="14" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield"><label>E-mail de contato</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.email||'—'}</div>`:`<input id="pf-email" type="email" value="${(u.email||'').replace(/"/g,'&quot;')}" placeholder="voce@empresa.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield"><label>E-mail de contato</label>${ro?`<div style="padding:9px 0;font-size:14px">${_esc(u.email||'—')}</div>`:`<input id="pf-email" type="email" value="${_esc(u.email)}" placeholder="voce@empresa.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>Data de nascimento</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-nasc" type="date" value="${u.data_nascimento||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>Data de entrada na MV</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}</div>`:`<input id="pf-entrada" type="date" value="${u.data_entrada||''}" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
         <div class="mfield"><label>CNPJ</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.cnpj?formatarCNPJ(u.cnpj):'—'}</div>`:`<input id="pf-cnpj" type="text" value="${u.cnpj?formatarCNPJ(u.cnpj):''}" placeholder="00.000.000/0000-00" oninput="_maskCNPJ(this)" maxlength="18" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield" style="grid-column:span 2"><label>Razão social</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.razao_social||'—'}</div>`:`<input id="pf-razao" type="text" value="${(u.razao_social||'').replace(/"/g,'&quot;')}" placeholder="Razão social da empresa" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield" style="grid-column:span 2"><label>Chave PIX</label>${ro?`<div style="padding:9px 0;font-size:14px">${u.pix||'—'}</div>`:`<input id="pf-pix" type="text" value="${(u.pix||'').replace(/"/g,'&quot;')}" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
-        <div class="mfield" style="grid-column:span 2"><label>Bio</label>${ro?`<div style="padding:9px 0;font-size:14px;white-space:pre-wrap">${(u.bio||'—').replace(/</g,'&lt;')}</div>`:`<textarea id="pf-bio" rows="3" placeholder="Fale um pouco sobre você..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);resize:vertical">${(u.bio||'').replace(/</g,'&lt;')}</textarea>`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Razão social</label>${ro?`<div style="padding:9px 0;font-size:14px">${_esc(u.razao_social||'—')}</div>`:`<input id="pf-razao" type="text" value="${_esc(u.razao_social)}" placeholder="Razão social da empresa" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Chave PIX</label>${ro?`<div style="padding:9px 0;font-size:14px">${_esc(u.pix||'—')}</div>`:`<input id="pf-pix" type="text" value="${_esc(u.pix)}" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">`}</div>
+        <div class="mfield" style="grid-column:span 2"><label>Bio</label>${ro?`<div style="padding:9px 0;font-size:14px;white-space:pre-wrap">${_esc(u.bio||'—')}</div>`:`<textarea id="pf-bio" rows="3" placeholder="Fale um pouco sobre você..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);resize:vertical">${_esc(u.bio)}</textarea>`}</div>
       </div>
       ${ro?'':`<div class="alert-err" id="pf-err"></div><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-pri" onclick="salvarPerfil()">Salvar alterações</button></div>`}
     </div>
@@ -2367,17 +2367,17 @@ async function loadMaEquipe(){
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px">
       ${users.length?users.map(u=>{
-        const foto=u.foto_url?`<img src="${u.foto_url}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:52px;height:52px;font-size:15px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
+        const foto=u.foto_url?`<img src="${_safeUrl(u.foto_url)}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:52px;height:52px;font-size:15px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
         return `<div class="card" style="cursor:pointer;padding:16px;transition:transform .15s" onclick="verPerfilDe('${u.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
           <div style="display:flex;gap:12px;align-items:center">
             <div style="width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0">${foto}</div>
             <div style="min-width:0;flex:1">
-              <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div>
-              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">${u.perfil}${u.equipes?.nome?' · '+u.equipes.nome:''}</div>
+              <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(u.nome)}</div>
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">${_esc(u.perfil)}${u.equipes?.nome?' · '+_esc(u.equipes.nome):''}</div>
             </div>
           </div>
           <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.6">
-            📧 ${u.email||'—'}<br>
+            📧 ${_esc(u.email||'—')}<br>
             🎂 ${u.data_nascimento?new Date(u.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}<br>
             🗓️ Entrada: ${u.data_entrada?new Date(u.data_entrada+'T12:00').toLocaleDateString('pt-BR'):'—'}
           </div>
@@ -2432,10 +2432,10 @@ async function renderAniversariantes(hostEl){
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px">
       ${doMes.map(u=>{
         const d=new Date(u.data_nascimento+'T12:00')
-        const foto=u.foto_url?`<img src="${u.foto_url}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:40px;height:40px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
+        const foto=u.foto_url?`<img src="${_safeUrl(u.foto_url)}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:50%;display:block">`:`<div class="av" style="width:40px;height:40px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(u.nome)}</div>`
         return `<div style="display:flex;gap:10px;align-items:center;padding:10px;background:var(--bg2);border-radius:10px">
           <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0">${foto}</div>
-          <div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome}</div><div style="font-size:11px;color:var(--text3)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</div></div>
+          <div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(u.nome)}</div><div style="font-size:11px;color:var(--text3)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</div></div>
         </div>`
       }).join('')}
     </div>`
@@ -2553,7 +2553,16 @@ async function _rodarAutomacoesFeed(){
 const FEED_PAGE_SIZE=10
 let _feedOffset=0,_feedNoMore=false,_feedLoading=false
 
-function _escapeFeed(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function _escapeFeed(str){return _esc(str)}
+// Escape HTML — cobre texto E atributos. USE em qualquer campo controlado por usuário
+// (nome, bio, razao_social, empresa, equipe.nome, etc) antes de meter em innerHTML/template string
+function _esc(str){return String(str==null?'':str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+// Serializa string como literal JS seguro para uso dentro de onclick="..." attribute.
+// Ex: onclick="foo(${_js(nome)})" — cobre aspas, <, > e evita XSS via valores maliciosos.
+function _js(v){return _esc(JSON.stringify(v==null?'':String(v)))}
+// Sanitiza URL: rejeita esquemas perigosos (javascript:, data:, vbscript:) — retorna '#' se suspeito.
+// USE em qualquer href/src controlado por usuário (drive.link, foto de post via URL colada, etc).
+function _safeUrl(u){const s=String(u||'').trim();return /^(https?:|mailto:|tel:|\/|#)/i.test(s)?_esc(s):'#'}
 
 // Normaliza pra comparação sem acento
 const _semAcento=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
@@ -2694,12 +2703,12 @@ window._checkMention=async(inputId,dropdownId)=>{
     <div><div class="mention-nome">@TODOS</div><div class="mention-role">notifica toda a MV</div></div>
   </button>`:''
   const itensUsuarios=matches.map(u=>{
-    const first=(u.nome||'').split(/\s+/)[0].replace(/'/g,"\\'")
+    const first=(u.nome||'').split(/\s+/)[0]
     const av=u.foto_url
-      ?`<img src="${u.foto_url}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block">`
+      ?`<img src="${_safeUrl(u.foto_url)}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:50%;display:block">`
       :`<div class="av" style="width:28px;height:28px;font-size:10px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(u.nome)}</div>`
     const role=u.perfil==='master'?'MV Corretora':u.perfil==='supervisor'?'supervisor':'consultor'
-    return `<button type="button" class="mention-item" onmousedown="event.preventDefault()" onclick="_selectMention('${first}','${inputId}','${dropdownId}')">
+    return `<button type="button" class="mention-item" onmousedown="event.preventDefault()" onclick="_selectMention(${_js(first)},'${inputId}','${dropdownId}')">
       <div style="width:28px;height:28px;flex-shrink:0">${av}</div>
       <div><div class="mention-nome">${_escapeFeed(u.nome)}</div><div class="mention-role">${role}</div></div>
     </button>`
@@ -2790,7 +2799,7 @@ window.abrirEnquete=()=>{
 function _renderOpcoesEnquete(opcoes){
   $('enq-opcoes-lista').innerHTML=opcoes.map((o,i)=>`
     <div class="enq-opcao-row">
-      <input type="text" data-idx="${i}" value="${(o.texto||'').replace(/"/g,'&quot;')}" maxlength="80" placeholder="Opção ${i+1}">
+      <input type="text" data-idx="${i}" value="${_esc(o.texto)}" maxlength="80" placeholder="Opção ${i+1}">
       ${opcoes.length>2?`<button class="enq-opcao-remove" onclick="_removeOpcaoEnquete(${i})" title="Remover">×</button>`:''}
     </div>
   `).join('')
@@ -2979,7 +2988,7 @@ window.enviarDenuncia=async()=>{
 function _feedAvatarHTML(user,size){
   const s=size+'px'
   const inner=user?.foto_url
-    ?`<img src="${user.foto_url}" alt="" style="width:${s};height:${s};object-fit:cover;border-radius:50%;display:block">`
+    ?`<img src="${_safeUrl(user.foto_url)}" alt="" style="width:${s};height:${s};object-fit:cover;border-radius:50%;display:block">`
     :`<div class="av" style="width:${s};height:${s};font-size:${Math.round(size*0.34)}px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini(user?.nome||'?')}</div>`
   return _wrapAvatarBorda(user?.id,size,inner)
 }
@@ -3212,7 +3221,7 @@ function _renderComment(c,postId){
         <div class="comment-head">
           <span class="comment-name">${_escapeFeed(nome)}</span>
           <span class="comment-time">${_feedTimeAgo(c.criado_em)}</span>
-          ${podeResponder?`<button class="comment-reply" onclick="responderComentario('${postId}','${(autor.nome||'').replace(/'/g,"\\'").split(/\s+/)[0]}')">Responder</button>`:''}
+          ${podeResponder?`<button class="comment-reply" onclick="responderComentario('${postId}',${_js((autor.nome||'').split(/\s+/)[0])})">Responder</button>`:''}
           ${podeApagar?`<button class="comment-del" onclick="apagarComentario('${c.id}','${postId}')" title="Excluir">×</button>`:''}
         </div>
         <div class="comment-text">${_feedFormatBody(c.conteudo)}</div>
@@ -3626,7 +3635,7 @@ async function loadCoHome(){
         </div>
         <div style="background:linear-gradient(135deg,rgba(0,201,167,.08),rgba(37,99,235,.08));border:1.5px solid rgba(29,164,212,.2);border-radius:14px;padding:18px 20px">
           <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-            <span>Equipe ${eq.nome} — consolidado do mês</span>
+            <span>Equipe ${_esc(eq.nome)} — consolidado do mês</span>
             <span style="font-size:11px;color:var(--text3);font-weight:400">${idsEq.length} consultores</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
@@ -3654,7 +3663,7 @@ async function loadCoHome(){
 
   el.innerHTML=`
     <div style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px">
-      <div style="flex:1"><div style="font-size:15px;font-weight:700">Olá, ${CU.nome.split(' ')[0]}!</div>
+      <div style="flex:1"><div style="font-size:15px;font-weight:700">Olá, ${_esc(CU.nome.split(' ')[0])}!</div>
       <div style="font-size:13px;color:#1E40AF;margin-top:3px">Dia útil <strong>${DU_HOJE}</strong> de <strong>${DU_TOTAL}</strong> — você deveria estar em <strong>${pctDU}%</strong> da meta.</div></div>
       ${followHoje.length>0?`<div style="background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#92400E;white-space:nowrap;flex-shrink:0">${followHoje.length} follow-up hoje</div>`:''}
     </div>
@@ -3694,7 +3703,7 @@ async function loadCoHome(){
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Próximos agendamentos</div>
         ${(agRes.data||[]).length?(agRes.data||[]).map(ag=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);align-items:center">
           <div style="width:32px;height:32px;border-radius:8px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">📅</div>
-          <div><div style="font-size:12px;font-weight:600">${ag.titulo}</div><div style="font-size:11px;color:var(--text3)">${ag.hora?.slice(0,5)} · ${new Date(ag.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})}</div></div>
+          <div><div style="font-size:12px;font-weight:600">${_esc(ag.titulo)}</div><div style="font-size:11px;color:var(--text3)">${ag.hora?.slice(0,5)} · ${new Date(ag.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})}</div></div>
         </div>`).join(''):'<div class="empty" style="padding:10px 0">Nenhum agendamento próximo</div>'}
       </div>
     </div>
@@ -3704,7 +3713,7 @@ async function loadCoHome(){
         <div class="card-head"><span class="card-title">Follow-up do dia</span><span class="pill p-wn">${followHoje.length} pendentes</span></div>
         ${followHoje.length?followHoje.map(l=>`<div class="row" onclick="editarLead('${l.id}')">
           <div class="av" style="width:32px;height:32px;font-size:11px;background:#FEF3C7;color:#92400E">${ini(l.nome)}</div>
-          <div class="ri"><div class="rn">${l.nome}</div><div class="rm">${l.empresa||l.canal}</div></div>
+          <div class="ri"><div class="rn">${_esc(l.nome)}</div><div class="rm">${_esc(l.empresa||l.canal)}</div></div>
           <span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span>
         </div>`).join(''):'<div class="empty">Nenhum follow-up hoje!</div>'}
       </div>
@@ -3768,7 +3777,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
       </select>
       <div class="search-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" id="busca-lead" placeholder="Buscar por nome, empresa, telefone..." value="${busca}" oninput="onBuscaLead(this)">
+        <input class="search-input" id="busca-lead" placeholder="Buscar por nome, empresa, telefone..." value="${_esc(busca)}" oninput="onBuscaLead(this)">
       </div>
     </div>
     <div class="filter-bar" id="filter-status-bar">
@@ -3778,7 +3787,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
     <div class="card"><div style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>Nome</th><th>Telefone</th><th>Canal</th><th>Status</th><th>Follow-up</th><th>Observação</th><th>Ações</th></tr></thead>
       <tbody>${filtrados.length?filtrados.map(l=>`<tr>
-        <td><strong>${l.nome}</strong></td>
+        <td><strong>${_esc(l.nome)}</strong></td>
         <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
         <td><span class="pill p-gray">${l.canal||'—'}</span></td>
         <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
@@ -3786,10 +3795,10 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
         <td style="font-size:12px;color:var(--text2);max-width:180px"><span title="${l.observacoes||''}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.observacoes||'—'}</span></td>
         <td><div class="acoes-wrap"><button class="acoes-btn" onclick="toggleAcoesMenu(this)">···</button><div class="acoes-menu">
           <button onclick="editarLead('${l.id}');fecharAcoesMenus()">✏️ Editar</button>
-          <button onclick="verHistLead('${l.id}','${l.nome.replace(/'/g,"\'")}')">📋 Histórico</button>
+          <button onclick="verHistLead('${l.id}',${_js(l.nome)})">📋 Histórico</button>
           <button onclick="abrirFollowUpIA('${l.id}');fecharAcoesMenus()">✨ Follow-up IA</button>
           <div class="acoes-sep"></div>
-          <button class="danger" onclick="excluirLead('${l.id}','${l.nome.replace(/'/g,"\'")}')">🗑 Excluir</button>
+          <button class="danger" onclick="excluirLead('${l.id}',${_js(l.nome)})">🗑 Excluir</button>
         </div></div></td>
       </tr>`).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
       </tbody>
@@ -3991,7 +4000,7 @@ window.abrirFollowUpIA=async(leadId)=>{
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <div>
           <div style="font-size:17px;font-weight:800">✨ Follow-up IA</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">${lead.nome}${lead.empresa?' · '+lead.empresa:''}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${_esc(lead.nome)}${lead.empresa?' · '+lead.empresa:''}</div>
         </div>
         <button onclick="this.closest('.followup-overlay').remove()" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:none;cursor:pointer;font-size:16px;color:var(--text2)">×</button>
       </div>
@@ -4107,7 +4116,7 @@ LINGUAGEM HUMANA — REGRAS ANTI-IA:
   const prompt=`${systemPrompt}
 
 DADOS DO LEAD:
-- Nome: ${lead.nome}
+- Nome: ${_esc(lead.nome)}
 - Empresa: ${lead.empresa||'Pessoa física / não informada'}
 - Status atual: ${lead.status} (nível ${nivelFechamento}/7 de proximidade ao fechamento)
 - Contexto do status: ${descricaoNivel[nivelFechamento]||''}
@@ -4267,8 +4276,8 @@ async function loadFunil(fMes=null,fAno=null){
         </div>
         <div class="funil-body">
           ${items.map(l=>`<div class="funil-card" onclick="editarLead('${l.id}')">
-            <div class="funil-card-name">${l.nome}</div>
-            <div class="funil-card-info">${l.empresa||l.canal}</div>
+            <div class="funil-card-name">${_esc(l.nome)}</div>
+            <div class="funil-card-info">${_esc(l.empresa||l.canal)}</div>
             ${(l.valor_meta||l.valor_negociacao)?`<div class="funil-card-val">${fmt(l.valor_meta||l.valor_negociacao)}</div>`:''}
           </div>`).join('')}
         </div>
@@ -4314,7 +4323,7 @@ async function loadAgenda(consultorId){
     sb.from('leads').select('id,nome').eq('consultor_id',cid).order('nome')
   ])
   AGENDA_EVENTS=agRes.data||[]
-  const lo=$('ma-lead');if(lo){lo.innerHTML='<option value="">Nenhum</option>'+(leadsRes.data||[]).map(l=>`<option value="${l.id}">${l.nome}</option>`).join('')}
+  const lo=$('ma-lead');if(lo){lo.innerHTML='<option value="">Nenhum</option>'+(leadsRes.data||[]).map(l=>`<option value="${l.id}">${_esc(l.nome)}</option>`).join('')}
   $('ma-consultor-id').value=cid
   const ds=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
   const pd=new Date(a,mm,1).getDay(),td=new Date(a,mm+1,0).getDate()
@@ -4326,7 +4335,7 @@ async function loadAgenda(consultorId){
     const evs=AGENDA_EVENTS.filter(e=>e.data===ds2)
     cal+=`<div class="agenda-day${isT?' today':''}" onclick="diaSel('${ds2}','${cid}')">
       <div class="agenda-day-num">${d}</div>
-      ${evs.slice(0,2).map(e=>`<div class="agenda-event">${e.hora?.slice(0,5)} ${e.titulo}</div>`).join('')}
+      ${evs.slice(0,2).map(e=>`<div class="agenda-event">${e.hora?.slice(0,5)} ${_esc(e.titulo)}</div>`).join('')}
       ${evs.length>2?`<div style="font-size:9px;color:var(--text3)">+${evs.length-2}</div>`:''}
     </div>`
   }
@@ -4344,7 +4353,7 @@ async function loadAgenda(consultorId){
             <span style="font-size:13px;font-weight:800;color:#fff;line-height:1">${new Date(e.data+'T12:00').getDate()}</span>
             <span style="font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase">${new Date(e.data+'T12:00').toLocaleString('pt-BR',{month:'short'})}</span>
           </div>
-          <div class="ri"><div class="rn">${e.titulo}</div><div class="rm">${e.hora?.slice(0,5)} · ${e.tipo}</div></div>
+          <div class="ri"><div class="rn">${_esc(e.titulo)}</div><div class="rm">${e.hora?.slice(0,5)} · ${e.tipo}</div></div>
           <button class="btn btn-danger btn-sm" onclick="excluirAg('${e.id}','${cid}')">Excluir</button>
         </div>`).join('')||'<div class="empty">Nenhum agendamento futuro</div>'}
     </div>
@@ -4353,7 +4362,7 @@ async function loadAgenda(consultorId){
 
 window.diaSel=(date,cid)=>{
   const evs=AGENDA_EVENTS.filter(e=>e.data===date)
-  if(evs.length){alert(evs.map(e=>`${e.hora?.slice(0,5)} — ${e.titulo} (${e.tipo})`).join('\n'))}
+  if(evs.length){alert(evs.map(e=>`${e.hora?.slice(0,5)} — ${_esc(e.titulo)} (${e.tipo})`).join('\n'))}
   else{$('ma-data').value=date;$('ma-consultor-id').value=cid;openModal('mod-agenda')}
 }
 window.novoAg=(cid)=>{
@@ -4373,7 +4382,7 @@ window.salvarAgendamento=async()=>{
   // Notificar o consultor se quem agendou é supervisor ou master
   if(cid!==CU.id){
     const dataFmt=new Date(data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})
-    await sb.from('notificacoes').insert({para_usuario:cid,titulo:`📅 Novo agendamento: ${titulo}`,mensagem:`${dataFmt} às ${hora?.slice(0,5)} — criado por ${CU.nome.split(' ')[0]}`,tipo:'info',lida:false,sobre_usuario_id:CU.id})
+    await sb.from('notificacoes').insert({para_usuario:cid,titulo:`📅 Novo agendamento: ${titulo}`,mensagem:`${dataFmt} às ${hora?.slice(0,5)} — criado por ${_esc(CU.nome.split(' ')[0])}`,tipo:'info',lida:false,sobre_usuario_id:CU.id})
     // Recarregar notificações do consultor atual
     await carregarNotificacoes()
   }
@@ -4438,7 +4447,7 @@ async function loadHistorico(){
     <div class="card"><table class="tbl">
       <thead><tr><th>Lead</th><th>Operadora</th><th>Tipo</th><th>Valor meta</th><th>Mês</th></tr></thead>
       <tbody>${(data||[]).map(l=>`<tr>
-        <td><strong>${l.nome}</strong></td>
+        <td><strong>${_esc(l.nome)}</strong></td>
         <td>${l.operadora||'—'}</td>
         <td><span class="pill p-info">${l.tipo||'—'}</span></td>
         <td style="font-weight:700;color:var(--mid)">${fmt(l.valor_meta)}</td>
@@ -4519,7 +4528,7 @@ async function loadSvHome(fMes=null,fAno=null){
       </select>
     </div>
     <div class="equipe-meta-box" style="margin-bottom:4px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Equipe ${eqRes.data?.nome||''} — consolidado ${ehMesAtual?'do mês':'de '+String(m).padStart(2,'0')+'/'+a}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Equipe ${_esc(eqRes.data?.nome||'')} — consolidado ${ehMesAtual?'do mês':'de '+String(m).padStart(2,'0')+'/'+a}</div>
       <div class="metrics m4" style="margin-bottom:12px">
         <div style="background:rgba(255,255,255,.6);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Meta vendas</div><div style="font-size:18px;font-weight:800">${fmt(metasTotal)}</div></div>
         <div style="background:rgba(255,255,255,.6);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Realizado</div><div style="font-size:18px;font-weight:800;color:var(--mid)">${fmt(receitaEq)}</div></div>
@@ -4532,10 +4541,10 @@ async function loadSvHome(fMes=null,fAno=null){
     <div class="card">
       <div class="card-head"><span class="card-title">Desempenho por consultor</span><span style="font-size:12px;color:var(--text3)">esperado: ${pctDU}% · dia útil ${DU_HOJE}/${DU_TOTAL}</span></div>
       ${consStats.map(({c,meta,real,cots,pct,st,ativo})=>`
-        <div class="row" style="cursor:pointer;opacity:${ativo?1:.7}" onclick="abrirConsultor('${c.id}','${c.nome.replace(/'/g,"\\'")}')">
+        <div class="row" style="cursor:pointer;opacity:${ativo?1:.7}" onclick="abrirConsultor('${c.id}',${_js(c.nome)})">
           <div class="av" style="width:36px;height:36px;font-size:12px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
           <div class="ri">
-            <div class="rn" style="display:flex;align-items:center;gap:6px">${c.nome}${c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':(!ativo?'<span style="font-size:10px;font-weight:600;background:#F3F4F6;color:#6B7280;padding:2px 7px;border-radius:10px">Fora da meta</span>':'')}</div>
+            <div class="rn" style="display:flex;align-items:center;gap:6px">${_esc(c.nome)}${c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':(!ativo?'<span style="font-size:10px;font-weight:600;background:#F3F4F6;color:#6B7280;padding:2px 7px;border-radius:10px">Fora da meta</span>':'')}</div>
             <div class="rm">${fmt(real)} · cotações: ${cots}${ativo?'/'+meta.meta_cotacoes:''}</div>
           </div>
           ${ativo?`<div class="pw">
@@ -4543,7 +4552,7 @@ async function loadSvHome(fMes=null,fAno=null){
             <div class="pt"><div class="pf" style="width:${Math.min(pct,100)}%;background:${st==='ok'?'linear-gradient(90deg,#00C9A7,#1DA4D4)':st==='wn'?'#F59E0B':'#EF4444'}"></div></div>
           </div>
           <span class="pill ${st==='ok'?'p-ok':st==='wn'?'p-wn':'p-lw'}">${st==='ok'?'No prazo':st==='wn'?'Atenção':'Abaixo'}</span>`:'<div style="flex:1"></div>'}
-          <button onclick="event.stopPropagation();toggleAtivoMeta('${c.id}',${!ativo},'${c.nome.replace(/'/g,"\\'")}')" style="background:${ativo?'#FEE2E2':'#D1FAE5'};color:${ativo?'#DC2626':'#065F46'};border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">${ativo?'Tirar da meta':'Colocar na meta'}</button>
+          <button onclick="event.stopPropagation();toggleAtivoMeta('${c.id}',${!ativo},${_js(c.nome)})" style="background:${ativo?'#FEE2E2':'#D1FAE5'};color:${ativo?'#DC2626':'#065F46'};border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">${ativo?'Tirar da meta':'Colocar na meta'}</button>
         </div>`).join('')}
     </div>
     <div class="g2">
@@ -4628,7 +4637,7 @@ window.abrirConsultor=async(id,nome)=>{
         <div class="card-head"><span class="card-title">Próximos agendamentos</span></div>
         ${(agRes.data||[]).length?(agRes.data||[]).map(ag=>`<div class="row">
           <div style="font-size:20px">📅</div>
-          <div class="ri"><div class="rn">${ag.titulo}</div><div class="rm">${ag.hora?.slice(0,5)} · ${new Date(ag.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})}</div></div>
+          <div class="ri"><div class="rn">${_esc(ag.titulo)}</div><div class="rm">${ag.hora?.slice(0,5)} · ${new Date(ag.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})}</div></div>
         </div>`).join(''):'<div class="empty">Nenhum agendamento</div>'}
       </div>
     </div>
@@ -4650,9 +4659,9 @@ async function loadSvConsultores(){
     <div style="font-size:20px;font-weight:800;margin-bottom:4px">Consultores da equipe</div>
     <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Clique em um consultor para ver o dashboard completo</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${cons.map(c=>`<div class="row" style="cursor:pointer;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--card)" onclick="abrirConsultor('${c.id}','${c.nome.replace(/'/g,"\\'")}')">
+      ${cons.map(c=>`<div class="row" style="cursor:pointer;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--card)" onclick="abrirConsultor('${c.id}',${_js(c.nome)})">
         <div class="av" style="width:40px;height:40px;font-size:14px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
-        <div class="ri"><div class="rn">${c.nome}</div><div class="rm">${c.email}</div></div>
+        <div class="ri"><div class="rn">${_esc(c.nome)}</div><div class="rm">${c.email}</div></div>
         <span style="color:var(--mid);font-size:13px;font-weight:600">Ver dashboard →</span>
       </div>`).join('')}
     </div>
@@ -4697,8 +4706,8 @@ async function loadSvFunil(fMes=null,fAno=null){
         </div>
         <div class="funil-body">
           ${items.map(l=>`<div class="funil-card" onclick="editarLead('${l.id}')">
-            <div class="funil-card-name">${l.nome}</div>
-            <div class="funil-card-info" style="color:var(--mid);font-weight:600">${l.usuarios?.nome?.split(' ')[0]||'—'}</div>
+            <div class="funil-card-name">${_esc(l.nome)}</div>
+            <div class="funil-card-info" style="color:var(--mid);font-weight:600">${_esc(l.usuarios?.nome?.split(' ')[0]||'—')}</div>
             ${(l.valor_meta||l.valor_negociacao)?`<div class="funil-card-val">${fmt(l.valor_meta||l.valor_negociacao)}</div>`:''}
           </div>`).join('')}
         </div>
@@ -4717,7 +4726,7 @@ async function loadSvFunil(fMes=null,fAno=null){
         <span style="font-size:13px;font-weight:600;color:var(--text2)">Consultor:</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap" id="sv-funil-filtros">
           <button class="filter-btn on" onclick="svFunilFiltro(null,this)">Todos</button>
-          ${todosNomes.map(c=>`<button class="filter-btn" onclick="svFunilFiltro('${c.id}',this)">${c.nome.split(' ')[0]}</button>`).join('')}
+          ${todosNomes.map(c=>`<button class="filter-btn" onclick="svFunilFiltro('${c.id}',this)">${_esc(c.nome.split(' ')[0])}</button>`).join('')}
         </div>
       </div>
     </div>
@@ -4772,7 +4781,7 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
         ${meses.map(x=>`<option value="${x.m}-${x.a}" ${x.m===fMes&&x.a===fAno?'selected':''}>${String(x.m).padStart(2,'0')}/${x.a}</option>`).join('')}
       </select>
       <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="search-input" id="sv-leads-busca" placeholder="Buscar por nome, empresa, t" value="${busca}" oninput="onSvLeadsBusca()">
+        <input class="search-input" id="sv-leads-busca" placeholder="Buscar por nome, empresa, t" value="${_esc(busca)}" oninput="onSvLeadsBusca()">
       </div>
     </div>
     <div class="filter-bar" id="sv-filter-status-bar">
@@ -4783,7 +4792,7 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
       <div style="overflow-x:auto"><table class="tbl">
         <thead><tr><th>Nome</th><th>Telefone</th><th>Canal</th><th>Status</th><th>Follow-up</th><th>Observação</th><th>Ações</th></tr></thead>
         <tbody>${filtrados.length?filtrados.map(l=>`<tr>
-          <td><strong>${l.nome}</strong></td>
+          <td><strong>${_esc(l.nome)}</strong></td>
           <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
           <td><span class="pill p-gray">${l.canal||'—'}</span></td>
           <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
@@ -4793,10 +4802,10 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
             <button class="acoes-btn" onclick="toggleAcoesMenu(this)">···</button>
             <div class="acoes-menu">
               <button onclick="editarLead('${l.id}');fecharAcoesMenus()">✏️ Editar</button>
-              <button onclick="verHistLeadSv('${l.id}','${l.nome.replace(/'/g,"\\'")}')">📋 Histórico</button>
+              <button onclick="verHistLeadSv('${l.id}',${_js(l.nome)})">📋 Histórico</button>
               <button onclick="abrirFollowUpIA('${l.id}');fecharAcoesMenus()">✨ Follow-up IA</button>
               <div class="acoes-sep"></div>
-              <button class="danger" onclick="excluirLeadSv('${l.id}','${l.nome.replace(/'/g,"\\'")}')">🗑 Excluir</button>
+              <button class="danger" onclick="excluirLeadSv('${l.id}',${_js(l.nome)})">🗑 Excluir</button>
             </div>
           </div></td>
         </tr>`).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
@@ -4903,8 +4912,8 @@ async function loadSvMeuFunil(fMes=null,fAno=null){
           </div>
           <div class="funil-body">
             ${items.map(l=>`<div class="funil-card" onclick="editarLead('${l.id}')">
-              <div class="funil-card-name">${l.nome}</div>
-              <div class="funil-card-info">${l.empresa||l.canal}</div>
+              <div class="funil-card-name">${_esc(l.nome)}</div>
+              <div class="funil-card-info">${_esc(l.empresa||l.canal)}</div>
               ${(l.valor_meta||l.valor_negociacao)?`<div class="funil-card-val">${fmt(l.valor_meta||l.valor_negociacao)}</div>`:''}
             </div>`).join('')}
           </div>
@@ -4958,7 +4967,7 @@ async function loadSvMetas(){
       <tbody>${cons.map(c=>{
         const ma=(metasAtual||[]).find(x=>x.consultor_id===c.id)||{meta_vendas:17000,meta_cotacoes:70}
         return`<tr>
-          <td><strong>${c.nome}</strong></td>
+          <td><strong>${_esc(c.nome)}</strong></td>
           <td><input type="number" id="mv-${c.id}" value="${ma.meta_vendas}" style="width:120px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
           <td><input type="number" id="mc-${c.id}" value="${ma.meta_cotacoes}" style="width:100px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
           <td><button class="btn btn-pri btn-sm" onclick="salvarMetaCons('${c.id}', this.closest('tr').querySelector('[id^=mv]').value, this.closest('tr').querySelector('[id^=mc]').value)">Salvar</button></td>
@@ -5112,12 +5121,12 @@ async function loadSvCurvas(){
     const cols=meses12.filter(x=>mesesVisiveis.includes(x.m))
     $('sv-curvas-body').innerHTML=consFiltrados.map(c=>`
       <div class="curva-row" style="grid-template-columns:160px repeat(${cols.length},1fr)">
-        <div><div class="curva-nome">${c.nome}</div></div>
+        <div><div class="curva-nome">${_esc(c.nome)}</div></div>
         ${cols.map(mes=>{
           const cv=curvas.find(x=>x.consultor_id===c.id&&x.mes===mes.m)
           return cv
-            ?`<div style="text-align:center"><button class="curva-pill ${CURVAS_COR[cv.curva]}" onclick="abrirModalCurva('${c.id}','${c.nome}',${mes.m},${a},'${cv.curva}','loadSvCurvas')">${cv.curva}</button></div>`
-            :`<div style="text-align:center"><button class="curva-vazia" onclick="abrirModalCurva('${c.id}','${c.nome}',${mes.m},${a},'','loadSvCurvas')">—</button></div>`
+            ?`<div style="text-align:center"><button class="curva-pill ${CURVAS_COR[cv.curva]}" onclick="abrirModalCurva('${c.id}',${_js(c.nome)},${mes.m},${a},'${cv.curva}','loadSvCurvas')">${cv.curva}</button></div>`
+            :`<div style="text-align:center"><button class="curva-vazia" onclick="abrirModalCurva('${c.id}',${_js(c.nome)},${mes.m},${a},'','loadSvCurvas')">—</button></div>`
         }).join('')}
       </div>`).join('')||'<div class="empty">Nenhum consultor encontrado</div>'
   }
@@ -5193,12 +5202,12 @@ async function loadMaCurvas(){
     $('ma-curvas-body').innerHTML=consFiltrados.map(c=>{
       const eq=equipes.find(e=>e.id===c.equipe_id)
       return`<div class="curva-row" style="grid-template-columns:180px repeat(${cols.length},1fr)">
-        <div><div class="curva-nome">${c.nome}</div><div class="curva-equipe">${eq?.nome||'—'}</div></div>
+        <div><div class="curva-nome">${_esc(c.nome)}</div><div class="curva-equipe">${_esc(eq?.nome||'—')}</div></div>
         ${cols.map(mes=>{
           const cv=curvas.find(x=>x.consultor_id===c.id&&x.mes===mes.m)
           return cv
-            ?`<div style="text-align:center"><button class="curva-pill ${CURVAS_COR[cv.curva]}" onclick="abrirModalCurva('${c.id}','${c.nome}',${mes.m},${a},'${cv.curva}','loadMaCurvas')">${cv.curva}</button></div>`
-            :`<div style="text-align:center"><button class="curva-vazia" onclick="abrirModalCurva('${c.id}','${c.nome}',${mes.m},${a},'','loadMaCurvas')">—</button></div>`
+            ?`<div style="text-align:center"><button class="curva-pill ${CURVAS_COR[cv.curva]}" onclick="abrirModalCurva('${c.id}',${_js(c.nome)},${mes.m},${a},'${cv.curva}','loadMaCurvas')">${cv.curva}</button></div>`
+            :`<div style="text-align:center"><button class="curva-vazia" onclick="abrirModalCurva('${c.id}',${_js(c.nome)},${mes.m},${a},'','loadMaCurvas')">—</button></div>`
         }).join('')}
       </div>`
     }).join('')||'<div class="empty">Nenhum consultor encontrado</div>'
@@ -5214,7 +5223,7 @@ async function loadMaCurvas(){
         <input id="ma-curvas-busca" type="text" placeholder="Filtrar por nome..." oninput="renderMaCurvas()" style="height:34px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none;width:180px">
         <select id="ma-curvas-equipe" onchange="renderMaCurvas()" style="height:34px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none">
           <option value="">Todas as equipes</option>
-          ${equipes.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')}
+          ${equipes.map(e=>`<option value="${e.id}">${_esc(e.nome)}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -5292,7 +5301,7 @@ async function loadSvRanking(fMes=null,fAno=null){
         <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
         <div style="width:34px;height:34px;flex-shrink:0">${_feedAvatarHTML(r.c,34)}</div>
         <div class="ri">
-          <div class="rn" style="display:flex;align-items:center;gap:6px">${r.c.nome}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
+          <div class="rn" style="display:flex;align-items:center;gap:6px">${_esc(r.c.nome)}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
           <div class="rm">${fmt(r.real)} · ${r.pct}%</div>
         </div>
         <div style="text-align:right"><div style="font-size:15px;font-weight:800;color:var(--mid)">${fmt(r.real)}</div><div style="font-size:11px;color:var(--text3)">de ${fmt(r.meta.meta_vendas)}</div></div>
@@ -5377,7 +5386,7 @@ window.loadSvHistAno=async(a,btn)=>{
   ])
   const el=$('sv-hist-content');if(!el)return
   el.innerHTML=`<div style="overflow-x:auto"><table class="tbl">
-    <thead><tr><th>Mês</th>${cons.map(c=>`<th>${c.nome.split(' ')[0]}</th>`).join('')}<th>Total</th></tr></thead>
+    <thead><tr><th>Mês</th>${cons.map(c=>`<th>${_esc(c.nome.split(' ')[0])}</th>`).join('')}<th>Total</th></tr></thead>
     <tbody>${Array.from({length:12},(_,i)=>i+1).map(m=>{
       const cells=cons.map(c=>{
         const meta=(metas.data||[]).find(x=>x.consultor_id===c.id&&x.mes===m)||{meta_vendas:17000}
@@ -5480,8 +5489,8 @@ async function loadMaHome(fMes=null,fAno=null){
       <table class="tbl">
         <thead><tr><th>Equipe</th><th>Supervisor</th><th>Consultores</th><th>Meta</th><th>Realizado</th><th>%</th><th>Status</th></tr></thead>
         <tbody>${eqStats.map(({eq,real,metaTotal,pct,st,nCons,sv},i)=>`<tr>
-          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]}"></div><strong>${eq.nome}</strong></div></td>
-          <td>${sv?.nome||'—'}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]}"></div><strong>${_esc(eq.nome)}</strong></div></td>
+          <td>${_esc(sv?.nome||'—')}</td>
           <td>${nCons}</td>
           <td>${fmt(metaTotal)}</td>
           <td style="font-weight:700;color:var(--mid)">${fmt(real)}</td>
@@ -5517,12 +5526,12 @@ async function loadMaEquipes(){
         const membros=cons.filter(c=>c.equipe_id===eq.id)
         return`<div class="card">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-            <div style="width:40px;height:40px;border-radius:10px;background:${cores[i%cores.length]}22;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:${cores[i%cores.length]}">${eq.nome.substring(0,2).toUpperCase()}</div>
-            <div><div style="font-size:15px;font-weight:700">${eq.nome}</div><div style="font-size:12px;color:var(--text3)">Meta: ${fmt(eq.meta_mensal)}/mês</div></div>
+            <div style="width:40px;height:40px;border-radius:10px;background:${cores[i%cores.length]}22;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:${cores[i%cores.length]}">${_esc(eq.nome.substring(0,2).toUpperCase())}</div>
+            <div><div style="font-size:15px;font-weight:700">${_esc(eq.nome)}</div><div style="font-size:12px;color:var(--text3)">Meta: ${fmt(eq.meta_mensal)}/mês</div></div>
           </div>
           ${membros.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
             <div class="av" style="width:28px;height:28px;font-size:10px;background:#E0FAF5;color:#065F46">${ini(c.nome)}</div>
-            <div><div style="font-size:12px;font-weight:600">${c.nome}</div></div>
+            <div><div style="font-size:12px;font-weight:600">${_esc(c.nome)}</div></div>
           </div>`).join('')}
           ${!membros.length?'<div class="empty" style="padding:10px 0">Nenhum consultor</div>':''}
         </div>`}).join('')}
@@ -5558,8 +5567,8 @@ async function loadMaFunil(fMes=null,fAno=null){
         </div>
         <div class="funil-body">
           ${items.slice(0,8).map(l=>`<div class="funil-card">
-            <div class="funil-card-name">${l.nome}</div>
-            <div class="funil-card-info" style="color:var(--mid)">${l.usuarios?.nome?.split(' ')[0]||'—'}</div>
+            <div class="funil-card-name">${_esc(l.nome)}</div>
+            <div class="funil-card-info" style="color:var(--mid)">${_esc(l.usuarios?.nome?.split(' ')[0]||'—')}</div>
             ${(l.valor_meta||l.valor_negociacao)?`<div class="funil-card-val">${fmt(l.valor_meta||l.valor_negociacao)}</div>`:''}
           </div>`).join('')}
           ${items.length>8?`<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">+${items.length-8} mais</div>`:''}
@@ -5797,7 +5806,7 @@ window.gerarApresentacao=async(mes,ano)=>{
     }
     // Nome + valor deslocados pra depois do avatar
     const TXT_X=AV_X+AV_SZ+0.18
-    s5.addText(`${r.nome}  ·  ${fmtR(r.real)}`,{x:TXT_X,y:y+0.14,w:BAR_W_RK-(TXT_X-0.85)-0.1,h:ROW_H-0.25,fontSize:14,bold:true,color:WHITE,fontFace:'Arial',valign:'middle',margin:0})
+    s5.addText(`${_esc(r.nome)}  ·  ${fmtR(r.real)}`,{x:TXT_X,y:y+0.14,w:BAR_W_RK-(TXT_X-0.85)-0.1,h:ROW_H-0.25,fontSize:14,bold:true,color:WHITE,fontFace:'Arial',valign:'middle',margin:0})
     s5.addText(r.pct+'% da meta',{x:0.85+BAR_W_RK+0.12,y:y+0.22,w:1.5,h:0.28,fontSize:11,color:GRAY,fontFace:'Calibri',margin:0})
   })
 
@@ -5843,8 +5852,8 @@ async function loadMaRanking(fMes=null,fAno=null){
         <div class="rank-num ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</div>
         <div style="width:34px;height:34px;flex-shrink:0">${_feedAvatarHTML(r.c,34)}</div>
         <div class="ri">
-          <div class="rn" style="display:flex;align-items:center;gap:6px">${r.c.nome}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
-          <div class="rm">${r.c.equipes?.nome||'—'} · ${r.pct}%</div>
+          <div class="rn" style="display:flex;align-items:center;gap:6px">${_esc(r.c.nome)}${r.c._isSv?'<span style="font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:10px">Supervisor</span>':''}</div>
+          <div class="rm">${_esc(r.c.equipes?.nome||'—')} · ${r.pct}%</div>
         </div>
         <div style="text-align:right"><div style="font-size:15px;font-weight:800;color:var(--mid)">${fmt(r.real)}</div><div style="font-size:11px;color:var(--text3)">de ${fmt(r.meta.meta_vendas)}</div></div>
       </div>`).join('')}
@@ -5878,7 +5887,7 @@ async function loadMaProv(){
         <tr><th>Equipe</th>${meses.map(x=>`<th>${String(x.m).padStart(2,'0')}/${x.a}</th>`).join('')}</tr>
       </thead>
       <tbody>${equipes.map(eq=>`<tr>
-        <td><strong>${eq.nome}</strong></td>
+        <td><strong>${_esc(eq.nome)}</strong></td>
         ${meses.map(x=>{
           const p=provs.find(v=>v.equipe_id===eq.id&&v.mes===x.m&&v.ano===x.a)||{meta:0,realizado:0}
           const pct=p.meta>0?Math.round(p.realizado/p.meta*100):0
@@ -6120,9 +6129,9 @@ async function loadDrives(){
           </div>
           <div style="display:flex;flex-direction:column;gap:6px">
             ${links.map(l=>`
-              <a href="${l.link}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg);border-radius:8px;text-decoration:none;transition:background .15s" onmouseover="this.style.background='${coresOp[op]||'#94A3B8'}15'" onmouseout="this.style.background='var(--bg)'">
+              <a href="${_safeUrl(l.link)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg);border-radius:8px;text-decoration:none;transition:background .15s" onmouseover="this.style.background='${coresOp[op]||'#94A3B8'}15'" onmouseout="this.style.background='var(--bg)'">
                 <span style="font-size:13px">📄</span>
-                <span style="font-size:12px;font-weight:600;color:var(--text1);flex:1">${l.nome}</span>
+                <span style="font-size:12px;font-weight:600;color:var(--text1);flex:1">${_esc(l.nome)}</span>
                 <span style="font-size:11px;color:${coresOp[op]||'#94A3B8'};font-weight:700">↗</span>
               </a>
             `).join('')}
@@ -6155,11 +6164,11 @@ async function loadMaDrives(){
       <tbody>${drives.length?drives.map(d=>`
         <tr>
           <td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${coresOp[d.operadora]||'#94A3B8'}20;color:${coresOp[d.operadora]||'#94A3B8'}">${d.operadora||'—'}</span></td>
-          <td><strong>${d.nome}</strong></td>
-          <td><a href="${d.link}" target="_blank" style="font-size:12px;color:var(--mid);font-weight:600">↗ Abrir</a></td>
+          <td><strong>${_esc(d.nome)}</strong></td>
+          <td><a href="${_safeUrl(d.link)}" target="_blank" style="font-size:12px;color:var(--mid);font-weight:600">↗ Abrir</a></td>
           <td><div style="display:flex;gap:6px">
-            <button onclick="editarDrive('${d.id}','${d.nome.replace(/'/g,"\\'")}','${d.link.replace(/'/g,"\\'")}','${(d.operadora||'').replace(/'/g,"\\'")}')" class="btn btn-sec btn-sm">✏️ Editar</button>
-            <button onclick="excluirDrive('${d.id}','${d.nome.replace(/'/g,"\\'")}')" class="btn btn-danger btn-sm">🗑 Excluir</button>
+            <button onclick="editarDrive('${d.id}',${_js(d.nome)},${_js(d.link)},${_js(d.operadora||'')})" class="btn btn-sec btn-sm">✏️ Editar</button>
+            <button onclick="excluirDrive('${d.id}',${_js(d.nome)})" class="btn btn-danger btn-sm">🗑 Excluir</button>
           </div></td>
         </tr>`).join(''):'<tr><td colspan="4"><div class="empty">Nenhum drive cadastrado ainda.</div></td></tr>'}
       </tbody>
@@ -6228,7 +6237,7 @@ async function loadMaMetas(){
     <div class="card"><table class="tbl">
       <thead><tr><th>Equipe</th><th>Meta mensal (R$)</th><th>Ação</th></tr></thead>
       <tbody>${(equipes||[]).map(eq=>`<tr>
-        <td><strong>${eq.nome}</strong></td>
+        <td><strong>${_esc(eq.nome)}</strong></td>
         <td><input type="number" id="meq-${eq.id}" value="${eq.meta_mensal||0}" style="width:140px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></td>
         <td><button class="btn btn-pri btn-sm" onclick="salvarMetaEq('${eq.id}')">Salvar</button></td>
       </tr>`).join('')}
@@ -6314,8 +6323,8 @@ async function loadSvRecusas(){
         <table class="tbl">
           <thead><tr><th>Lead</th><th>Consultor</th><th>Motivo</th><th>Data</th><th>Detalhe</th></tr></thead>
           <tbody>${leadsMes.length?leadsMes.map(l=>`<tr>
-            <td><strong>${l.nome}</strong>${l.empresa?`<div style="font-size:11px;color:var(--text3)">${l.empresa}</div>`:''}</td>
-            <td>${l.usuarios?.nome?.split(' ')[0]||'—'}</td>
+            <td><strong>${_esc(l.nome)}</strong>${l.empresa?`<div style="font-size:11px;color:var(--text3)">${l.empresa}</div>`:''}</td>
+            <td>${_esc(l.usuarios?.nome?.split(' ')[0]||'—')}</td>
             <td><span class="pill p-lw">${l.motivo_perda?.startsWith('Outro:')?'Outro':l.motivo_perda||'—'}</span></td>
             <td style="font-size:12px;color:var(--text3)">${new Date(l.criado_em).toLocaleDateString('pt-BR')}</td>
             <td style="font-size:12px;color:var(--text2);max-width:200px">${l.motivo_perda?.startsWith('Outro:')?l.motivo_perda.replace('Outro:','').trim():l.observacoes||'—'}</td>
@@ -6422,7 +6431,7 @@ async function loadSvEngajamento(){
             <td>
               <div style="display:flex;align-items:center;gap:10px">
                 <div class="av" style="width:32px;height:32px;font-size:11px;background:#E0FAF5;color:#065F46;flex-shrink:0">${ini(s.c.nome)}</div>
-                <div><div style="font-weight:600">${s.c.nome}</div><div style="font-size:11px;color:var(--text3)">${s.c.email}</div></div>
+                <div><div style="font-weight:600">${_esc(s.c.nome)}</div><div style="font-size:11px;color:var(--text3)">${s.c.email}</div></div>
               </div>
             </td>
             <td>
@@ -6537,7 +6546,7 @@ async function loadMaRecusas(){
         <div style="margin-top:14px">
           ${eqStats.map((e,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
             <div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]};flex-shrink:0"></div>
-            <span style="flex:1;font-size:13px">${e.eq.nome}</span>
+            <span style="flex:1;font-size:13px">${_esc(e.eq.nome)}</span>
             <span style="font-weight:700">${e.total}</span>
             <span style="font-size:11px;color:var(--text3)">${e.principal}</span>
           </div>`).join('')}
@@ -6555,7 +6564,7 @@ async function loadMaRecusas(){
             return idsEq.includes(l.consultor_id)
           }).length
           return`<tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]}"></div><strong>${e.eq.nome}</strong></div></td>
+            <td><div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${cores[i%cores.length]}"></div><strong>${_esc(e.eq.nome)}</strong></div></td>
             <td><span style="font-weight:700;color:#EF4444">${e.total}</span></td>
             <td>${e.motivos[0]?`<span class="pill p-lw">${e.motivos[0][0]}</span>`:'—'}</td>
             <td>${e.motivos[1]?`<span class="pill p-wn">${e.motivos[1][0]}</span>`:'—'}</td>
@@ -6578,9 +6587,9 @@ async function loadMaRecusas(){
             return idsEq.includes(l.consultor_id)
           })
           return`<tr>
-            <td><strong>${l.nome}</strong>${l.empresa?`<div style="font-size:11px;color:var(--text3)">${l.empresa}</div>`:''}</td>
-            <td>${l.usuarios?.nome?.split(' ')[0]||'—'}</td>
-            <td>${eq?.nome||'—'}</td>
+            <td><strong>${_esc(l.nome)}</strong>${l.empresa?`<div style="font-size:11px;color:var(--text3)">${l.empresa}</div>`:''}</td>
+            <td>${_esc(l.usuarios?.nome?.split(' ')[0]||'—')}</td>
+            <td>${_esc(eq?.nome||'—')}</td>
             <td><span class="pill p-lw">${l.motivo_perda?.startsWith('Outro:')?'Outro':l.motivo_perda||'—'}</span></td>
             <td style="font-size:12px;color:var(--text3)">${new Date(l.criado_em).toLocaleDateString('pt-BR')}</td>
             <td style="font-size:12px;color:var(--text2);max-width:200px">${l.motivo_perda?.startsWith('Outro:')?l.motivo_perda.replace('Outro:','').trim():l.observacoes||'—'}</td>
@@ -6615,11 +6624,11 @@ async function loadMaUsuarios(){
       <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead>
       <tbody>${users.map(u=>`
         <tr>
-          <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:30px;height:30px;font-size:11px">${ini(u.nome)}</div><span style="font-weight:600">${u.nome}</span></div></td>
-          <td style="color:var(--text3);font-size:13px">${u.email||'—'}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:30px;height:30px;font-size:11px">${ini(u.nome)}</div><span style="font-weight:600">${_esc(u.nome)}</span></div></td>
+          <td style="color:var(--text3);font-size:13px">${_esc(u.email||'—')}</td>
           <td><span class="pill ${u.perfil==='supervisor'?'p-wn':'p-ok'}" style="font-size:11px">${u.perfil}</span></td>
-          <td style="font-size:13px">${u.equipes?.nome||'—'}</td>
-          <td><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}','${u.nome.replace(/'/g,"\\'")}')">🗑 Excluir</button></td>
+          <td style="font-size:13px">${_esc(u.equipes?.nome||'—')}</td>
+          <td><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}',${_js(u.nome)})">🗑 Excluir</button></td>
         </tr>`).join('')}
       </tbody>
     </table></div>
@@ -6643,7 +6652,7 @@ async function loadMaUsuarios(){
             <div><label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">EQUIPE</label>
               <select id="nu-equipe" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">
                 <option value="">Sem equipe</option>
-                ${equipes.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')}
+                ${equipes.map(e=>`<option value="${e.id}">${_esc(e.nome)}</option>`).join('')}
               </select></div>
           </div>
           <div id="nu-erro" style="display:none;background:#FEE2E2;color:#DC2626;padding:10px 12px;border-radius:8px;font-size:13px"></div>
@@ -6663,7 +6672,7 @@ async function loadMaUsuarios(){
           <label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:6px">TRANSFERIR LEADS PARA</label>
           <select id="eu-destino" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);margin-bottom:14px">
             <option value="">Ninguém (leads ficam sem consultor)</option>
-            ${users.map(u=>`<option value="${u.id}">${u.nome} (${u.perfil})</option>`).join('')}
+            ${users.map(u=>`<option value="${u.id}">${_esc(u.nome)} (${u.perfil})</option>`).join('')}
           </select>
         </div>
         <div id="eu-erro" style="display:none;background:#FEE2E2;color:#DC2626;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px"></div>
