@@ -2098,21 +2098,17 @@ async function iniciarApp(){
   $('sb-name').textContent=CU.nome
   $('sb-role').textContent=CU.perfil==='master'?'Master':CU.perfil==='supervisor'?'Supervisor':'Consultor(a)'
   await carregarNotificacoes()
-  // Polling a cada 30s — garante que todos vejam notificações geradas por outros usuários
+  // Polling a cada 60s — reduzido de 30s pra aliviar carga no Postgres/Realtime
   if(_notifInterval) clearInterval(_notifInterval)
-  _notifInterval=setInterval(carregarNotificacoes,30000)
+  _notifInterval=setInterval(carregarNotificacoes,60000)
   if(CU.perfil==='master') setupMaster()
   else if(CU.perfil==='supervisor') setupSupervisor()
   else setupConsultor()
   // Automações do Feed (aniversário pessoal + aniversário na empresa) — dispara 1x por sessão
   _rodarAutomacoesFeed()
-  // Realtime: liga o canal do feed pra receber posts/curtidas/comentários/votos ao vivo
-  _subscribeFeed()
+  // Realtime do Feed: lazy — só assina quando o usuário ABRIR o feed (loadFeed).
   // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
   _autoFecharMesAnterior()
-  // Bordas de conquista mensal (prata/ouro/roxa) — refresh do cache no login
-  // Após terminar, reaplica avatar da sidebar pra pintar a borda (o 1º render rodou antes do cache existir)
-  _recalcularBordas().then(()=>{if(CU)aplicarAvatar($('sb-av'),CU)})
 }
 
 // ── NOTIFICAÇÕES ──
@@ -2921,6 +2917,12 @@ function _subscribeFeed(){
     .subscribe()
 }
 
+function _unsubscribeFeed(){
+  if(!_feedChannel)return
+  try{sb.removeChannel(_feedChannel)}catch(e){}
+  _feedChannel=null
+}
+
 // Notifica todos os masters (usado por denúncias)
 async function _notificarMasters(titulo,mensagem,sobreUsuarioId){
   const{data}=await sb.from('usuarios').select('id').eq('perfil','master')
@@ -3020,6 +3022,7 @@ async function _podePostar(){
 
 async function loadFeed(){
   const el=$('p-feed');if(!el)return
+  _subscribeFeed()  // lazy: só assina realtime quando o feed é aberto
   _feedOffset=0;_feedNoMore=false;_feedLoading=false
   _composerImagem=null;_composerEnquete=null
   el.innerHTML='<div class="feed-wrap"><div class="loading">Carregando feed…</div></div>'
@@ -3352,8 +3355,6 @@ async function notificarTodos(titulo,mensagem,tipo='info',sobreUsuarioId=null){
 }
 
 async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
-  // Reavalia bordas de conquista sempre que meta é checada (roda pós-save de lead)
-  _recalcularBordas().then(()=>{if(CU)aplicarAvatar($('sb-av'),CU)})
   const m=mesAtual(),a=anoAtual()
   const[metaRes,leadsRes]=await Promise.all([
     sb.from('metas_mensais').select('meta_vendas').eq('consultor_id',consultorId).eq('mes',m).eq('ano',a).maybeSingle(),
@@ -3527,6 +3528,8 @@ window.navTo=(id,btn,title)=>{
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   btn.classList.add('active');$(id).classList.add('active')
   $('topbar-title').textContent=title
+  // Realtime do feed: desassina ao sair da tela (economiza WAL/compute do Postgres)
+  if(id!=='p-feed') _unsubscribeFeed()
   const map={
     'p-home':loadCoHome,'p-leads':()=>loadLeads(),'p-funil':loadFunil,'p-agenda':()=>loadAgenda(CU.id),
     'p-drives':loadDrives,'p-historico':loadHistorico,
