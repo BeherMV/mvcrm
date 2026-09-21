@@ -392,6 +392,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 /* Badge "novo" na sidebar */
 .pill-new{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--grad);color:#fff;box-shadow:0 2px 6px -2px rgba(37,99,235,.5)}
+/* Botão pequeno de WhatsApp inline (ao lado do telefone) */
+.wa-icon-btn{background:#25D366;border:0;color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;margin-left:6px;transition:transform .15s,box-shadow .15s;box-shadow:0 1px 4px rgba(37,211,102,.35)}
+.wa-icon-btn:hover{transform:scale(1.12);box-shadow:0 3px 10px rgba(37,211,102,.55)}
+.wa-icon-btn svg{display:block}
 /* Badge de follow-up atrasado — persistente na sidebar */
 .pill-fup{margin-left:auto;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;background:#DC2626;color:#fff;box-shadow:0 2px 8px -2px rgba(220,38,38,.7);animation:fup-pulse 2s ease-in-out infinite}
 @keyframes fup-pulse{0%,100%{box-shadow:0 2px 8px -2px rgba(220,38,38,.7)}50%{box-shadow:0 2px 14px 0 rgba(220,38,38,.9)}}
@@ -859,9 +863,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="modal-box">
     <h3 id="mod-lead-title">Novo lead</h3>
     <input type="hidden" id="ml-id">
-    <div class="mfield"><label>Nome</label><input type="text" id="ml-nome" placeholder="Nome completo"></div>
+    <div class="mfield"><label>Nome</label><input type="text" id="ml-nome" placeholder="Nome completo" oninput="_atualizarPainelWa()"></div>
     <div class="mfield"><label>Empresa (CNPJ)</label><input type="text" id="ml-empresa" placeholder="Razão social ou nome fantasia"></div>
-    <div class="mfield"><label>Telefone</label><input type="text" id="ml-tel" placeholder="(41) 99999-9999"></div>
+    <div class="mfield"><label>Telefone</label><input type="text" id="ml-tel" placeholder="(41) 99999-9999" oninput="_atualizarPainelWa()"></div>
+    <div id="ml-wa-painel" style="display:none;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:#065F46;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">WhatsApp — mensagem pronta</div>
+      <select id="ml-wa-template" style="width:100%;padding:8px 10px;border:1.5px solid #86EFAC;border-radius:8px;font-size:13px;background:#fff;margin-bottom:8px" onchange="_atualizarPainelWa()"></select>
+      <div id="ml-wa-preview" style="font-size:12px;color:#065F46;background:#fff;border:1px solid #D1FAE5;border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:80px;overflow-y:auto;white-space:pre-wrap"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="_wa_abrirDoModal()" style="flex:1;background:#25D366;color:#fff;border:0;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Abrir no WhatsApp</button>
+        <button type="button" onclick="_wa_copiarDoModal()" style="flex:1;background:#25D366;color:#fff;border:0;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Copiar mensagem</button>
+      </div>
+    </div>
     <div class="mfield"><label>Canal</label>
       <select id="ml-canal"><option>HotLead</option><option>ListaFria</option><option>Remarketing</option><option>Orgânico</option><option>Indicação</option><option>Patrocinado</option><option>Networking</option></select>
     </div>
@@ -1998,6 +2011,136 @@ document.addEventListener('click',e=>{if(notifOpen&&!e.target.closest('#notif-pa
 // ── MODAL LEAD ──
 // ── Cadência de follow-up: D+1, D+3, D+5, D+10 desde criado_em ──
 const FOLLOWUP_CADENCE=[1,3,5,10]
+
+// ── Templates de WhatsApp (categorias + mensagens) ─────────────────────
+// Variáveis suportadas: {nome} {primeiroNome} {consultor} {consultorPrimeiroNome} {operadora} {valor}
+const WA_TEMPLATES=[
+  {id:'primeiro_contato',categoria:'Contato inicial',label:'Primeiro contato',texto:'Olá {primeiroNome}, tudo bem? Aqui é {consultorPrimeiroNome} da MV Corretora. Vi seu interesse em plano de saúde. Posso te apresentar as melhores opções?'},
+  {id:'reforcar_contato',categoria:'Contato inicial',label:'Reforçar interesse (2ª tentativa)',texto:'Oi {primeiroNome}, tudo bem? Fiquei sem retorno dos meus recados anteriores. Posso te enviar uma proposta rápida pra sua análise?'},
+  {id:'qualificacao_pf',categoria:'Qualificação',label:'Descobrir necessidade — PF',texto:'{primeiroNome}, pra te enviar as melhores opções, me confirma: quantas vidas serão no plano? Alguém tem consulta/exame com data marcada?'},
+  {id:'qualificacao_pme',categoria:'Qualificação',label:'Descobrir necessidade — PME',texto:'{primeiroNome}, pra montar a melhor proposta pra sua empresa: quantos colaboradores vão entrar no plano? Você prefere cobertura regional ou nacional?'},
+  {id:'proposta_enviada',categoria:'Proposta',label:'Após enviar valores',texto:'{primeiroNome}, acabei de te mandar os valores. Qualquer dúvida me chama por aqui. Ficou de acordo com o que você esperava?'},
+  {id:'follow_analisando',categoria:'Follow-up',label:'Lead analisando (D+3 / D+5)',texto:'Oi {primeiroNome}, tudo bem? Só passando pra saber se conseguiu dar uma olhada nos valores que enviei. Ficou alguma dúvida?'},
+  {id:'follow_documento',categoria:'Follow-up',label:'Aguardando documentos',texto:'{primeiroNome}, tudo certo? Conseguiu separar os documentos que combinamos? Qualquer coisa que precisar, me avisa.'},
+  {id:'urgencia_carencia',categoria:'Fechamento',label:'Urgência — carência',texto:'{primeiroNome}, um alerta: quanto mais tempo esperar pra assinar, mais tempo você fica sem cobertura. Consegue fechar hoje pra já começar a carência?'},
+  {id:'boas_vindas',categoria:'Pós-venda',label:'Boas-vindas cliente novo',texto:'{primeiroNome}, parabéns pela decisão! Bem-vindo(a) à família {operadora}. Vou te acompanhar pelo processo. Qualquer coisa que precisar, chama aqui.'},
+  {id:'reativacao',categoria:'Reengajamento',label:'Lead antigo — reativação',texto:'Oi {primeiroNome}, tudo bem? Faz um tempo que não conversamos. Se ainda tiver interesse em plano de saúde, os valores mudaram. Quer que eu envie uma atualização?'},
+]
+
+function _normalizarTelefoneWa(tel){
+  const d=String(tel||'').replace(/\D/g,'')
+  if(!d) return ''
+  // Se já começa com 55 e tem 12+ dígitos, mantém. Senão, prefixa 55.
+  return d.startsWith('55')&&d.length>=12?d:'55'+d
+}
+function _montarMensagemWa(lead,template){
+  const nome=lead?.nome||''
+  const primeiroNome=nome.split(/\s+/)[0]||''
+  const consultor=CU?.nome||''
+  const consultorPrimeiroNome=consultor.split(/\s+/)[0]||''
+  return String(template.texto||'')
+    .replace(/\{nome\}/g,nome)
+    .replace(/\{primeiroNome\}/g,primeiroNome)
+    .replace(/\{consultor\}/g,consultor)
+    .replace(/\{consultorPrimeiroNome\}/g,consultorPrimeiroNome)
+    .replace(/\{operadora\}/g,lead?.operadora||'')
+    .replace(/\{valor\}/g,lead?.valor?`R$ ${lead.valor}`:'')
+}
+// Abre o modal de edit do lead e rola até o painel do WhatsApp
+window.abrirLeadNoWa=async id=>{
+  await editarLead(id)
+  setTimeout(()=>{
+    const painel=$('ml-wa-painel')
+    if(painel&&painel.style.display!=='none'){
+      painel.scrollIntoView({behavior:'smooth',block:'center'})
+      painel.style.transition='box-shadow .3s'
+      painel.style.boxShadow='0 0 0 3px rgba(37,211,102,.35)'
+      setTimeout(()=>{painel.style.boxShadow=''},1200)
+      const sel=$('ml-wa-template');if(sel) sel.focus()
+    }
+  },250)
+}
+window.abrirWhatsapp=(lead,templateId)=>{
+  const tel=_normalizarTelefoneWa(lead?.telefone)
+  if(!tel){mostrarToast('Sem telefone','Este lead não tem telefone cadastrado.','info');return}
+  const tpl=WA_TEMPLATES.find(t=>t.id===templateId)
+  const msg=tpl?_montarMensagemWa(lead,tpl):''
+  const url=`https://web.whatsapp.com/send?phone=${tel}${msg?'&text='+encodeURIComponent(msg):''}`
+  // Nome 'whatsapp_tab' faz o navegador reutilizar a mesma aba entre cliques
+  window.open(url,'whatsapp_tab')
+}
+// ── Painel WhatsApp dentro do modal de lead ──
+function _leadDoModal(){
+  const status=$('ml-status')?.value||''
+  return{
+    id:$('ml-id')?.value||'',
+    nome:$('ml-nome')?.value||'',
+    telefone:$('ml-tel')?.value||'',
+    empresa:$('ml-empresa')?.value||'',
+    canal:$('ml-canal')?.value||'',
+    status,
+    operadora:$('ml-operadora')?.value||'',
+    valor:Number($('ml-valor')?.value)||0
+  }
+}
+// Sugere qual template mostrar por padrão baseado no status atual
+function _templatePadraoParaStatus(status){
+  const map={
+    'Não responderam AB':'primeiro_contato',
+    'Não responderam mais':'reforcar_contato',
+    'Analisando':'follow_analisando',
+    'Pela Boa':'proposta_enviada',
+    'Ard Documento':'follow_documento',
+    'Proposta':'boas_vindas'
+  }
+  return map[status]||'primeiro_contato'
+}
+window._atualizarPainelWa=()=>{
+  const painel=$('ml-wa-painel'),tel=$('ml-tel')?.value||''
+  if(!painel)return
+  const temTel=_normalizarTelefoneWa(tel).length>=12
+  painel.style.display=temTel?'block':'none'
+  if(!temTel)return
+  const sel=$('ml-wa-template')
+  const lead=_leadDoModal()
+  if(sel&&!sel.options.length){
+    // Popular select agrupado por categoria
+    const grupos={}
+    WA_TEMPLATES.forEach(t=>{(grupos[t.categoria]=grupos[t.categoria]||[]).push(t)})
+    sel.innerHTML=Object.entries(grupos).map(([cat,items])=>
+      `<optgroup label="${_esc(cat)}">${items.map(t=>`<option value="${t.id}">${_esc(t.label)}</option>`).join('')}</optgroup>`
+    ).join('')
+    // Pré-selecionar de acordo com status
+    sel.value=_templatePadraoParaStatus(lead.status)
+  }
+  // Atualiza preview
+  const tpl=WA_TEMPLATES.find(t=>t.id===sel.value)
+  const preview=$('ml-wa-preview')
+  if(preview&&tpl) preview.textContent=_montarMensagemWa(lead,tpl)
+}
+window._wa_abrirDoModal=()=>{
+  const lead=_leadDoModal(),tplId=$('ml-wa-template')?.value
+  abrirWhatsapp(lead,tplId)
+}
+window._wa_copiarDoModal=()=>{
+  const lead=_leadDoModal(),tplId=$('ml-wa-template')?.value
+  copiarMensagemWa(lead,tplId)
+}
+window.copiarMensagemWa=async(lead,templateId)=>{
+  const tpl=WA_TEMPLATES.find(t=>t.id===templateId)
+  if(!tpl){mostrarToast('Erro','Template não encontrado.','erro');return}
+  const msg=_montarMensagemWa(lead,tpl)
+  try{
+    await navigator.clipboard.writeText(msg)
+    mostrarToast('Copiado','Mensagem no clipboard — cole no seu WhatsApp aberto.','sucesso')
+  }catch(e){
+    // Fallback pra navegadores sem clipboard API
+    const ta=document.createElement('textarea');ta.value=msg;document.body.appendChild(ta);ta.select()
+    try{document.execCommand('copy');mostrarToast('Copiado','Mensagem no clipboard.','sucesso')}
+    catch(e2){mostrarToast('Erro','Copie manualmente: '+msg,'erro')}
+    ta.remove()
+  }
+}
 function _calcProximoFollowup(criadoEm,contatosFeitos){
   // Se já esgotou as 4 tentativas, follow-up fica null (esgotou cadência)
   if(contatosFeitos>=FOLLOWUP_CADENCE.length)return null
@@ -2013,6 +2156,12 @@ window.onStatusChange=function(val){
   // Mês da venda só aparece pra Proposta (é lá que compõe a meta)
   const wrapMes=$('ml-mes-wrap')
   if(wrapMes) wrapMes.style.display=val==='Proposta'?'block':'none'
+  // Ao mudar status, sugere novo template padrão pro WhatsApp
+  const selWa=$('ml-wa-template')
+  if(selWa&&selWa.options.length){
+    selWa.value=_templatePadraoParaStatus(val)
+    _atualizarPainelWa()
+  }
   // Atualizar label do bloco conforme status
   const labelPlano=$('ml-proposta-label')
   if(labelPlano){
@@ -4011,7 +4160,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
         const atrasado=l.followup_date&&l.followup_date<hj&&!['Proposta','Negativa'].includes(l.status)
         return `<tr${atrasado?' style="background:rgba(239,68,68,0.06)"':''}>
         <td><strong>${_esc(l.nome)}</strong></td>
-        <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
+        <td style="font-size:13px;color:var(--text2);white-space:nowrap">${l.telefone?`${l.telefone} <button class="wa-icon-btn" onclick="event.stopPropagation();abrirLeadNoWa('${l.id}')" title="Abrir mensagem no WhatsApp"><svg viewBox="0 0 24 24" width="14" height="14" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg></button>`:'—'}</td>
         <td><span class="pill p-gray">${l.canal||'—'}</span></td>
         <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
         <td style="font-size:12px;color:${atrasado?'#DC2626':'var(--text3)'};font-weight:${atrasado?'700':'normal'}">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')+(atrasado?' 🔥':''):'—'}</td>
@@ -4109,6 +4258,7 @@ window.setFiltroStatus=(s,btn)=>{
 
 window.novoLead=()=>{
   $('mod-lead-title').textContent='Novo lead';$('ml-id').value=''
+  const _selWa=$('ml-wa-template');if(_selWa)_selWa.innerHTML=''
   ;['ml-nome','ml-empresa','ml-tel','ml-obs','ml-valor','ml-vidas'].forEach(id=>{if($(id))$(id).value=''})
   $('ml-status').value='Não responderam AB';$('ml-canal').value='HotLead'
   $('ml-proposta').style.display='none';$('ml-negativa').style.display='none'
@@ -4173,7 +4323,10 @@ window.editarLead=async id=>{
     }
   }
   $('ml-ok').style.display='none';$('ml-err').style.display='none'
+  // Reseta select do WA pra repovoar com padrão do status atual do lead
+  const _selWa=$('ml-wa-template');if(_selWa)_selWa.innerHTML=''
   openModal('mod-lead')
+  _atualizarPainelWa()
 }
 
 let _salvandoLead=false
@@ -5076,7 +5229,7 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
           const atrasado=l.followup_date&&l.followup_date<hj&&!['Proposta','Negativa'].includes(l.status)
           return `<tr${atrasado?' style="background:rgba(239,68,68,0.06)"':''}>
           <td><strong>${_esc(l.nome)}</strong></td>
-          <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
+          <td style="font-size:13px;color:var(--text2);white-space:nowrap">${l.telefone?`${l.telefone} <button class="wa-icon-btn" onclick="event.stopPropagation();abrirLeadNoWa('${l.id}')" title="Abrir mensagem no WhatsApp"><svg viewBox="0 0 24 24" width="14" height="14" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg></button>`:'—'}</td>
           <td><span class="pill p-gray">${l.canal||'—'}</span></td>
           <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
           <td style="font-size:12px;color:${atrasado?'#DC2626':'var(--text3)'};font-weight:${atrasado?'700':'normal'}">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')+(atrasado?' 🔥':''):'—'}</td>
@@ -5104,6 +5257,7 @@ window.setSvFiltroStatus=(s,btn)=>{document.querySelectorAll('#sv-filter-status-
 window.novoLeadSv=()=>{
   $('mod-lead-title').textContent='Novo lead'
   $('ml-id').value=''
+  const _selWa=$('ml-wa-template');if(_selWa)_selWa.innerHTML=''
   $('ml-nome').value='';$('ml-empresa').value='';$('ml-tel').value=''
   $('ml-status').value='Não responderam AB';$('ml-canal').value='HotLead'
   $('ml-tipo').value='PF';$('ml-operadora').value='Clinipam';$('ml-valor').value='';$('ml-vidas').value='1'
