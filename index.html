@@ -2233,7 +2233,7 @@ function _renderCentral(){
   const hj=new Date().toISOString().split('T')[0]
   const diasStatus=Math.floor(_horasDesde(l.status_alterado_em||l.criado_em)/24)
   const fupTxt=l.followup_date===hj?'Follow-up hoje':(l.followup_date&&l.followup_date<hj?`Follow-up atrasado ${Math.floor((Date.now()-new Date(l.followup_date+'T12:00'))/86400000)}d`:l.followup_date?`Follow-up em ${new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')}`:'Sem follow-up definido')
-  const restantes=_CENTRAL.fila.filter((x,i)=>i>_CENTRAL.idx&&!_CENTRAL.pulados.has(x.id)).length
+  const restantes=_CENTRAL.fila.filter((x,i)=>i>_CENTRAL.idx&&!_CENTRAL.pulados.includes(x.id)).length
   wrap.innerHTML=`<div class="card" style="border-left:5px solid ${t.cor};padding:20px 22px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Próxima melhor ação</div>
