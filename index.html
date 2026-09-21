@@ -392,6 +392,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 /* Badge "novo" na sidebar */
 .pill-new{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--grad);color:#fff;box-shadow:0 2px 6px -2px rgba(37,99,235,.5)}
+/* Badge de follow-up atrasado — persistente na sidebar */
+.pill-fup{margin-left:auto;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;background:#DC2626;color:#fff;box-shadow:0 2px 8px -2px rgba(220,38,38,.7);animation:fup-pulse 2s ease-in-out infinite}
+@keyframes fup-pulse{0%,100%{box-shadow:0 2px 8px -2px rgba(220,38,38,.7)}50%{box-shadow:0 2px 14px 0 rgba(220,38,38,.9)}}
+/* Banner persistente no topo — visível em toda tela */
+.fup-banner{background:linear-gradient(90deg,#DC2626,#B91C1C);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:fup-banner-pulse 3s ease-in-out infinite}
+@keyframes fup-banner-pulse{0%,100%{background:linear-gradient(90deg,#DC2626,#B91C1C)}50%{background:linear-gradient(90deg,#B91C1C,#991B1B)}}
+.fup-banner:hover{filter:brightness(1.08)}
+.fup-banner .close-x{background:rgba(255,255,255,.2);border:0;color:#fff;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;font-weight:800;flex-shrink:0}
+.fup-banner .close-x:hover{background:rgba(255,255,255,.35)}
 
 /* Botão de tema */
 .theme-toggle-btn{
@@ -801,6 +810,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </div>
     </div>
     <div class="main-content">
+      <div id="fup-banner-wrap" style="display:none"></div>
       <div class="topbar">
         <div style="display:flex;align-items:center;gap:10px">
           <button class="ham-btn" id="ham-btn" onclick="toggleSidebar()" style="display:none;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0">
@@ -881,6 +891,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div style="background:#E0FAF5;border-radius:8px;padding:10px 14px;font-size:12px;color:#065F46;margin-top:4px">
         Valor na meta: <strong id="ml-valor-meta">R$ 0</strong>
       </div>
+      <div class="mfield" id="ml-mes-wrap" style="display:none;margin-top:12px">
+        <label>Mês da venda</label>
+        <input type="month" id="ml-mes-fechamento">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Define em qual mês esta venda entra na meta. Padrão: mês atual.</div>
+      </div>
     </div>
 
     <!-- CAMPOS NEGATIVA -->
@@ -903,6 +918,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="alert-err" id="ml-err"></div>
     <div class="modal-btns">
       <button class="btn btn-sec" onclick="closeModal(&#39;mod-lead&#39;)">Cancelar</button>
+      <button class="btn" id="ml-btn-contato" style="display:none;background:#FEF3C7;color:#92400E;font-weight:700" onclick="confirmarContato()">📞 Fiz contato</button>
       <button class="btn btn-pri" onclick="salvarLead()">Salvar</button>
     </div>
   </div>
@@ -1980,11 +1996,23 @@ window.toggleNotif=()=>{notifOpen=!notifOpen;$('notif-panel').classList.toggle('
 document.addEventListener('click',e=>{if(notifOpen&&!e.target.closest('#notif-panel')&&!e.target.closest('#notif-btn')){notifOpen=false;$('notif-panel').classList.remove('open')}})
 
 // ── MODAL LEAD ──
+// ── Cadência de follow-up: D+1, D+3, D+5, D+10 desde criado_em ──
+const FOLLOWUP_CADENCE=[1,3,5,10]
+function _calcProximoFollowup(criadoEm,contatosFeitos){
+  // Se já esgotou as 4 tentativas, follow-up fica null (esgotou cadência)
+  if(contatosFeitos>=FOLLOWUP_CADENCE.length)return null
+  const d=new Date(criadoEm||new Date())
+  d.setDate(d.getDate()+FOLLOWUP_CADENCE[contatosFeitos])
+  return d.toISOString().split('T')[0]
+}
 window.onStatusChange=function(val){
   // Mostrar campos de plano em Pela Boa, Ard Documento e Proposta
   const mostrarPlano=['Pela Boa','Ard Documento','Proposta'].includes(val)
   $('ml-proposta').style.display=mostrarPlano?'block':'none'
   $('ml-negativa').style.display=val==='Negativa'?'block':'none'
+  // Mês da venda só aparece pra Proposta (é lá que compõe a meta)
+  const wrapMes=$('ml-mes-wrap')
+  if(wrapMes) wrapMes.style.display=val==='Proposta'?'block':'none'
   // Atualizar label do bloco conforme status
   const labelPlano=$('ml-proposta-label')
   if(labelPlano){
@@ -2109,6 +2137,95 @@ async function iniciarApp(){
   // Realtime do Feed: lazy — só assina quando o usuário ABRIR o feed (loadFeed).
   // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
   _autoFecharMesAnterior()
+  // Follow-ups: badge + banner persistente + modal de boas-vindas 1x por sessão
+  if(CU.perfil!=='master') atualizarFollowupBadge({mostrarModal:true})
+}
+
+// ── FOLLOW-UP AGRESSIVO: badge sidebar + banner persistente + modal de sessão ──
+let _atrasadosCache=[]
+async function atualizarFollowupBadge({mostrarModal=false}={}){
+  if(!CU||CU.perfil==='master')return
+  const hoje=new Date().toISOString().split('T')[0]
+  const{data,error}=await sb.from('leads')
+    .select('id,nome,empresa,canal,followup_date,status,contatos_feitos,criado_em')
+    .eq('consultor_id',CU.id)
+    .lt('followup_date',hoje)
+    .not('followup_date','is',null)
+    .not('status','in','("Proposta","Negativa")')
+    .order('followup_date',{ascending:true})
+  if(error){console.warn('fup badge:',error);return}
+  _atrasadosCache=data||[]
+  const n=_atrasadosCache.length
+  // Badge no menu Leads
+  const badge=document.getElementById('badge-fup-leads')
+  if(badge){badge.textContent=n>0?String(n):'';badge.style.display=n>0?'inline-block':'none'}
+  // Banner persistente no topo
+  const wrap=document.getElementById('fup-banner-wrap')
+  if(wrap){
+    if(n>0){
+      wrap.innerHTML=`<div class="fup-banner" onclick="_irParaLeads()">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <span style="font-size:20px">🔥</span>
+          <span>Você tem <strong>${n} follow-up${n>1?'s':''} atrasado${n>1?'s':''}</strong>. Clique aqui pra ver.</span>
+        </div>
+        <button class="close-x" onclick="event.stopPropagation();_dispensarBannerFup()" title="Ocultar até o próximo login">×</button>
+      </div>`
+      // Se usuário dispensou nesta sessão, respeita
+      if(sessionStorage.getItem('fup_banner_dispensado')==='1') wrap.style.display='none'
+      else wrap.style.display='block'
+    }else{
+      wrap.innerHTML=''
+      wrap.style.display='none'
+    }
+  }
+  // Modal de boas-vindas (só na 1ª chamada, se tem atrasados)
+  if(mostrarModal&&n>0&&sessionStorage.getItem('fup_modal_visto')!=='1'){
+    sessionStorage.setItem('fup_modal_visto','1')
+    _abrirModalFollowupsAtrasados()
+  }
+}
+window._irParaLeads=()=>{
+  const btnLeads=document.querySelector(`.sb-btn[onclick*="p-leads"], .sb-btn[onclick*="p-sv-meus-leads"]`)
+  if(btnLeads) btnLeads.click()
+}
+window._dispensarBannerFup=()=>{
+  sessionStorage.setItem('fup_banner_dispensado','1')
+  const wrap=document.getElementById('fup-banner-wrap')
+  if(wrap) wrap.style.display='none'
+}
+function _abrirModalFollowupsAtrasados(){
+  const arr=_atrasadosCache.slice(0,10)
+  const hj=new Date()
+  const html=`
+    <div class="modal-overlay" id="mod-fup-atrasado" style="display:flex" onclick="if(event.target===this)closeModal('mod-fup-atrasado')">
+      <div class="modal-box" style="max-width:520px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:28px">🔥</span>
+          <h3 style="margin:0;color:#B91C1C">Follow-ups atrasados</h3>
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Você tem <strong>${_atrasadosCache.length}</strong> lead${_atrasadosCache.length>1?'s':''} esperando contato. Prioridade do dia:</div>
+        <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:10px">
+          ${arr.map(l=>{
+            const dias=Math.floor((hj-new Date(l.followup_date+'T12:00'))/86400000)
+            const cf=l.contatos_feitos||0
+            return `<div onclick="closeModal('mod-fup-atrasado');editarLead('${l.id}')" style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer">
+              <div class="av" style="width:34px;height:34px;font-size:12px;background:#FEE2E2;color:#B91C1C;flex-shrink:0">${ini(l.nome)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(l.nome)}</div>
+                <div style="font-size:11px;color:var(--text3)">${_esc(l.empresa||l.canal)} · contato ${cf}/${FOLLOWUP_CADENCE.length}</div>
+              </div>
+              <span class="pill" style="background:#FEE2E2;color:#B91C1C;flex-shrink:0">${dias}d atraso</span>
+            </div>`
+          }).join('')}
+        </div>
+        ${_atrasadosCache.length>10?`<div style="text-align:center;padding:10px;font-size:12px;color:var(--text3)">+${_atrasadosCache.length-10} outros na tela de Leads</div>`:''}
+        <div class="modal-btns" style="margin-top:14px">
+          <button class="btn btn-sec" onclick="closeModal('mod-fup-atrasado')">Depois</button>
+          <button class="btn btn-pri" onclick="closeModal('mod-fup-atrasado');_irParaLeads()">Ver todos</button>
+        </div>
+      </div>
+    </div>`
+  document.body.insertAdjacentHTML('beforeend',html)
 }
 
 // ── NOTIFICAÇÕES ──
@@ -3419,7 +3536,7 @@ function setupConsultor(){
   $('sb-nav').innerHTML=`
     <div class="sb-section">Principal</div>
     <button class="sb-btn active" onclick="navTo('p-home',this,'Meu painel')">📊 Meu painel</button>
-    <button class="sb-btn" onclick="navTo('p-leads',this,'Leads')">👤 Leads</button>
+    <button class="sb-btn" onclick="navTo('p-leads',this,'Leads')">👤 Leads<span id="badge-fup-leads" class="pill-fup" style="display:none"></span></button>
     <button class="sb-btn" onclick="navTo('p-funil',this,'Funil de vendas')">🔽 Funil</button>
     <button class="sb-btn" onclick="navTo('p-agenda',this,'Agenda')">📅 Agenda</button>
     <div class="sb-section">Resultados</div>
@@ -3451,7 +3568,7 @@ function setupSupervisor(){
     <button class="sb-btn" onclick="navTo('p-sv-consultores',this,'Consultores')">👥 Consultores</button>
     <button class="sb-btn" onclick="navTo('p-sv-funil',this,'Funil da equipe')">🔽 Funil</button>
     <div class="sb-section">Minha produção</div>
-    <button class="sb-btn" onclick="navTo('p-sv-meus-leads',this,'Meus Leads')">👤 Meus Leads</button>
+    <button class="sb-btn" onclick="navTo('p-sv-meus-leads',this,'Meus Leads')">👤 Meus Leads<span id="badge-fup-leads" class="pill-fup" style="display:none"></span></button>
     <button class="sb-btn" onclick="navTo('p-sv-meu-funil',this,'Meu Funil')">🔽 Meu Funil</button>
     <div class="sb-section">Gestão</div>
     <button class="sb-btn" onclick="navTo('p-sv-metas',this,'Metas')">🎯 Metas</button>
@@ -3569,7 +3686,7 @@ async function loadCoHome(){
     sb.from('metas_mensais').select('*').eq('consultor_id',CU.id).eq('mes',m).eq('ano',a).maybeSingle(),
     sb.from('leads').select('*').eq('consultor_id',CU.id).eq('status','Proposta').eq('mes_fechamento',m).eq('ano_fechamento',a),
     sb.from('leads').select('*').eq('consultor_id',CU.id).eq('mes_cotacao',m).eq('ano_cotacao',a),
-    sb.from('leads').select('*').eq('consultor_id',CU.id).eq('followup_date',hoje),
+    sb.from('leads').select('*').eq('consultor_id',CU.id).lte('followup_date',hoje).not('followup_date','is',null).not('status','in','("Proposta","Negativa")'),
     sb.from('leads').select('id',{count:'exact',head:true}).eq('consultor_id',CU.id).neq('status','Negativa'),
     sb.from('leads').select('id',{count:'exact',head:true}).eq('consultor_id',CU.id),
     sb.from('agendamentos').select('*').eq('consultor_id',CU.id).gte('data',hoje).order('data').limit(5),
@@ -3579,7 +3696,10 @@ async function loadCoHome(){
   const metaVnd=metaRes.data?.meta_vendas||17000
   const metaCot=metaRes.data?.meta_cotacoes||70
   const leadsC=leadsCRes.data||[]
-  const followHoje=followRes.data||[]
+  // Split follow-up: hoje vs atrasado (com dias de atraso pra exibir na UI)
+  const _followTodos=followRes.data||[]
+  const followHoje=_followTodos.filter(l=>l.followup_date===hoje)
+  const followAtrasados=_followTodos.filter(l=>l.followup_date<hoje).sort((a,b)=>(a.followup_date||'').localeCompare(b.followup_date||''))
   const fechados=leadsFRes.data||[]
   const realizado=fechados.reduce((s,l)=>s+Number(l.valor_meta||0),0)
   const cotacoes=leadsC.length
@@ -3665,6 +3785,7 @@ async function loadCoHome(){
     <div style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px">
       <div style="flex:1"><div style="font-size:15px;font-weight:700">Olá, ${_esc(CU.nome.split(' ')[0])}!</div>
       <div style="font-size:13px;color:#1E40AF;margin-top:3px">Dia útil <strong>${DU_HOJE}</strong> de <strong>${DU_TOTAL}</strong> — você deveria estar em <strong>${pctDU}%</strong> da meta.</div></div>
+      ${followAtrasados.length>0?`<div style="background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#B91C1C;white-space:nowrap;flex-shrink:0">🔥 ${followAtrasados.length} atrasado${followAtrasados.length>1?'s':''}</div>`:''}
       ${followHoje.length>0?`<div style="background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#92400E;white-space:nowrap;flex-shrink:0">${followHoje.length} follow-up hoje</div>`:''}
     </div>
 
@@ -3707,6 +3828,20 @@ async function loadCoHome(){
         </div>`).join(''):'<div class="empty" style="padding:10px 0">Nenhum agendamento próximo</div>'}
       </div>
     </div>
+
+    ${followAtrasados.length?`<div class="card" style="border-left:4px solid #DC2626;background:linear-gradient(90deg,#FEF2F2,transparent)">
+      <div class="card-head"><span class="card-title" style="color:#B91C1C">🔥 Follow-ups atrasados</span><span class="pill" style="background:#FEE2E2;color:#B91C1C">${followAtrasados.length}</span></div>
+      ${followAtrasados.slice(0,6).map(l=>{
+        const diasAtraso=Math.floor((Date.now()-new Date(l.followup_date+'T12:00').getTime())/86400000)
+        const cf=l.contatos_feitos||0
+        return `<div class="row" onclick="editarLead('${l.id}')" style="cursor:pointer">
+          <div class="av" style="width:32px;height:32px;font-size:11px;background:#FEE2E2;color:#B91C1C">${ini(l.nome)}</div>
+          <div class="ri"><div class="rn">${_esc(l.nome)}</div><div class="rm">${_esc(l.empresa||l.canal)} · contato ${cf}/${FOLLOWUP_CADENCE.length}</div></div>
+          <span class="pill" style="background:#FEE2E2;color:#B91C1C">${diasAtraso}d atraso</span>
+        </div>`
+      }).join('')}
+      ${followAtrasados.length>6?`<div style="text-align:center;padding:8px;font-size:12px;color:var(--text3)">+${followAtrasados.length-6} outros — abra Leads para ver todos</div>`:''}
+    </div>`:''}
 
     <div class="g2">
       <div class="card">
@@ -3786,12 +3921,15 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
     </div>
     <div class="card"><div style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>Nome</th><th>Telefone</th><th>Canal</th><th>Status</th><th>Follow-up</th><th>Observação</th><th>Ações</th></tr></thead>
-      <tbody>${filtrados.length?filtrados.map(l=>`<tr>
+      <tbody>${filtrados.length?filtrados.map(l=>{
+        const hj=new Date().toISOString().split('T')[0]
+        const atrasado=l.followup_date&&l.followup_date<hj&&!['Proposta','Negativa'].includes(l.status)
+        return `<tr${atrasado?' style="background:rgba(239,68,68,0.06)"':''}>
         <td><strong>${_esc(l.nome)}</strong></td>
         <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
         <td><span class="pill p-gray">${l.canal||'—'}</span></td>
         <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
-        <td style="font-size:12px;color:var(--text3)">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR'):'—'}</td>
+        <td style="font-size:12px;color:${atrasado?'#DC2626':'var(--text3)'};font-weight:${atrasado?'700':'normal'}">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')+(atrasado?' 🔥':''):'—'}</td>
         <td style="font-size:12px;color:var(--text2);max-width:180px"><span title="${l.observacoes||''}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.observacoes||'—'}</span></td>
         <td><div class="acoes-wrap"><button class="acoes-btn" onclick="toggleAcoesMenu(this)">···</button><div class="acoes-menu">
           <button onclick="editarLead('${l.id}');fecharAcoesMenus()">✏️ Editar</button>
@@ -3800,7 +3938,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
           <div class="acoes-sep"></div>
           <button class="danger" onclick="excluirLead('${l.id}',${_js(l.nome)})">🗑 Excluir</button>
         </div></div></td>
-      </tr>`).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
+      </tr>`}).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
       </tbody>
     </table></div></div>`
   window._filtroStatus=filtroStatus;window._filtroMes=fMes;window._filtroAno=fAno
@@ -3891,6 +4029,11 @@ window.novoLead=()=>{
   $('ml-proposta').style.display='none';$('ml-negativa').style.display='none'
   $('ml-motivo-sel').value='';$('ml-outro-wrap').style.display='none'
   $('ml-tipo').value='PF';$('ml-operadora').value='Clinipam'
+  // Mês da venda: default = mês atual
+  const mesInput=$('ml-mes-fechamento')
+  if(mesInput) mesInput.value=`${anoAtual()}-${String(mesAtual()).padStart(2,'0')}`
+  const wrapMes=$('ml-mes-wrap');if(wrapMes)wrapMes.style.display='none'
+  const btnContato=$('ml-btn-contato');if(btnContato)btnContato.style.display='none'
   ajustarTiposPorOperadora()
   $('ml-ok').style.display='none';$('ml-err').style.display='none'
   openModal('mod-lead')
@@ -3926,6 +4069,24 @@ window.editarLead=async id=>{
     atualizarValorMeta()
   }
   if(l.status==='Negativa'){$('ml-motivo-sel').value=l.motivo_perda&&!['Preço','Cobertura insuficiente','Já tem plano','Sem interesse','Sem retorno','Concorrência','Área de abrangência','Carência'].includes(l.motivo_perda)?'Outro':l.motivo_perda||''}
+  // Mês da venda: pré-preenche com valor existente (edit) ou mês atual (fallback)
+  const mesInput=$('ml-mes-fechamento')
+  if(mesInput){
+    const mF=l.mes_fechamento||mesAtual(),aF=l.ano_fechamento||anoAtual()
+    mesInput.value=`${aF}-${String(mF).padStart(2,'0')}`
+  }
+  const wrapMes=$('ml-mes-wrap');if(wrapMes)wrapMes.style.display=l.status==='Proposta'?'block':'none'
+  // Botão "Fiz contato": só pra leads em cadência (não Proposta / Negativa) e existentes
+  const btnContato=$('ml-btn-contato')
+  if(btnContato){
+    const emCadencia=!['Proposta','Negativa'].includes(l.status)
+    const jaEsgotou=(l.contatos_feitos||0)>=FOLLOWUP_CADENCE.length
+    btnContato.style.display=(emCadencia&&!jaEsgotou)?'inline-block':'none'
+    if(emCadencia){
+      const cf=l.contatos_feitos||0
+      btnContato.textContent=jaEsgotou?'✅ Cadência esgotada':`📞 Fiz contato (${cf+1}/${FOLLOWUP_CADENCE.length})`
+    }
+  }
   $('ml-ok').style.display='none';$('ml-err').style.display='none'
   openModal('mod-lead')
 }
@@ -3938,27 +4099,34 @@ window.salvarLead=async()=>{
   $('ml-err').style.display='none'
   if(!nome){$('ml-err').textContent='Informe o nome do lead.';$('ml-err').style.display='block';_salvandoLead=false;return}
   if(status==='Negativa'&&!$('ml-motivo-sel').value){$('ml-err').textContent='Selecione o motivo da negativa.';$('ml-err').style.display='block';_salvandoLead=false;return}
-  const amanha=new Date();amanha.setDate(amanha.getDate()+1)
   const m=mesAtual(),a=anoAtual()
   let motivo=$('ml-motivo-sel').value
   if(motivo==='Outro') motivo='Outro: '+($('ml-motivo-detalhe').value||'')
   const isNovo=!id
-  let dados={nome,empresa:$('ml-empresa').value.trim(),telefone:$('ml-tel').value.trim(),canal:$('ml-canal').value,status,observacoes:$('ml-obs').value.trim(),followup_date:['Proposta','Negativa'].includes(status)?null:amanha.toISOString().split('T')[0]}
-  // Apenas em leads novos define consultor e mês de cotação
+  // followup_date: em lead novo, D+1 da cadência. Em EDIT, preserva o valor atual
+  // (só muda quando consultor clica "Fiz contato" via confirmarContato).
+  let dados={nome,empresa:$('ml-empresa').value.trim(),telefone:$('ml-tel').value.trim(),canal:$('ml-canal').value,status,observacoes:$('ml-obs').value.trim()}
+  if(['Proposta','Negativa'].includes(status)){
+    dados.followup_date=null
+  }else if(isNovo){
+    dados.followup_date=_calcProximoFollowup(new Date(),0)
+    dados.contatos_feitos=0
+  }
+  // Em leads novos define consultor e mês de cotação
   if(isNovo){dados.consultor_id=CU.id;dados.mes_cotacao=m;dados.ano_cotacao=a}
   // Salvar dados do plano em Pela Boa, Ard Documento e Proposta
   if(['Pela Boa','Ard Documento','Proposta'].includes(status)){
-    // Migração pro mês atual: quando o lead entra nesses status "quentes",
-    // ele passa a compor o funil do mês corrente (mesmo se veio de meses passados)
     dados.mes_cotacao=m;dados.ano_cotacao=a
     const tipo=$('ml-tipo').value,op=$('ml-operadora').value,val=Number($('ml-valor').value)||0,vidas=Number($('ml-vidas').value)||1
     if(tipo==='Adesão'&&OPS_SEM_ADESAO.includes(op)){$('ml-err').textContent=op+' não trabalha com Adesão. Selecione PF ou PME.';$('ml-err').style.display='block';_salvandoLead=false;return}
     if(status==='Proposta'){
-      // Proposta: contabiliza na meta com valor_meta e mes_fechamento
-      dados={...dados,tipo,operadora:op,valor:val,valor_meta:calcMeta(val,tipo,op),vidas,mes_fechamento:m,ano_fechamento:a}
+      // Mês da venda: lê do input; padrão = atual
+      const mesStr=$('ml-mes-fechamento')?.value||''
+      let mF=m,aF=a
+      const mt=mesStr.match(/^(\d{4})-(\d{2})$/)
+      if(mt){aF=Number(mt[1]);mF=Number(mt[2])}
+      dados={...dados,tipo,operadora:op,valor:val,valor_meta:calcMeta(val,tipo,op),vidas,mes_fechamento:mF,ano_fechamento:aF}
     }else{
-      // Pela Boa / Ard Documento: salva dados do plano, valor_meta=0 (não contabiliza)
-      // mas salva valor_negociacao para exibir no funil sem afetar resultados
       dados={...dados,tipo,operadora:op,valor:val,valor_meta:0,valor_negociacao:calcMeta(val,tipo,op),vidas,mes_fechamento:null,ano_fechamento:null}
     }
   }
@@ -3980,8 +4148,24 @@ window.salvarLead=async()=>{
     _autoCriarProvisionamento(leadIdReal,dados).catch(e=>console.warn('auto prov:',e))
   }
   $('ml-ok').textContent=id?'Lead atualizado!':'Lead cadastrado!';$('ml-ok').style.display='block'
-  setTimeout(()=>{closeModal('mod-lead');loadLeads();loadCoHome();_salvandoLead=false},1400)
+  setTimeout(()=>{closeModal('mod-lead');loadLeads();loadCoHome();atualizarFollowupBadge();_salvandoLead=false},1400)
   setTimeout(()=>{_salvandoLead=false},3000) // segurança
+}
+
+// Incrementa contatos_feitos e recalcula o próximo follow-up conforme cadência D+1,D+3,D+5,D+10
+window.confirmarContato=async()=>{
+  const id=$('ml-id').value;if(!id)return
+  const lead=LEADS_CACHE.find(x=>x.id===id);if(!lead)return
+  const novoCf=(lead.contatos_feitos||0)+1
+  const proxFollowup=_calcProximoFollowup(lead.criado_em||new Date(),novoCf)
+  const{error}=await sb.from('leads').update({contatos_feitos:novoCf,followup_date:proxFollowup}).eq('id',id)
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  const msg=proxFollowup
+    ?`Próximo toque em ${new Date(proxFollowup+'T12:00').toLocaleDateString('pt-BR')} (contato ${novoCf}/${FOLLOWUP_CADENCE.length})`
+    :`Cadência esgotada — considere marcar como Negativa`
+  mostrarToast('Contato registrado',msg,'sucesso')
+  closeModal('mod-lead')
+  loadLeads();loadCoHome();atualizarFollowupBadge()
 }
 
 window.abrirFollowUpIA=async(leadId)=>{
@@ -4827,6 +5011,10 @@ window.novoLeadSv=()=>{
   ajustarTiposPorOperadora()
   $('ml-obs').value='';$('ml-proposta').style.display='none';$('ml-negativa').style.display='none'
   $('ml-motivo-sel').value='';$('ml-outro-wrap').style.display='none'
+  const mesInput=$('ml-mes-fechamento')
+  if(mesInput) mesInput.value=`${anoAtual()}-${String(mesAtual()).padStart(2,'0')}`
+  const wrapMes=$('ml-mes-wrap');if(wrapMes)wrapMes.style.display='none'
+  const btnContato=$('ml-btn-contato');if(btnContato)btnContato.style.display='none'
   $('ml-ok').style.display='none';$('ml-err').style.display='none'
   openModal('mod-lead')
   // Após salvar, recarregar meus leads do supervisor
