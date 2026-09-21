@@ -2027,23 +2027,21 @@ function _horasDesde(iso){
   return (Date.now()-t)/36e5
 }
 // Calcula o score de um lead. Retorna número.
-// -1 = fora da fila (Proposta / Negativa / cooldown ativo).
+// -1 = fora da fila (Proposta / Negativa / cooldown / adormecido).
 function _calcScoreLead(l){
   if(!l||['Proposta','Negativa'].includes(l.status)) return -1
   if(_horasDesde(l.ultimo_contato_em)<COOLDOWN_HORAS) return -1
+  const horasStatus=_horasDesde(l.status_alterado_em||l.criado_em)
+  // Lead adormecido (>30 dias no mesmo status) sai da fila.
+  // Consultor trata via "Precisam de atenção" na lista ou botão Zerar.
+  if(horasStatus>24*30) return -1
   let score=SCORE_BASE_STATUS[l.status]||30
   const hj=new Date().toISOString().split('T')[0]
-  const horasStatus=_horasDesde(l.status_alterado_em||l.criado_em)
   const horasCriado=_horasDesde(l.criado_em)
-  // Sinais positivos de urgência
   if(l.followup_date&&l.followup_date<=hj) score+=25
-  if(l.status==='Ard Documento'&&horasStatus>24&&horasStatus<24*14) score+=20  // cap: 2 semanas
-  if(l.status==='Pela Boa'&&horasStatus>24&&horasStatus<24*14) score+=15
-  // Lead REALMENTE novo (criado <=3 dias) sem contato — urgência de 1º toque
+  if(l.status==='Ard Documento'&&horasStatus>24) score+=20
+  if(l.status==='Pela Boa'&&horasStatus>24) score+=15
   if((l.contatos_feitos||0)===0&&horasCriado>0&&horasCriado<72) score+=30
-  // Decay: lead parado no mesmo status há muito tempo
-  if(horasStatus>24*30) score-=15    // >30 dias parado
-  if(horasStatus>24*90) score-=30    // >90 dias parado (praticamente some da fila)
   return score
 }
 function _calcTierLead(score){
