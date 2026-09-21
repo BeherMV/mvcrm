@@ -2151,10 +2151,25 @@ window._centralFizContato=async()=>{
   mostrarToast('Contato registrado','Próximo lead da fila carregado.','sucesso')
   await _refreshCentral()
 }
+// Garante que o lead está no LEADS_CACHE (necessário pra editarLead/abrirFollowUpIA)
+function _centralGarantirCache(l){
+  if(!l) return
+  const idx=LEADS_CACHE.findIndex(x=>x.id===l.id)
+  if(idx>=0) LEADS_CACHE[idx]=l
+  else LEADS_CACHE.push(l)
+}
 // Botão IA reusa a modal existente
-window._centralGerarIA=()=>{const l=_leadAtualCentral();if(l)abrirFollowUpIA(l.id)}
+window._centralGerarIA=()=>{
+  const l=_leadAtualCentral();if(!l)return
+  _centralGarantirCache(l)
+  abrirFollowUpIA(l.id)
+}
 // Abre editor do lead no meio da execução
-window._centralAbrirLead=()=>{const l=_leadAtualCentral();if(l)editarLead(l.id)}
+window._centralAbrirLead=()=>{
+  const l=_leadAtualCentral();if(!l)return
+  _centralGarantirCache(l)
+  editarLead(l.id)
+}
 
 // Renderiza a Central no container #central-wrap (se existir)
 function _renderCentral(){
