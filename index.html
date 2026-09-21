@@ -2197,26 +2197,7 @@ async function atualizarFollowupBadge({mostrarModal=false}={}){
   // Badge no menu Leads
   const badge=document.getElementById('badge-fup-leads')
   if(badge){badge.textContent=n>0?String(n):'';badge.style.display=n>0?'inline-block':'none'}
-  // Banner persistente no topo
-  const wrap=document.getElementById('fup-banner-wrap')
-  if(wrap){
-    if(n>0){
-      wrap.innerHTML=`<div class="fup-banner" onclick="_irParaLeads()">
-        <div style="display:flex;align-items:center;gap:10px;flex:1">
-          <span style="font-size:20px">🔥</span>
-          <span>Você tem <strong>${n} follow-up${n>1?'s':''} atrasado${n>1?'s':''}</strong>. Clique aqui pra ver.</span>
-        </div>
-        <button onclick="event.stopPropagation();zerarFollowupsAtrasados()" title="Zerar todos os atrasados" style="background:rgba(255,255,255,.2);border:0;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Zerar</button>
-        <button class="close-x" onclick="event.stopPropagation();_dispensarBannerFup()" title="Ocultar até o próximo login">×</button>
-      </div>`
-      // Se usuário dispensou nesta sessão, respeita
-      if(sessionStorage.getItem('fup_banner_dispensado')==='1') wrap.style.display='none'
-      else wrap.style.display='block'
-    }else{
-      wrap.innerHTML=''
-      wrap.style.display='none'
-    }
-  }
+  // Banner persistente removido — informação foi consolidada no cartão da Home
   // Modal de boas-vindas (só na 1ª chamada, se tem atrasados)
   if(mostrarModal&&n>0&&sessionStorage.getItem('fup_modal_visto')!=='1'){
     sessionStorage.setItem('fup_modal_visto','1')
@@ -2226,6 +2207,20 @@ async function atualizarFollowupBadge({mostrarModal=false}={}){
 window._irParaLeads=()=>{
   const btnLeads=document.querySelector(`.sb-btn[onclick*="p-leads"], .sb-btn[onclick*="p-sv-meus-leads"]`)
   if(btnLeads) btnLeads.click()
+}
+// Navega pra tela de Leads já com filtro 'atencao' ativo (atrasados + hoje)
+window._filtrarLeadsAtencao=()=>{
+  _irParaLeads()
+  // Aguarda a página renderizar antes de aplicar o filtro
+  setTimeout(()=>{
+    if(CU?.perfil==='supervisor'){
+      const btn=document.querySelector('#sv-filter-status-bar .filter-btn')
+      if(btn&&typeof setSvFiltroStatus==='function') setSvFiltroStatus('atencao',btn)
+    }else{
+      const btn=document.querySelector('#filter-status-bar .filter-btn')
+      if(btn&&typeof setFiltroStatus==='function') setFiltroStatus('atencao',btn)
+    }
+  },350)
 }
 window._dispensarBannerFup=()=>{
   sessionStorage.setItem('fup_banner_dispensado','1')
@@ -3849,8 +3844,19 @@ async function loadCoHome(){
     <div style="background:linear-gradient(135deg,#E0FAF5,#EFF6FF);border:1.5px solid #93C5FD;border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px">
       <div style="flex:1"><div style="font-size:15px;font-weight:700">Olá, ${_esc(CU.nome.split(' ')[0])}!</div>
       <div style="font-size:13px;color:#1E40AF;margin-top:3px">Dia útil <strong>${DU_HOJE}</strong> de <strong>${DU_TOTAL}</strong> — você deveria estar em <strong>${pctDU}%</strong> da meta.</div></div>
-      ${followAtrasados.length>0?`<div style="background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#B91C1C;white-space:nowrap;flex-shrink:0">🔥 ${followAtrasados.length} atrasado${followAtrasados.length>1?'s':''}</div>`:''}
-      ${followHoje.length>0?`<div style="background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;color:#92400E;white-space:nowrap;flex-shrink:0">${followHoje.length} follow-up hoje</div>`:''}
+      ${(followAtrasados.length+followHoje.length)>0?`<div style="background:${followAtrasados.length?'#FEE2E2':'#FEF3C7'};border:1.5px solid ${followAtrasados.length?'#FCA5A5':'#FCD34D'};border-radius:12px;padding:10px 14px;flex-shrink:0;min-width:220px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:20px">${followAtrasados.length?'🔥':'📞'}</span>
+          <div style="line-height:1.25">
+            ${followAtrasados.length?`<div style="font-size:15px;font-weight:800;color:#B91C1C">${followAtrasados.length} atrasado${followAtrasados.length>1?'s':''}</div>`:''}
+            ${followHoje.length?`<div style="font-size:12px;font-weight:700;color:#92400E">${followHoje.length} follow-up hoje</div>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="_filtrarLeadsAtencao()" style="flex:1;background:#fff;border:1.5px solid ${followAtrasados.length?'#FCA5A5':'#FCD34D'};color:${followAtrasados.length?'#B91C1C':'#92400E'};padding:6px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Ver só esses</button>
+          ${followAtrasados.length?`<button onclick="zerarFollowupsAtrasados()" title="Zerar cadência dos atrasados" style="background:transparent;border:1.5px solid #FCA5A5;color:#B91C1C;padding:6px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Zerar</button>`:''}
+        </div>
+      </div>`:''}
     </div>
 
     <div class="metrics m4">
@@ -3951,21 +3957,32 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
   const el=$('p-leads');if(!el)return
   const m=mesAtual(),a=anoAtual()
   const fMes=filtroMes||m,fAno=filtroAno||a
+  const hj=new Date().toISOString().split('T')[0]
+  // Cálculo de "precisam de atenção" — atrasados + hoje, não Proposta/Negativa
+  const precisamAtencao=leads.filter(l=>l.followup_date&&l.followup_date<=hj&&!['Proposta','Negativa'].includes(l.status))
   let filtrados=leads
-  if(filtroStatus&&filtroStatus!=='all') filtrados=filtrados.filter(l=>l.status===filtroStatus)
-  filtrados=filtrados.filter(l=>{
-    const criado=new Date(l.criado_em)
-    const lMes=l.mes_cotacao||criado.getMonth()+1
-    const lAno=l.ano_cotacao||criado.getFullYear()
-    return lMes===fMes&&lAno===fAno
-  })
+  if(filtroStatus==='atencao'){
+    filtrados=precisamAtencao
+  }else if(filtroStatus&&filtroStatus!=='all'){
+    filtrados=filtrados.filter(l=>l.status===filtroStatus)
+  }
+  // Filtro por mês só aplica quando NÃO está no modo "atenção" (atenção mostra de todos os meses)
+  if(filtroStatus!=='atencao'){
+    filtrados=filtrados.filter(l=>{
+      const criado=new Date(l.criado_em)
+      const lMes=l.mes_cotacao||criado.getMonth()+1
+      const lAno=l.ano_cotacao||criado.getFullYear()
+      return lMes===fMes&&lAno===fAno
+    })
+  }
   if(busca) filtrados=filtrados.filter(l=>l.nome?.toLowerCase().includes(busca.toLowerCase())||l.empresa?.toLowerCase().includes(busca.toLowerCase())||l.telefone?.includes(busca))
   const meses=[]
   for(let i=0;i<12;i++){const d=new Date(a,m-1-i,1);meses.push({m:d.getMonth()+1,a:d.getFullYear()})}
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div><div style="font-size:20px;font-weight:800">Leads</div><div style="font-size:13px;color:var(--text3)">${filtrados.length} leads encontrados</div></div>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      ${precisamAtencao.length?`<button onclick="zerarFollowupsAtrasados()" class="btn" style="border-color:#FCA5A5;color:#B91C1C;background:#FEF2F2;font-weight:700">🧹 Zerar follow-ups (${precisamAtencao.length})</button>`:''}
       <button class="btn btn-pri" onclick="novoLead()">+ Novo lead</button>
       <button class="btn" onclick="exportarLeadsExcel()" style="display:flex;align-items:center;gap:6px;border-color:var(--g1);color:var(--g1)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -3974,7 +3991,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
     </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <select id="filtro-mes-leads" style="height:36px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none" onchange="onFiltroMes()">
+      <select id="filtro-mes-leads" style="height:36px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none" onchange="onFiltroMes()" ${filtroStatus==='atencao'?'disabled title="Mês não se aplica ao filtro Atenção"':''}>
         ${meses.map(x=>`<option value="${x.m}-${x.a}" ${x.m===fMes&&x.a===fAno?'selected':''}>${String(x.m).padStart(2,'0')}/${x.a}</option>`).join('')}
       </select>
       <div class="search-wrap">
@@ -3983,6 +4000,7 @@ function renderLeads(leads,filtroStatus,filtroMes,filtroAno,busca){
       </div>
     </div>
     <div class="filter-bar" id="filter-status-bar">
+      ${precisamAtencao.length?`<button class="filter-btn${filtroStatus==='atencao'?' on':''}" onclick="setFiltroStatus('atencao',this)" style="background:${filtroStatus==='atencao'?'#DC2626':'#FEE2E2'};color:${filtroStatus==='atencao'?'#fff':'#B91C1C'};border-color:#FCA5A5;font-weight:700">🔥 Precisam de atenção (${precisamAtencao.length})</button>`:''}
       <button class="filter-btn${filtroStatus==='all'?' on':''}" onclick="setFiltroStatus('all',this)">Todos (${leads.length})</button>
       ${STATUS_LEADS.map(s=>`<button class="filter-btn${filtroStatus===s?' on':''}" onclick="setFiltroStatus('${s}',this)">${s} (${leads.filter(l=>l.status===s).length})</button>`).join('')}
     </div>
@@ -5012,23 +5030,34 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
   const meses=[]
   for(let i=0;i<12;i++){const d=new Date(a,m-1-i,1);meses.push({m:d.getMonth()+1,a:d.getFullYear()})}
   const{data}=await sb.from('leads').select('*').eq('consultor_id',CU.id).order('criado_em',{ascending:false})
-  let leads=data||[]
-  // Filtrar por mês
-  leads=leads.filter(l=>{
-    const lm=l.mes_cotacao||(new Date(l.criado_em).getMonth()+1)
-    const la=l.ano_cotacao||new Date(l.criado_em).getFullYear()
-    return lm===fMes&&la===fAno
-  })
-  let filtrados=filtroStatus==='all'?leads:leads.filter(l=>l.status===filtroStatus)
+  const todos=data||[]
+  const hj=new Date().toISOString().split('T')[0]
+  const precisamAtencao=todos.filter(l=>l.followup_date&&l.followup_date<=hj&&!['Proposta','Negativa'].includes(l.status))
+  // Filtro por mês só quando não em modo "atenção"
+  let leads=todos
+  if(filtroStatus!=='atencao'){
+    leads=leads.filter(l=>{
+      const lm=l.mes_cotacao||(new Date(l.criado_em).getMonth()+1)
+      const la=l.ano_cotacao||new Date(l.criado_em).getFullYear()
+      return lm===fMes&&la===fAno
+    })
+  }
+  let filtrados
+  if(filtroStatus==='atencao') filtrados=precisamAtencao
+  else if(filtroStatus==='all') filtrados=leads
+  else filtrados=leads.filter(l=>l.status===filtroStatus)
   if(busca) filtrados=filtrados.filter(l=>(l.nome+l.empresa+l.telefone).toLowerCase().includes(busca.toLowerCase()))
   LEADS_CACHE=data||[]
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div><div style="font-size:20px;font-weight:800">Meus Leads</div><div style="font-size:13px;color:var(--text3)">${filtrados.length} leads encontrados</div></div>
-      <button class="btn btn-pri" onclick="novoLeadSv()">+ Novo lead</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${precisamAtencao.length?`<button onclick="zerarFollowupsAtrasados()" class="btn" style="border-color:#FCA5A5;color:#B91C1C;background:#FEF2F2;font-weight:700">🧹 Zerar follow-ups (${precisamAtencao.length})</button>`:''}
+        <button class="btn btn-pri" onclick="novoLeadSv()">+ Novo lead</button>
+      </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      <select id="sv-leads-mes" style="height:36px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none" onchange="onSvLeadsMes()">
+      <select id="sv-leads-mes" style="height:36px;padding:0 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);outline:none" onchange="onSvLeadsMes()" ${filtroStatus==='atencao'?'disabled title="Mês não se aplica ao filtro Atenção"':''}>
         ${meses.map(x=>`<option value="${x.m}-${x.a}" ${x.m===fMes&&x.a===fAno?'selected':''}>${String(x.m).padStart(2,'0')}/${x.a}</option>`).join('')}
       </select>
       <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -5036,18 +5065,21 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
       </div>
     </div>
     <div class="filter-bar" id="sv-filter-status-bar">
+      ${precisamAtencao.length?`<button class="filter-btn${filtroStatus==='atencao'?' on':''}" onclick="setSvFiltroStatus('atencao',this)" style="background:${filtroStatus==='atencao'?'#DC2626':'#FEE2E2'};color:${filtroStatus==='atencao'?'#fff':'#B91C1C'};border-color:#FCA5A5;font-weight:700">🔥 Precisam de atenção (${precisamAtencao.length})</button>`:''}
       <button class="filter-btn${filtroStatus==='all'?' on':''}" onclick="setSvFiltroStatus('all',this)">Todos (${leads.length})</button>
       ${STATUS_LEADS.map(s=>`<button class="filter-btn${filtroStatus===s?' on':''}" onclick="setSvFiltroStatus('${s}',this)">${s} (${leads.filter(l=>l.status===s).length})</button>`).join('')}
     </div>
     <div class="card">
       <div style="overflow-x:auto"><table class="tbl">
         <thead><tr><th>Nome</th><th>Telefone</th><th>Canal</th><th>Status</th><th>Follow-up</th><th>Observação</th><th>Ações</th></tr></thead>
-        <tbody>${filtrados.length?filtrados.map(l=>`<tr>
+        <tbody>${filtrados.length?filtrados.map(l=>{
+          const atrasado=l.followup_date&&l.followup_date<hj&&!['Proposta','Negativa'].includes(l.status)
+          return `<tr${atrasado?' style="background:rgba(239,68,68,0.06)"':''}>
           <td><strong>${_esc(l.nome)}</strong></td>
           <td style="font-size:13px;color:var(--text2)">${l.telefone||'—'}</td>
           <td><span class="pill p-gray">${l.canal||'—'}</span></td>
           <td><span class="pill" style="background:${S_BG[l.status]};color:${S_CLR[l.status]}">${l.status}</span></td>
-          <td style="font-size:12px;color:var(--text3)">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR'):'—'}</td>
+          <td style="font-size:12px;color:${atrasado?'#DC2626':'var(--text3)'};font-weight:${atrasado?'700':'normal'}">${l.followup_date?new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')+(atrasado?' 🔥':''):'—'}</td>
           <td style="font-size:12px;color:var(--text2);max-width:180px"><span title="${l.observacoes||''}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.observacoes||'—'}</span></td>
           <td><div class="acoes-wrap">
             <button class="acoes-btn" onclick="toggleAcoesMenu(this)">···</button>
@@ -5059,7 +5091,7 @@ async function loadSvMeusLeads(filtroStatus='all',filtroMes=null,filtroAno=null,
               <button class="danger" onclick="excluirLeadSv('${l.id}',${_js(l.nome)})">🗑 Excluir</button>
             </div>
           </div></td>
-        </tr>`).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
+        </tr>`}).join(''):'<tr><td colspan="7"><div class="empty">Nenhum lead encontrado</div></td></tr>'}
         </tbody>
       </table></div>
     </div>
