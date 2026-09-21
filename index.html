@@ -4380,7 +4380,49 @@ LINGUAGEM HUMANA — REGRAS ANTI-IA:
 - PROIBIDO: estruturas de IA como listas numeradas, bullet points, cabeçalhos em mensagens de WhatsApp
 - Aplique variação natural — nem toda mensagem começa pelo nome do cliente
 - O texto deve parecer escrito por uma pessoa real que conhece o cliente e o contexto, não gerado por sistema
-- Ao aplicar SPIN e Cialdini, faça de forma invisível — a técnica deve estar na mensagem mas nunca ser percebida como técnica`
+- Ao aplicar SPIN e Cialdini, faça de forma invisível — a técnica deve estar na mensagem mas nunca ser percebida como técnica
+
+BLACKLIST — frases proibidas em qualquer versão (regenere se aparecer):
+- "vamos conversar?"
+- "posso te ajudar?" / "posso te ajudar em algo?"
+- "fico à disposição" / "estou à disposição"
+- "aguardo seu retorno" / "aguardo sua resposta"
+- "tudo bem por aí?" / "tudo bem contigo?"
+- "gostaria de saber" / "queria saber"
+- "espero que esteja bem" / "espero que tudo bem"
+- "só passando aqui pra"
+- "queria confirmar se recebeu"
+- "qualquer coisa me chama"
+- "se precisar, me avisa"
+Estas frases são a marca registrada de vendedor amador e desengajado. Nunca use.
+
+ESTRUTURA OBRIGATÓRIA de cada mensagem (3 blocos em ordem, sem quebras visuais entre eles):
+1. MOTIVO DO CONTATO AGORA: uma sentença curta que justifica esse toque nesse momento (referência a valor da proposta, tempo desde envio, operadora escolhida ou fato do histórico). Sem "só passando" nem "queria saber".
+2. VALOR ESPECÍFICO: o que você entrega/oferece nessa mensagem em concreto (uma informação nova, um esclarecimento, um caminho pra decisão). Nunca "conteúdo genérico".
+3. CTA ESPECÍFICA: pergunta ou proposta que exige resposta de menos de 10 palavras do cliente. Nunca aberta ou vaga.
+
+CTA OBRIGATÓRIA POR NÍVEL:
+- Nível 1 (Negativa): pergunta aberta sobre necessidade atual, sem tocar na negativa passada. Ex: "quantas vidas hoje ficam sem cobertura?"
+- Nível 2 (Não responderam AB): pergunta binária pura, resposta em uma palavra. Ex: "posso te enviar em 3 minutos?" / "faz sentido pra empresa hoje?"
+- Nível 3 (Não responderam mais): sugestão de horário CONCRETO. Ex: "te ligo às 14h ou 16h?" / "posso te mandar áudio agora?"
+- Nível 4 (Analisando): peça de dado específico que destrava a venda. Ex: "me manda CEP pra eu ver rede da Unimed?" / "quantas vidas no total, com idade acima de 58?"
+- Nível 5 (Pela Boa): proposta de próximo passo com prazo. Ex: "fecho a proposta agora e mando pra você aprovar até 18h, combinado?"
+- Nível 6 (Ard Documento): compromisso de prazo curto. Ex: "consegue os docs hoje ou amanhã até 18h?" — mencione documento pendente se soubermos.
+- Nível 7 (Proposta): agenda de onboarding específica. Ex: "te ligo às 15h pra explicar como usar a carteirinha. Anota aí?"
+
+TRÊS PERSONALIDADES OBRIGATÓRIAS — cada versão tem que ter voz distinta:
+- VERSÃO 1 — CONSULTIVO/DIRETO: fala como consultor sênior de 10 anos de mercado. Cutuca objeção em 1 frase. Zero rodeio. Pergunta que expõe risco de não decidir.
+- VERSÃO 2 — CURIOSO/PROVOCADOR: desperta curiosidade específica sem dar spoiler. Uma pergunta ou fato que o cliente NÃO pode ignorar. Estilo mais leve, quase provocativo, mas nunca informal demais.
+- VERSÃO 3 — FACILITADOR/PRÁTICO: derruba barreira operacional. Oferece caminho concreto ("posso mandar áudio", "posso ligar em 5 minutos", "posso resumir em 2 linhas"). Foca em reduzir esforço do cliente.
+Se as 3 versões parecerem parecidas, refaça — cada uma tem que soar como pessoa diferente falando com o mesmo cliente.
+
+ANCORAGEM em dados concretos SEMPRE que houver:
+- Se sabemos o valor: cite em R$/mês. Ex: "os R$ 320/mês da proposta"
+- Se sabemos a operadora: cite pelo nome. Ex: "a Unimed que você escolheu"
+- Se sabemos dias no status: use como gancho. Ex: "há 3 dias com sua análise aberta"
+- Se sabemos vidas: use como gancho. Ex: "pra suas 4 vidas"
+- Se sabemos empresa: cite pelo nome. Ex: "aqui na {empresa}"
+Nunca invente. Mas se o dado existir, USE — genérico perde pra específico sempre.`
 
   const prompt=`${systemPrompt}
 
@@ -4406,20 +4448,31 @@ Gere EXATAMENTE 3 versões de mensagem de follow-up para ${canalLabel[canal]}.
 Tom desejado: ${tomLabel[tom]}
 Nível de proximidade ao fechamento: ${nivelFechamento}/7 — ${descricaoNivel[nivelFechamento]||''}
 
-Cada versão deve ter uma abordagem distinta (ex: foco em benefício diferente, ângulo diferente, gatilho diferente).
+Cada versão TEM QUE seguir a personalidade correspondente definida acima (Consultivo, Curioso, Facilitador) — não improvise ângulos aleatórios, siga os 3 papéis.
 
-DIRETRIZES POR NÍVEL:
+TOM POR NÍVEL (sobre a personalidade, não substitui):
 - Nível 1 (Negativa): NÃO mencione a recusa. Aborde como nova oportunidade. Sem pressão.
-- Nível 2 (Não responderam AB): Mensagem CURTA. Objetivo é só conseguir uma resposta. Desperte curiosidade.
-- Nível 3 (Não responderam mais): Reative naturalmente. Justifique o contato com novidade ou escassez. Sem ansiedade.
-- Nível 4 (Analisando): Tom consultivo. Ofereça ajuda para decidir. Não pressione.
-- Nível 5 (Pela Boa): Aprofunde o interesse. Proponha próximo passo concreto (reunião, proposta).
-- Nível 6 (Ard Documento): Seja prático e prestativo. Facilite o envio dos docs. Urgência positiva.
-- Nível 7 (Proposta fechada): Boas-vindas. Confirme próximos passos. Inicie o pós-venda.
+- Nível 2 (Não responderam AB): Mensagem CURTA (≤3 linhas). Objetivo é resposta binária. Desperte curiosidade específica.
+- Nível 3 (Não responderam mais): Reative com gancho concreto (novidade, valor, mudança). Sem ansiedade.
+- Nível 4 (Analisando): Consultivo. Peça dado que ajuda decidir. Não pressione, mas conduza.
+- Nível 5 (Pela Boa): Próximo passo com prazo claro. Se sabemos valor, ancore.
+- Nível 6 (Ard Documento): Prático. Cite documentos específicos se soubermos. Urgência positiva.
+- Nível 7 (Proposta): Boas-vindas + primeira ação de onboarding com horário/data.
+
+CHECKLIST FINAL antes de responder (auto-verifique cada versão):
+[ ] Sem NENHUMA frase da blacklist
+[ ] Estrutura de 3 blocos (motivo + valor + CTA) presente
+[ ] CTA específica exigindo resposta ≤10 palavras
+[ ] Personalidade da versão (Consultivo / Curioso / Facilitador) claramente diferente das outras 2
+[ ] Se havia dados (valor, operadora, dias, vidas), foram usados como ancoragem
+[ ] Máximo 4 linhas pra WhatsApp
+[ ] Nenhuma pergunta genérica tipo "faz sentido?" sem contexto
+
+Se qualquer item falhar, refaça antes de responder.
 
 Responda APENAS em JSON válido, sem markdown, sem texto fora do JSON.
 Formato:
-{"versoes":[{"label":"Versão 1 — [nome criativo]","conteudo":"texto completo aqui"},{"label":"Versão 2 — [nome criativo]","conteudo":"texto completo aqui"},{"label":"Versão 3 — [nome criativo]","conteudo":"texto completo aqui"}]}`
+{"versoes":[{"label":"Versão 1 — Consultivo","conteudo":"texto completo aqui"},{"label":"Versão 2 — Curioso","conteudo":"texto completo aqui"},{"label":"Versão 3 — Facilitador","conteudo":"texto completo aqui"}]}`
 
   try{
     const response=await fetch('/api/followup',{
