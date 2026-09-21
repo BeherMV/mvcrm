@@ -2077,13 +2077,37 @@ function _contadoresFila(fila){
     total:  fila.length
   }
 }
-// Estado da Central: fila em memória + índice atual + pilha de pulados
-const _CENTRAL={fila:[],idx:0,pulados:new Set()}
+// Explica por que esse lead subiu no score — texto humano pra "Por que essa é minha prioridade?"
+function _explicarScore(l){
+  if(!l) return ''
+  const razoes=[]
+  const hj=new Date().toISOString().split('T')[0]
+  const horasStatus=_horasDesde(l.status_alterado_em||l.criado_em)
+  const horasCriado=_horasDesde(l.criado_em)
+  const diasStatus=Math.floor(horasStatus/24)
+  if(l.status==='Ard Documento') razoes.push('documentação em andamento')
+  else if(l.status==='Pela Boa') razoes.push('proposta enviada')
+  else if(l.status==='Analisando') razoes.push('cliente analisando valores')
+  if(l.followup_date&&l.followup_date<hj){
+    const dAtraso=Math.floor((Date.now()-new Date(l.followup_date+'T12:00'))/86400000)
+    razoes.push(`follow-up atrasado ${dAtraso}d`)
+  }else if(l.followup_date===hj){
+    razoes.push('follow-up marcado pra hoje')
+  }
+  if(l.status==='Ard Documento'&&horasStatus>24) razoes.push(`há ${diasStatus}d aguardando docs`)
+  if(l.status==='Pela Boa'&&horasStatus>24) razoes.push(`há ${diasStatus}d sem retorno da proposta`)
+  if((l.contatos_feitos||0)===0&&horasCriado>0&&horasCriado<72){
+    const diasCriado=Math.floor(horasCriado/24)
+    razoes.push(diasCriado===0?'lead novo, primeiro contato pendente':`lead novo há ${diasCriado}d sem contato`)
+  }
+  return razoes.length?razoes.join(' · '):'combinação de sinais no funil'
+}
+// Estado da Central: fila em memória + índice atual + pilha de pulados (ordem preservada pro "Voltar")
+const _CENTRAL={fila:[],idx:0,pulados:[]}
 function _leadAtualCentral(){
-  // Retorna o próximo lead da fila que não foi pulado nem já é o atual
   while(_CENTRAL.idx<_CENTRAL.fila.length){
     const l=_CENTRAL.fila[_CENTRAL.idx]
-    if(!_CENTRAL.pulados.has(l.id)) return l
+    if(!_CENTRAL.pulados.includes(l.id)) return l
     _CENTRAL.idx++
   }
   return null
@@ -2092,11 +2116,18 @@ async function _refreshCentral(){
   if(!CU||CU.perfil==='master') return
   _CENTRAL.fila=await _buscarFilaConsultor(CU.id)
   _CENTRAL.idx=0
-  _CENTRAL.pulados=new Set()
+  _CENTRAL.pulados=[]
   _renderCentral()
 }
 window._centralPularProximo=()=>{
-  const l=_leadAtualCentral();if(l)_CENTRAL.pulados.add(l.id)
+  const l=_leadAtualCentral();if(l)_CENTRAL.pulados.push(l.id)
+  _renderCentral()
+}
+window._centralVoltarAnterior=()=>{
+  if(!_CENTRAL.pulados.length)return
+  _CENTRAL.pulados.pop()  // desfaz o último "Ver próxima"
+  // Reseta o índice pra reencontrar o lead recuperado a partir do início da fila
+  _CENTRAL.idx=0
   _renderCentral()
 }
 window._centralAbrirRecusa=()=>{
@@ -2212,15 +2243,19 @@ function _renderCentral(){
       <div style="font-size:20px;font-weight:800">${_esc(l.nome)}</div>
       <div style="font-size:12px;color:var(--text2)">${_esc(l.empresa||l.canal||'')}</div>
     </div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px">
       <strong>${_esc(l.status)}</strong> · ${diasStatus>0?`há ${diasStatus} dia${diasStatus>1?'s':''} no status`:'atualizado hoje'} · ${fupTxt}
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="font-size:11px;color:var(--text3);background:var(--bg2);border-left:3px solid ${t.cor};padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:12px">
+      <strong style="color:var(--text2)">Por que agora?</strong> ${_esc(_explicarScore(l))}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button onclick="_centralGerarIA()" class="btn" style="background:var(--grad);color:#fff;border:0;font-weight:700">✨ Gerar mensagem IA</button>
       <button onclick="_centralFizContato()" class="btn" style="background:#10B981;color:#fff;border:0;font-weight:700">Fiz contato</button>
       <button onclick="_centralAbrirLead()" class="btn" style="background:var(--card);color:var(--mid);border:1.5px solid var(--mid);font-weight:700">Abrir lead</button>
       <button onclick="_centralPularProximo()" class="btn btn-sec" style="font-weight:600">Ver próxima</button>
       <button onclick="_centralAbrirRecusa()" class="btn" style="background:transparent;color:var(--text3);border:1.5px solid var(--border);font-weight:600">Não vou fazer</button>
+      ${_CENTRAL.pulados.length?`<button onclick="_centralVoltarAnterior()" class="btn" style="background:transparent;color:var(--text3);border:0;font-weight:600;text-decoration:underline;padding:6px 10px" title="Volta o último lead pulado">← Voltar anterior</button>`:''}
     </div>
     ${restantes>0?`<div style="margin-top:10px;font-size:11px;color:var(--text3)">+${restantes} outros na fila</div>`:''}
     ${contadoresHtml}
