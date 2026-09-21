@@ -2139,6 +2139,44 @@ async function iniciarApp(){
   _autoFecharMesAnterior()
   // Follow-ups: badge + banner persistente + modal de boas-vindas 1x por sessão
   if(CU.perfil!=='master') atualizarFollowupBadge({mostrarModal:true})
+  // Detecta novas versões do CRM sem exigir hard refresh do usuário
+  _iniciarChecagemVersao()
+}
+
+// ── AUTO-UPDATE: detecta nova versão do index.html no Vercel via ETag ──
+let _crmBuildId=null,_crmVerInterval=null
+async function _crmFetchBuildId(){
+  try{
+    const r=await fetch(location.pathname+'?_v='+Date.now(),{method:'HEAD',cache:'no-store'})
+    return r.headers.get('etag')||r.headers.get('last-modified')||null
+  }catch(e){return null}
+}
+async function _iniciarChecagemVersao(){
+  if(_crmVerInterval) return
+  _crmBuildId=await _crmFetchBuildId()
+  if(!_crmBuildId) return // sem etag/last-modified — desiste silenciosamente
+  _crmVerInterval=setInterval(async()=>{
+    const v=await _crmFetchBuildId()
+    if(v&&v!==_crmBuildId){
+      clearInterval(_crmVerInterval);_crmVerInterval=null
+      _mostrarAvisoAtualizacao()
+    }
+  },5*60*1000)
+}
+function _mostrarAvisoAtualizacao(){
+  if(document.getElementById('update-toast'))return
+  const el=document.createElement('div')
+  el.id='update-toast'
+  el.innerHTML=`<div style="position:fixed;bottom:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;padding:14px 18px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;max-width:340px;animation:fadein .3s ease">
+    <span style="font-size:22px">🚀</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700">Nova versão disponível</div>
+      <div style="font-size:11px;opacity:.85;margin-top:2px">Clique pra atualizar (2s)</div>
+    </div>
+    <button onclick="location.reload()" style="background:rgba(255,255,255,.22);border:0;color:#fff;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Atualizar</button>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:0;color:rgba(255,255,255,.7);font-size:16px;font-weight:800;cursor:pointer;padding:0 4px" title="Depois">×</button>
+  </div>`
+  document.body.appendChild(el)
 }
 
 // ── FOLLOW-UP AGRESSIVO: badge sidebar + banner persistente + modal de sessão ──
@@ -2197,6 +2235,21 @@ window._fecharModalFup=()=>{
   const el=document.getElementById('mod-fup-atrasado')
   if(el) el.remove()
 }
+// Zera cadência dos leads atrasados do consultor logado (útil pra herança de leads antigos)
+window.zerarFollowupsAtrasados=async()=>{
+  if(!CU)return
+  const n=_atrasadosCache.length
+  if(!n){mostrarToast('Tudo em dia','Nada pra zerar.','info');return}
+  if(!confirm(`Zerar ${n} follow-up${n>1?'s':''} atrasado${n>1?'s':''}?\n\nOs leads NÃO são apagados — só a cadência é resetada. Você pode reativar cada um manualmente depois.`))return
+  const ids=_atrasadosCache.map(l=>l.id)
+  const{error}=await sb.from('leads').update({followup_date:null,contatos_feitos:0}).in('id',ids)
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  _fecharModalFup()
+  mostrarToast('Zerado',`${n} follow-up${n>1?'s':''} atrasado${n>1?'s':''} desativado${n>1?'s':''}. Continue com os novos.`,'sucesso')
+  await atualizarFollowupBadge()
+  if(typeof loadCoHome==='function') try{loadCoHome()}catch(e){}
+  if(typeof loadLeads==='function') try{loadLeads()}catch(e){}
+}
 function _abrirModalFollowupsAtrasados(){
   // Remove qualquer instância anterior antes de reabrir
   const prev=document.getElementById('mod-fup-atrasado')
@@ -2226,6 +2279,9 @@ function _abrirModalFollowupsAtrasados(){
           }).join('')}
         </div>
         ${_atrasadosCache.length>10?`<div style="text-align:center;padding:10px;font-size:12px;color:var(--text3)">+${_atrasadosCache.length-10} outros na tela de Leads</div>`:''}
+        <div style="text-align:center;margin-top:10px">
+          <button onclick="zerarFollowupsAtrasados()" style="background:none;border:0;color:var(--text3);font-size:12px;text-decoration:underline;cursor:pointer">Zerar todos (herdei muitos leads antigos)</button>
+        </div>
         <div class="modal-btns" style="margin-top:14px">
           <button class="btn btn-sec" onclick="_fecharModalFup()">Depois</button>
           <button class="btn btn-pri" onclick="_fecharModalFup();_irParaLeads()">Ver todos</button>
@@ -3848,6 +3904,9 @@ async function loadCoHome(){
         </div>`
       }).join('')}
       ${followAtrasados.length>6?`<div style="text-align:center;padding:8px;font-size:12px;color:var(--text3)">+${followAtrasados.length-6} outros — abra Leads para ver todos</div>`:''}
+      <div style="text-align:center;padding-top:6px">
+        <button onclick="zerarFollowupsAtrasados()" style="background:none;border:0;color:var(--text3);font-size:11px;text-decoration:underline;cursor:pointer">Zerar todos (herdei leads antigos)</button>
+      </div>
     </div>`:''}
 
     <div class="g2">
