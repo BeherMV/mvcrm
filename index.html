@@ -2066,23 +2066,22 @@ window.abrirLeadNoWa=async id=>{
     }
   },250)
 }
-// Referência em memória pra reusar a mesma aba do WhatsApp entre cliques
-let _waWindowRef=null
+// Abre o WhatsApp sempre reutilizando a mesma aba (target='whatsapp_tab').
+// Usa <a> click com rel="noopener": em Chrome/Edge/Firefox modernos, isso costuma
+// respeitar melhor o nome do target do que window.open() cross-origin.
 window.abrirWhatsapp=(lead,templateId)=>{
   const tel=_normalizarTelefoneWa(lead?.telefone)
   if(!tel){mostrarToast('Sem telefone','Este lead não tem telefone cadastrado.','info');return}
   const tpl=WA_TEMPLATES.find(t=>t.id===templateId)
   const msg=tpl?_montarMensagemWa(lead,tpl):''
-  const url=`https://web.whatsapp.com/send?phone=${tel}${msg?'&text='+encodeURIComponent(msg):''}`
-  // Reutiliza a aba anterior se ainda estiver aberta (mais confiável que só o nome)
-  if(_waWindowRef&&!_waWindowRef.closed){
-    try{
-      _waWindowRef.location.href=url
-      _waWindowRef.focus()
-      return
-    }catch(e){/* se cross-origin bloquear, cai no fallback abaixo */}
-  }
-  _waWindowRef=window.open(url,'whatsapp_tab')
+  const url=`https://wa.me/${tel}${msg?'?text='+encodeURIComponent(msg):''}`
+  const a=document.createElement('a')
+  a.href=url
+  a.target='whatsapp_tab'
+  a.rel='noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
 }
 // ── Painel WhatsApp dentro do modal de lead ──
 function _leadDoModal(){
