@@ -2206,6 +2206,7 @@ async function atualizarFollowupBadge({mostrarModal=false}={}){
           <span style="font-size:20px">🔥</span>
           <span>Você tem <strong>${n} follow-up${n>1?'s':''} atrasado${n>1?'s':''}</strong>. Clique aqui pra ver.</span>
         </div>
+        <button onclick="event.stopPropagation();zerarFollowupsAtrasados()" title="Zerar todos os atrasados" style="background:rgba(255,255,255,.2);border:0;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Zerar</button>
         <button class="close-x" onclick="event.stopPropagation();_dispensarBannerFup()" title="Ocultar até o próximo login">×</button>
       </div>`
       // Se usuário dispensou nesta sessão, respeita
