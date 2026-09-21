@@ -2074,7 +2074,7 @@ window.abrirWhatsapp=(lead,templateId)=>{
   if(!tel){mostrarToast('Sem telefone','Este lead não tem telefone cadastrado.','info');return}
   const tpl=WA_TEMPLATES.find(t=>t.id===templateId)
   const msg=tpl?_montarMensagemWa(lead,tpl):''
-  const url=`https://wa.me/${tel}${msg?'?text='+encodeURIComponent(msg):''}`
+  const url=`https://web.whatsapp.com/send?phone=${tel}${msg?'&text='+encodeURIComponent(msg):''}`
   const a=document.createElement('a')
   a.href=url
   a.target='whatsapp_tab'
