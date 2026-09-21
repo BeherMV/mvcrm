@@ -2052,15 +2052,19 @@ function _calcTierLead(score){
   return null
 }
 // Busca fila do consultor ordenada por score DESC.
+// Exclui leads recusados nas últimas 24h (via lead_recusas).
 // Retorna array de {...lead, _score, _tier}.
 async function _buscarFilaConsultor(consultorId){
-  const{data,error}=await sb.from('leads')
-    .select('*')
-    .eq('consultor_id',consultorId)
-    .not('status','in','("Proposta","Negativa")')
-    .order('criado_em',{ascending:false})
-  if(error){console.warn('fila:',error);return[]}
-  return(data||[])
+  const dt24h=new Date(Date.now()-24*3600*1000).toISOString()
+  const[leadsRes,recusasRes]=await Promise.all([
+    sb.from('leads').select('*').eq('consultor_id',consultorId)
+      .not('status','in','("Proposta","Negativa")').order('criado_em',{ascending:false}),
+    sb.from('lead_recusas').select('lead_id').eq('consultor_id',consultorId).gte('criada_em',dt24h)
+  ])
+  if(leadsRes.error){console.warn('fila:',leadsRes.error);return[]}
+  const recusadosSet=new Set((recusasRes.data||[]).map(r=>r.lead_id))
+  return(leadsRes.data||[])
+    .filter(l=>!recusadosSet.has(l.id))
     .map(l=>{const s=_calcScoreLead(l);return{...l,_score:s,_tier:_calcTierLead(s)}})
     .filter(l=>l._tier)
     .sort((a,b)=>b._score-a._score)
@@ -2072,6 +2076,140 @@ function _contadoresFila(fila){
     morno:  fila.filter(l=>l._tier==='morno').length,
     total:  fila.length
   }
+}
+// Estado da Central: fila em memória + índice atual + pilha de pulados
+const _CENTRAL={fila:[],idx:0,pulados:new Set()}
+function _leadAtualCentral(){
+  // Retorna o próximo lead da fila que não foi pulado nem já é o atual
+  while(_CENTRAL.idx<_CENTRAL.fila.length){
+    const l=_CENTRAL.fila[_CENTRAL.idx]
+    if(!_CENTRAL.pulados.has(l.id)) return l
+    _CENTRAL.idx++
+  }
+  return null
+}
+async function _refreshCentral(){
+  if(!CU||CU.perfil==='master') return
+  _CENTRAL.fila=await _buscarFilaConsultor(CU.id)
+  _CENTRAL.idx=0
+  _CENTRAL.pulados=new Set()
+  _renderCentral()
+}
+window._centralPularProximo=()=>{
+  const l=_leadAtualCentral();if(l)_CENTRAL.pulados.add(l.id)
+  _renderCentral()
+}
+window._centralAbrirRecusa=()=>{
+  const l=_leadAtualCentral();if(!l)return
+  const html=`<div class="modal-overlay open" id="mod-recusa" onclick="if(event.target===this)_centralFecharRecusa()">
+    <div class="modal-box" style="max-width:440px">
+      <h3 style="margin:0 0 4px">Por que não vai fazer agora?</h3>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Lead: <strong>${_esc(l.nome)}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        ${[
+          ['retorno_agendado','Cliente pediu retorno depois'],
+          ['fora_do_crm','Já conversei fora do CRM'],
+          ['aguardando_info','Aguardando informação do cliente'],
+          ['indisponivel','Cliente indisponível agora'],
+          ['discordo','Não concordo com a recomendação']
+        ].map(([v,label],i)=>`<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
+          <input type="radio" name="rec-motivo" value="${v}" ${i===0?'checked':''} style="margin:0">
+          <span>${label}</span>
+        </label>`).join('')}
+      </div>
+      <div class="mfield" style="margin-bottom:14px">
+        <label style="font-size:11px">Detalhe (opcional)</label>
+        <textarea id="rec-detalhe" rows="2" placeholder="Contexto adicional..." style="font-size:12px"></textarea>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-sec" onclick="_centralFecharRecusa()">Cancelar</button>
+        <button class="btn btn-pri" onclick="_centralConfirmarRecusa()">Confirmar</button>
+      </div>
+    </div>
+  </div>`
+  const prev=document.getElementById('mod-recusa');if(prev)prev.remove()
+  document.body.insertAdjacentHTML('beforeend',html)
+}
+window._centralFecharRecusa=()=>{const el=document.getElementById('mod-recusa');if(el)el.remove()}
+window._centralConfirmarRecusa=async()=>{
+  const l=_leadAtualCentral();if(!l)return
+  const motivo=document.querySelector('input[name="rec-motivo"]:checked')?.value||'discordo'
+  const detalhe=document.getElementById('rec-detalhe')?.value?.trim()||null
+  const{error}=await sb.from('lead_recusas').insert({lead_id:l.id,consultor_id:CU.id,motivo,detalhe})
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  _centralFecharRecusa()
+  mostrarToast('Registrado','Lead fora da fila por 24h.','sucesso')
+  await _refreshCentral()
+}
+// "Fiz contato" no card da Central: avança cadência + refresha fila
+window._centralFizContato=async()=>{
+  const l=_leadAtualCentral();if(!l)return
+  const novoCf=(l.contatos_feitos||0)+1
+  const proxFollowup=_calcProximoFollowup(l.criado_em||new Date(),novoCf)
+  const{error}=await sb.from('leads').update({contatos_feitos:novoCf,followup_date:proxFollowup,ultimo_contato_em:new Date().toISOString()}).eq('id',l.id)
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  mostrarToast('Contato registrado','Próximo lead da fila carregado.','sucesso')
+  await _refreshCentral()
+}
+// Botão IA reusa a modal existente
+window._centralGerarIA=()=>{const l=_leadAtualCentral();if(l)abrirFollowUpIA(l.id)}
+// Abre editor do lead no meio da execução
+window._centralAbrirLead=()=>{const l=_leadAtualCentral();if(l)editarLead(l.id)}
+
+// Renderiza a Central no container #central-wrap (se existir)
+function _renderCentral(){
+  const wrap=document.getElementById('central-wrap')
+  if(!wrap) return
+  const l=_leadAtualCentral()
+  const c=_contadoresFila(_CENTRAL.fila)
+  const contadoresHtml=c.total>0?`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;background:var(--bg2);border-radius:10px">
+    <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Fila do dia</span>
+    ${c.critico?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#B91C1C"><span style="width:8px;height:8px;border-radius:50%;background:#DC2626"></span>${c.critico} crítico${c.critico>1?'s':''}</span>`:''}
+    ${c.quente?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#B45309"><span style="width:8px;height:8px;border-radius:50%;background:#F59E0B"></span>${c.quente} quente${c.quente>1?'s':''}</span>`:''}
+    ${c.morno?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#1E40AF"><span style="width:8px;height:8px;border-radius:50%;background:#3B82F6"></span>${c.morno} morno${c.morno>1?'s':''}</span>`:''}
+    <button onclick="_filtrarLeadsAtencao()" style="margin-left:auto;background:none;border:0;color:var(--mid);font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline">Ver todos</button>
+  </div>`:''
+  if(!l){
+    wrap.innerHTML=`<div class="card" style="background:linear-gradient(135deg,#F0FDF4,#EFF6FF);border:1.5px solid #86EFAC;padding:20px 22px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:32px">🎯</span>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#065F46">Sem prioridades no momento!</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Bom momento pra cadastrar leads novos ou revisar a aba "Precisam de atenção".</div>
+        </div>
+      </div>
+      ${contadoresHtml}
+    </div>`
+    return
+  }
+  const tierMap={critico:{cor:'#DC2626',bg:'#FEE2E2',txt:'#B91C1C',label:'🔴 CRÍTICO'},quente:{cor:'#F59E0B',bg:'#FEF3C7',txt:'#B45309',label:'🟡 QUENTE'},morno:{cor:'#3B82F6',bg:'#DBEAFE',txt:'#1E40AF',label:'🔵 MORNO'}}
+  const t=tierMap[l._tier]||tierMap.morno
+  const hj=new Date().toISOString().split('T')[0]
+  const diasStatus=Math.floor(_horasDesde(l.status_alterado_em||l.criado_em)/24)
+  const fupTxt=l.followup_date===hj?'Follow-up hoje':(l.followup_date&&l.followup_date<hj?`Follow-up atrasado ${Math.floor((Date.now()-new Date(l.followup_date+'T12:00'))/86400000)}d`:l.followup_date?`Follow-up em ${new Date(l.followup_date+'T12:00').toLocaleDateString('pt-BR')}`:'Sem follow-up definido')
+  const restantes=_CENTRAL.fila.filter((x,i)=>i>_CENTRAL.idx&&!_CENTRAL.pulados.has(x.id)).length
+  wrap.innerHTML=`<div class="card" style="border-left:5px solid ${t.cor};padding:20px 22px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Próxima melhor ação</div>
+      <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:${t.bg};color:${t.txt};letter-spacing:.4px">${t.label}</span>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-size:20px;font-weight:800">${_esc(l.nome)}</div>
+      <div style="font-size:12px;color:var(--text2)">${_esc(l.empresa||l.canal||'')}</div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+      <strong>${_esc(l.status)}</strong> · ${diasStatus>0?`há ${diasStatus} dia${diasStatus>1?'s':''} no status`:'atualizado hoje'} · ${fupTxt}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="_centralGerarIA()" class="btn" style="background:var(--grad);color:#fff;border:0;font-weight:700">✨ Gerar mensagem IA</button>
+      <button onclick="_centralFizContato()" class="btn" style="background:#10B981;color:#fff;border:0;font-weight:700">Fiz contato</button>
+      <button onclick="_centralAbrirLead()" class="btn" style="background:var(--card);color:var(--mid);border:1.5px solid var(--mid);font-weight:700">Abrir lead</button>
+      <button onclick="_centralPularProximo()" class="btn btn-sec" style="font-weight:600">Ver próxima</button>
+      <button onclick="_centralAbrirRecusa()" class="btn" style="background:transparent;color:var(--text3);border:1.5px solid var(--border);font-weight:600">Não vou fazer</button>
+    </div>
+    ${restantes>0?`<div style="margin-top:10px;font-size:11px;color:var(--text3)">+${restantes} outros na fila</div>`:''}
+    ${contadoresHtml}
+  </div>`
 }
 window.onStatusChange=function(val){
   // Mostrar campos de plano em Pela Boa, Ard Documento e Proposta
@@ -3927,6 +4065,8 @@ async function loadCoHome(){
       </div>`:''}
     </div>
 
+    <div id="central-wrap"></div>
+
     <div class="metrics m4">
       <div class="metric"><div class="metric-label">Leads ativos</div><div class="metric-val">${leadsAtivos}</div><div class="metric-sub">${leadsTotal} total</div></div>
       <div class="metric"><div class="metric-label">Cotações (mês)</div><div class="metric-val">${cotacoes}</div><div class="metric-sub ${cotOk?'up':'dn'}">${cotOk?'▲':'▼'} esperado ${cotEsp}</div></div>
@@ -4007,6 +4147,7 @@ async function loadCoHome(){
   const sl=Object.keys(sc).filter(s=>sc[s]>0)
   setTimeout(()=>newChart('c-co-status',{type:'doughnut',data:{labels:sl,datasets:[{data:sl.map(s=>sc[s]),backgroundColor:sl.map(s=>S_BG[s]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}}),100)
   renderAniversariantes($('p-home'))
+  _refreshCentral()
 }
 
 // ════════════════════════════════════════
@@ -4325,6 +4466,7 @@ window.confirmarContato=async()=>{
   mostrarToast('Contato registrado',msg,'sucesso')
   closeModal('mod-lead')
   loadLeads();loadCoHome();atualizarFollowupBadge()
+  if(typeof _refreshCentral==='function') _refreshCentral()
 }
 
 window.abrirFollowUpIA=async(leadId)=>{
