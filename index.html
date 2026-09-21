@@ -2005,6 +2005,69 @@ function _calcProximoFollowup(criadoEm,contatosFeitos){
   d.setDate(d.getDate()+FOLLOWUP_CADENCE[contatosFeitos])
   return d.toISOString().split('T')[0]
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTOR DE PRIORIZAÇÃO — Central do Consultor V1
+// Score determinístico por regras. NÃO é exibido — só decide a ordem da fila.
+// Tier deriva do score: 🔴 crítico / 🟡 quente / 🔵 morno / — fora.
+// Cooldown: após "Fiz contato" o lead fica de fora da fila por N horas.
+// ═══════════════════════════════════════════════════════════════════════
+const SCORE_BASE_STATUS={
+  'Ard Documento':90,
+  'Pela Boa':75,
+  'Analisando':65,
+  'Não responderam AB':55,
+  'Não responderam mais':35
+}
+const COOLDOWN_HORAS=2  // após "Fiz contato" o lead fica de fora da fila por N horas
+function _horasDesde(iso){
+  if(!iso) return Infinity
+  const t=new Date(iso).getTime()
+  if(isNaN(t)) return Infinity
+  return (Date.now()-t)/36e5
+}
+// Calcula o score de um lead. Retorna número.
+// -1 = fora da fila (Proposta / Negativa / cooldown ativo).
+function _calcScoreLead(l){
+  if(!l||['Proposta','Negativa'].includes(l.status)) return -1
+  if(_horasDesde(l.ultimo_contato_em)<COOLDOWN_HORAS) return -1
+  let score=SCORE_BASE_STATUS[l.status]||30
+  const hj=new Date().toISOString().split('T')[0]
+  if(l.followup_date&&l.followup_date<=hj) score+=25
+  if(l.status==='Ard Documento'&&_horasDesde(l.status_alterado_em||l.criado_em)>24) score+=20
+  if(l.status==='Pela Boa'&&_horasDesde(l.status_alterado_em||l.criado_em)>24) score+=15
+  if((l.contatos_feitos||0)===0&&_horasDesde(l.criado_em)>0) score+=30
+  return score
+}
+function _calcTierLead(score){
+  if(score<0) return null
+  if(score>=100) return 'critico'
+  if(score>=70)  return 'quente'
+  if(score>=40)  return 'morno'
+  return null
+}
+// Busca fila do consultor ordenada por score DESC.
+// Retorna array de {...lead, _score, _tier}.
+async function _buscarFilaConsultor(consultorId){
+  const{data,error}=await sb.from('leads')
+    .select('*')
+    .eq('consultor_id',consultorId)
+    .not('status','in','("Proposta","Negativa")')
+    .order('criado_em',{ascending:false})
+  if(error){console.warn('fila:',error);return[]}
+  return(data||[])
+    .map(l=>{const s=_calcScoreLead(l);return{...l,_score:s,_tier:_calcTierLead(s)}})
+    .filter(l=>l._tier)
+    .sort((a,b)=>b._score-a._score)
+}
+function _contadoresFila(fila){
+  return{
+    critico:fila.filter(l=>l._tier==='critico').length,
+    quente: fila.filter(l=>l._tier==='quente').length,
+    morno:  fila.filter(l=>l._tier==='morno').length,
+    total:  fila.length
+  }
+}
 window.onStatusChange=function(val){
   // Mostrar campos de plano em Pela Boa, Ard Documento e Proposta
   const mostrarPlano=['Pela Boa','Ard Documento','Proposta'].includes(val)
@@ -4197,6 +4260,11 @@ window.salvarLead=async()=>{
     dados.followup_date=_calcProximoFollowup(new Date(),0)
     dados.contatos_feitos=0
   }
+  // status_alterado_em: marca quando o status muda (usado pelo motor de score pra "tempo no status atual")
+  const leadCache=isNovo?null:LEADS_CACHE.find(x=>x.id===id)
+  if(isNovo||!leadCache||leadCache.status!==status){
+    dados.status_alterado_em=new Date().toISOString()
+  }
   // Em leads novos define consultor e mês de cotação
   if(isNovo){dados.consultor_id=CU.id;dados.mes_cotacao=m;dados.ano_cotacao=a}
   // Salvar dados do plano em Pela Boa, Ard Documento e Proposta
@@ -4243,7 +4311,8 @@ window.confirmarContato=async()=>{
   const lead=LEADS_CACHE.find(x=>x.id===id);if(!lead)return
   const novoCf=(lead.contatos_feitos||0)+1
   const proxFollowup=_calcProximoFollowup(lead.criado_em||new Date(),novoCf)
-  const{error}=await sb.from('leads').update({contatos_feitos:novoCf,followup_date:proxFollowup}).eq('id',id)
+  // ultimo_contato_em: usado pelo motor de score pra aplicar cooldown de 2h
+  const{error}=await sb.from('leads').update({contatos_feitos:novoCf,followup_date:proxFollowup,ultimo_contato_em:new Date().toISOString()}).eq('id',id)
   if(error){mostrarToast('Erro',error.message,'erro');return}
   const msg=proxFollowup
     ?`Próximo toque em ${new Date(proxFollowup+'T12:00').toLocaleDateString('pt-BR')} (contato ${novoCf}/${FOLLOWUP_CADENCE.length})`
