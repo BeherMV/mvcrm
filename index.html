@@ -5115,6 +5115,7 @@ async function loadSvHome(fMes=null,fAno=null){
         ${meses.map(x=>`<option value="${x.m}-${x.a}" ${x.m===m&&x.a===a?'selected':''}>${String(x.m).padStart(2,'0')}/${x.a}</option>`).join('')}
       </select>
     </div>
+    <div id="central-wrap" style="margin-bottom:12px"></div>
     <div class="equipe-meta-box" style="margin-bottom:4px">
       <div style="font-size:13px;font-weight:700;margin-bottom:12px">Equipe ${_esc(eqRes.data?.nome||'')} — consolidado ${ehMesAtual?'do mês':'de '+String(m).padStart(2,'0')+'/'+a}</div>
       <div class="metrics m4" style="margin-bottom:12px">
@@ -5167,6 +5168,7 @@ async function loadSvHome(fMes=null,fAno=null){
     if(CU.equipe_id){const{data}=await sb.from('equipes').select('nome').eq('id',CU.equipe_id).single();nomeEq=data?.nome||''}
     _renderWidgetProvSupervisor($('p-sv-home'),CU.equipe_id,nomeEq)
   })()
+  _refreshCentral()
 }
 
 // Abrir dashboard do consultor
