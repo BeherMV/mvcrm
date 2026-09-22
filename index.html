@@ -5076,7 +5076,7 @@ function _renderRoleplayChat(){
       </div>
       <div id="rp-msgs" style="flex:1;overflow-y:auto;background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
       <div style="display:flex;gap:8px">
-        <textarea id="rp-input" placeholder="Sua mensagem... (Enter envia, Shift+Enter quebra linha)" rows="2" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;resize:none;background:var(--card)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_rpEnviarMsg()}"></textarea>
+        <textarea id="rp-input" placeholder="Sua mensagem... (Enter envia, Shift+Enter quebra linha)" rows="2" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;resize:none;background:var(--card);color:var(--text1)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_rpEnviarMsg()}"></textarea>
         <button onclick="_rpEnviarMsg()" class="btn btn-pri" style="padding:0 20px">Enviar</button>
       </div>
     </div>
@@ -5194,17 +5194,20 @@ Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
     ?'Inicie a conversa. Você é o cliente entrando em contato pela primeira vez ou respondendo um lead que o vendedor deixou. Seja natural, curto (1-2 linhas).'
     :`Conversa até agora:\n${conversaTexto}\n\nResponda a última mensagem do VENDEDOR mantendo seu papel de cliente. JSON puro.`
 
-  try{
+  // Chamada com fallback: Sonnet -> Haiku
+  async function _rpCliente(model){
     const res=await fetch('/api/followup',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-5',
-        max_tokens:800,
-        system:systemPrompt,
-        messages:[{role:'user',content:userPrompt}]
-      })
+      body:JSON.stringify({model,max_tokens:800,system:systemPrompt,messages:[{role:'user',content:userPrompt}]})
     })
-    const data=await res.json()
+    return res.json()
+  }
+  try{
+    let data=await _rpCliente('claude-sonnet-4-5')
+    if(data.error||!data.content?.[0]?.text){
+      console.warn('Cliente Sonnet falhou, fallback Haiku:',data.error||'vazio')
+      data=await _rpCliente('claude-haiku-4-5-20251001')
+    }
     if(data.error) throw new Error(data.error.message||JSON.stringify(data.error))
     const text=data.content?.[0]?.text||''
     let parsed=null
@@ -5336,19 +5339,24 @@ Vínculo (0-10) mede QUANTO cliente CONFIOU + ABRIU + ENGAJOU independente de ve
 
 Seja severo. Seja útil. Seja honesto.`
 
-  try{
+  // Chamada com fallback: tenta Sonnet 4.5, se falhar cai pro Haiku 4.5
+  async function _rpChamarIA(model){
     const res=await fetch('/api/followup',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-5',
-        max_tokens:2500,
-        messages:[{role:'user',content:avalPrompt}]
-      })
+      body:JSON.stringify({model,max_tokens:2500,messages:[{role:'user',content:avalPrompt}]})
     })
-    const data=await res.json()
+    return res.json()
+  }
+  try{
+    let data=await _rpChamarIA('claude-sonnet-4-5')
+    // Se Sonnet retornou erro (modelo indisponível, sem acesso, etc), tenta Haiku
+    if(data.error||!data.content?.[0]?.text){
+      console.warn('Sonnet falhou, tentando Haiku:',data.error||'resposta vazia')
+      data=await _rpChamarIA('claude-haiku-4-5-20251001')
+    }
     if(data.error) throw new Error(data.error.message||JSON.stringify(data.error))
     const text=data.content?.[0]?.text||''
-    if(!text) throw new Error('Resposta vazia da API')
+    if(!text) throw new Error('Resposta vazia da API (ambos modelos)')
     // Parser robusto — tenta múltiplas estratégias
     let parsed=null
     // Estratégia 1: JSON puro
