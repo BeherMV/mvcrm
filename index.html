@@ -3881,6 +3881,7 @@ function setupConsultor(){
 
 function setupSupervisor(){
   const roleplayItem=CU.roleplay_liberado?`<button class="sb-btn" onclick="navTo('p-roleplay',this,'Roleplay')">🎭 Roleplay <span class="pill-new">treino</span></button>`:''
+  const roleplayEquipe=`<button class="sb-btn" onclick="navTo('p-sv-roleplay',this,'Roleplay da equipe')">📊 Roleplay equipe</button>`
   $('sb-nav').innerHTML=`
     <div class="sb-section">Visão geral</div>
     <button class="sb-btn active" onclick="navTo('p-sv-home',this,'Dashboard da equipe')">📊 Dashboard</button>
@@ -3898,6 +3899,7 @@ function setupSupervisor(){
     <button class="sb-btn" onclick="navTo('p-sv-recusas',this,'Recusas')">❌ Recusas</button>
     <button class="sb-btn" onclick="navTo('p-sv-engajamento',this,'Engajamento')">📊 Engajamento</button>
     <button class="sb-btn" onclick="navTo('p-sv-historico',this,'Histórico mensal')">📋 Histórico</button>
+    ${roleplayEquipe}
     <div class="sb-section">Rede social</div>
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
     <div class="sb-section">Financeiro</div>
@@ -3922,6 +3924,7 @@ function setupSupervisor(){
     <div id="p-perfil" class="page"></div>
     <div id="p-feed" class="page"></div>
     <div id="p-roleplay" class="page"></div>
+    <div id="p-sv-roleplay" class="page"></div>
   `
   loadSvHome()
 }
@@ -3986,7 +3989,7 @@ window.navTo=(id,btn,title)=>{
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
     'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe,
-    'p-roleplay':loadRoleplay
+    'p-roleplay':loadRoleplay,'p-sv-roleplay':loadSvRoleplay
   }
   if(map[id]) map[id]()
 }
@@ -5021,10 +5024,22 @@ const _RP_PERSONAS_MOCK={
   ]
 }
 
-function loadRoleplay(){
+async function loadRoleplay(){
   const el=$('p-roleplay');if(!el)return
   _RP.status='idle';_RP.modulo=null;_RP.perfil=null;_RP.mensagens=[];_RP.score=50;_RP.personaContexto='';_RP.sessaoId=null
+  // Descobre quais módulos o consultor já concluiu (>=1 rodada com nota)
+  const{data}=await sb.from('roleplay_sessoes').select('modulo').eq('consultor_id',CU.id).not('nota','is',null)
+  _RP.modulosConcluidos=new Set((data||[]).map(r=>r.modulo))
   _renderRoleplaySetup()
+}
+// Rodada completa fica travada até consultor fazer TODOS os módulos específicos pelo menos 1x
+function _rpCompletaLiberada(){
+  const especificos=['spin','ancoragem','objecao','fechamento','followup']
+  return especificos.every(m=>_RP.modulosConcluidos?.has(m))
+}
+function _rpModuloBloqueado(k){
+  if(k!=='completa') return false
+  return !_rpCompletaLiberada()
 }
 
 function _renderRoleplaySetup(){
@@ -5035,17 +5050,30 @@ function _renderRoleplaySetup(){
         <h1 style="font-size:38px;font-weight:900;letter-spacing:-1px;margin:0;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Roleplay MV</h1>
       </div>
       <div style="margin-bottom:22px">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">Módulo</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px">Módulo</div>
+          ${_rpCompletaLiberada()?'':`<div style="font-size:11px;color:var(--text3)">Complete os 5 módulos específicos para destravar a <strong style="color:var(--mid)">Rodada completa</strong></div>`}
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
-          ${Object.entries(ROLEPLAY_MODULOS).map(([k,m])=>`
-            <div style="position:relative">
-              <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}" style="width:100%">
+          ${['spin','ancoragem','objecao','fechamento','followup','completa'].map(k=>{
+            const m=ROLEPLAY_MODULOS[k]
+            const feito=_RP.modulosConcluidos?.has(k)
+            const bloqueado=_rpModuloBloqueado(k)
+            const badge=bloqueado
+              ?`<div class="rp-badge rp-badge-lock">🔒 Bloqueado</div>`
+              :feito
+                ?`<div class="rp-badge rp-badge-done">✓ Concluído</div>`
+                :''
+            const clickHandler=bloqueado?'mostrarToast(\'Bloqueado\',\'Complete os 5 módulos específicos primeiro.\',\'info\')':`_rpSelModulo('${k}',this)`
+            return `<div style="position:relative">
+              <button onclick="${clickHandler}" class="rp-card ${bloqueado?'rp-card-locked':''}" data-modulo="${k}" style="width:100%">
+                ${badge}
                 <div class="rp-card-title">${m.label}</div>
                 <div class="rp-card-desc">${m.desc}</div>
               </button>
               <button onclick="event.stopPropagation();_rpAbrirTutorial('modulo','${k}')" class="rp-help-btn" title="Como funciona este módulo">?</button>
-            </div>
-          `).join('')}
+            </div>`
+          }).join('')}
         </div>
       </div>
       <div id="rp-perfil-wrap" style="display:none;margin-bottom:22px">
@@ -5074,13 +5102,20 @@ function _renderRoleplaySetup(){
       .rp-card{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;text-align:left;cursor:pointer;transition:all .18s ease;font-family:inherit}
       .rp-card:hover{border-color:var(--mid);transform:translateY(-1px);box-shadow:0 4px 12px -6px rgba(29,164,212,.25)}
       .rp-card.sel{border-color:var(--mid);border-width:2px;padding:15px 17px;background:linear-gradient(135deg,rgba(239,246,255,.6),rgba(240,253,244,.6))}
-      .rp-card-title{font-size:14.5px;font-weight:700;color:var(--text1);margin-bottom:4px;letter-spacing:-.2px;padding-right:24px}
+      .rp-card-title{font-size:14.5px;font-weight:700;color:var(--text1);margin-bottom:4px;letter-spacing:-.2px;padding-right:24px;margin-top:14px}
       .rp-card-desc{font-size:12px;color:var(--text3);line-height:1.4;font-weight:400}
       .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.06),rgba(37,99,235,.06));border-color:rgba(29,164,212,.35)}
       :root[data-theme="dark"] .rp-card.sel{background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(0,201,167,.12))}
       :root[data-theme="dark"] .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.12),rgba(37,99,235,.12))}
       .rp-help-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);color:var(--text3);font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .15s;z-index:2}
       .rp-help-btn:hover{background:var(--mid);color:#fff;border-color:var(--mid);transform:scale(1.1)}
+      .rp-badge{position:absolute;top:10px;left:12px;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.4px;text-transform:uppercase}
+      .rp-badge-done{background:#D1FAE5;color:#065F46}
+      .rp-badge-lock{background:#F3F4F6;color:#6B7280}
+      .rp-card-locked{opacity:.55;cursor:not-allowed}
+      .rp-card-locked:hover{transform:none;box-shadow:none;border-color:var(--border)}
+      :root[data-theme="dark"] .rp-badge-done{background:rgba(16,185,129,.25);color:#6EE7B7}
+      :root[data-theme="dark"] .rp-badge-lock{background:rgba(107,114,128,.2);color:#9CA3AF}
     </style>
   `
 }
@@ -5531,6 +5566,196 @@ Seja severo. Seja útil. Seja honesto.`
       <button onclick="loadRoleplay()" class="btn btn-pri" style="margin-top:14px">Voltar</button>
     </div>`
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ROLEPLAY — Dashboard do Supervisor (visão da equipe)
+// ═══════════════════════════════════════════════════════════════════════
+async function loadSvRoleplay(){
+  const el=$('p-sv-roleplay');if(!el)return
+  el.innerHTML='<div class="loading">Carregando…</div>'
+  if(!CU.equipe_id){el.innerHTML='<div class="empty">Você não tem equipe associada.</div>';return}
+  // Consultores da equipe (perfil consultor + supervisor não conta ele mesmo por ora)
+  const{data:cons}=await sb.from('usuarios').select('id,nome,foto_url,foto_ver,roleplay_liberado').eq('equipe_id',CU.equipe_id).eq('perfil','consultor').order('nome')
+  const ids=(cons||[]).map(c=>c.id)
+  // Sessões dos últimos 60 dias
+  const dtLim=new Date(Date.now()-60*86400000).toISOString()
+  const{data:ses}=ids.length?await sb.from('roleplay_sessoes').select('consultor_id,modulo,nota,iniciada_em,encerrada_em').in('consultor_id',ids).not('nota','is',null).gte('iniciada_em',dtLim):{data:[]}
+  const stats=(cons||[]).map(c=>{
+    const rounds=(ses||[]).filter(s=>s.consultor_id===c.id)
+    const notas=rounds.map(r=>Number(r.nota)).filter(n=>!isNaN(n))
+    const media=notas.length?notas.reduce((a,b)=>a+b,0)/notas.length:null
+    // Evolução: comparar média últimas 5 vs. 5 anteriores
+    const ord=rounds.slice().sort((a,b)=>new Date(b.encerrada_em||b.iniciada_em)-new Date(a.encerrada_em||a.iniciada_em))
+    const ult5=ord.slice(0,5).map(r=>Number(r.nota)).filter(n=>!isNaN(n))
+    const ant5=ord.slice(5,10).map(r=>Number(r.nota)).filter(n=>!isNaN(n))
+    const mUlt=ult5.length?ult5.reduce((a,b)=>a+b,0)/ult5.length:null
+    const mAnt=ant5.length?ant5.reduce((a,b)=>a+b,0)/ant5.length:null
+    let tend='—'
+    if(mUlt!==null&&mAnt!==null){
+      const diff=mUlt-mAnt
+      tend=diff>=0.3?'↑':diff<=-0.3?'↓':'—'
+    }
+    const ultRodada=ord[0]
+    return{cons:c,rodadas:rounds.length,media,tend,ultRodada}
+  })
+  const totalRodadas=stats.reduce((s,x)=>s+x.rodadas,0)
+  const mediaGeral=stats.filter(s=>s.media!==null).reduce((s,x,_,arr)=>s+x.media/arr.length,0)
+  const semAcesso=stats.filter(s=>!s.cons.roleplay_liberado).length
+  const nuncaTreinou=stats.filter(s=>s.cons.roleplay_liberado&&s.rodadas===0).length
+  el.innerHTML=`
+    <div style="max-width:1200px;margin:0 auto">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div>
+          <h2 style="margin:0;font-size:22px;font-weight:800">Roleplay da equipe</h2>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Últimos 60 dias · ${(cons||[]).length} consultores</div>
+        </div>
+      </div>
+      <div class="metrics m4" style="margin-bottom:16px">
+        <div class="metric"><div class="metric-label">Rodadas do time</div><div class="metric-val">${totalRodadas}</div><div class="metric-sub">últimos 60 dias</div></div>
+        <div class="metric"><div class="metric-label">Nota média</div><div class="metric-val" style="color:${mediaGeral>=7?'#10B981':mediaGeral>=5?'#F59E0B':'#DC2626'}">${totalRodadas?mediaGeral.toFixed(1):'—'}</div><div class="metric-sub">média das rodadas avaliadas</div></div>
+        <div class="metric"><div class="metric-label">Sem acesso</div><div class="metric-val">${semAcesso}</div><div class="metric-sub">consultor(es) não liberado(s)</div></div>
+        <div class="metric"><div class="metric-label">Nunca treinou</div><div class="metric-val">${nuncaTreinou}</div><div class="metric-sub">liberado mas 0 rodadas</div></div>
+      </div>
+      <div class="card">
+        <div style="overflow-x:auto"><table class="tbl">
+          <thead><tr><th>Consultor</th><th>Status</th><th style="text-align:center">Rodadas</th><th style="text-align:center">Nota média</th><th style="text-align:center">Tendência</th><th>Última rodada</th><th></th></tr></thead>
+          <tbody>${stats.length?stats.map(s=>{
+            const cor=s.media===null?'var(--text3)':(s.media>=7?'#10B981':s.media>=5?'#F59E0B':'#DC2626')
+            const tCor=s.tend==='↑'?'#10B981':s.tend==='↓'?'#DC2626':'var(--text3)'
+            const ini=(s.cons.nome||'').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
+            const avatarHtml=s.cons.foto_url
+              ?`<img src="${_safeUrl(s.cons.foto_url)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">`
+              :`<div class="av" style="width:32px;height:32px;font-size:11px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini}</div>`
+            const statusHtml=!s.cons.roleplay_liberado
+              ?'<span class="pill" style="background:#F3F4F6;color:#6B7280">Sem acesso</span>'
+              :s.rodadas===0
+                ?'<span class="pill" style="background:#FEF3C7;color:#92400E">Não treinou</span>'
+                :'<span class="pill" style="background:#D1FAE5;color:#065F46">Ativo</span>'
+            const ultimaTxt=s.ultRodada?new Date(s.ultRodada.encerrada_em||s.ultRodada.iniciada_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'—'
+            return `<tr>
+              <td><div style="display:flex;align-items:center;gap:10px">${avatarHtml}<div><div style="font-weight:700">${_esc(s.cons.nome||'')}</div></div></div></td>
+              <td>${statusHtml}</td>
+              <td style="text-align:center;font-weight:700">${s.rodadas}</td>
+              <td style="text-align:center;font-weight:800;color:${cor};font-size:15px">${s.media!==null?s.media.toFixed(1):'—'}</td>
+              <td style="text-align:center;font-weight:800;color:${tCor};font-size:16px">${s.tend}</td>
+              <td style="font-size:12px;color:var(--text3)">${ultimaTxt}</td>
+              <td><button onclick="_svAbrirDrilldown('${s.cons.id}',${_js(s.cons.nome)})" class="btn btn-sm" style="padding:5px 10px;font-size:11px" ${s.rodadas===0?'disabled style="opacity:.4;cursor:not-allowed;padding:5px 10px;font-size:11px"':''}>Ver detalhes →</button></td>
+            </tr>`
+          }).join(''):'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhum consultor na equipe.</td></tr>'}
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  `
+}
+
+// Drilldown do consultor no dashboard do supervisor
+window._svAbrirDrilldown=async(consultorId,consultorNome)=>{
+  const{data:ses}=await sb.from('roleplay_sessoes').select('*').eq('consultor_id',consultorId).not('nota','is',null).order('iniciada_em',{ascending:false}).limit(50)
+  const rounds=ses||[]
+  // Nota média por módulo
+  const porModulo={}
+  Object.keys(ROLEPLAY_MODULOS).forEach(k=>{porModulo[k]={notas:[],rounds:0}})
+  rounds.forEach(r=>{
+    if(porModulo[r.modulo]){
+      porModulo[r.modulo].rounds++
+      if(r.nota!==null) porModulo[r.modulo].notas.push(Number(r.nota))
+    }
+  })
+  const barrasHtml=Object.entries(porModulo).map(([k,d])=>{
+    const m=ROLEPLAY_MODULOS[k]
+    if(!d.rounds) return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span style="color:var(--text3)">${m.label}</span><span style="color:var(--text3);font-size:11px">nunca fez</span></div><div style="height:8px;background:var(--bg2);border-radius:4px"></div></div>`
+    const media=d.notas.reduce((a,b)=>a+b,0)/d.notas.length
+    const pct=Math.round((media/10)*100)
+    const cor=media>=7?'#10B981':media>=5?'#F59E0B':'#DC2626'
+    return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span style="font-weight:600">${m.label}</span><span style="font-weight:700;color:${cor}">${media.toFixed(1)}<span style="color:var(--text3);font-weight:400;font-size:11px"> · ${d.rounds} rodada${d.rounds>1?'s':''}</span></span></div><div style="height:8px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${cor}"></div></div></div>`
+  }).join('')
+  // Padrões nos pontos a desenvolver (top 5)
+  const contadorPontos={}
+  rounds.forEach(r=>{
+    (r.pontos_desenvolver||[]).forEach(p=>{
+      // Pega os primeiros 60 chars como chave (agrupamento fuzzy)
+      const chave=p.substring(0,60).toLowerCase()
+      contadorPontos[chave]=(contadorPontos[chave]||{n:0,texto:p})
+      contadorPontos[chave].n++
+    })
+  })
+  const topPontos=Object.values(contadorPontos).sort((a,b)=>b.n-a.n).slice(0,5)
+  // Últimas 10 rodadas com transcrição
+  const ultimasRodadas=rounds.slice(0,10)
+  const html=`<div class="modal-overlay open" id="mod-sv-drilldown" onclick="if(event.target===this)_svFecharDrilldown()">
+    <div class="modal-box" style="max-width:820px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.7px">Roleplay</div>
+          <h3 style="margin:2px 0 0;font-size:20px">${_esc(consultorNome)}</h3>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${rounds.length} rodada${rounds.length!==1?'s':''} avaliada${rounds.length!==1?'s':''}</div>
+        </div>
+        <button onclick="_svFecharDrilldown()" style="background:none;border:0;color:var(--text3);font-size:22px;cursor:pointer">×</button>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Nota média por módulo</div>
+        ${barrasHtml}
+      </div>
+      ${topPontos.length?`<div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Padrões recorrentes (a desenvolver)</div>
+        <div style="background:var(--bg2);border-radius:8px;padding:12px">
+          ${topPontos.map(p=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span style="background:#FEE2E2;color:#B91C1C;font-weight:800;padding:2px 8px;border-radius:6px;font-size:11px;flex-shrink:0">${p.n}x</span>
+            <span style="color:var(--text2)">${_esc(p.texto)}</span>
+          </div>`).join('')}
+        </div>
+      </div>`:''}
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Últimas rodadas</div>
+        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+          ${ultimasRodadas.length?ultimasRodadas.map(r=>{
+            const modLabel=ROLEPLAY_MODULOS[r.modulo]?.label||r.modulo
+            const perLabel=ROLEPLAY_PERFIS[r.perfil_cliente]?.label||r.perfil_cliente
+            const dt=new Date(r.encerrada_em||r.iniciada_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
+            const notaCor=r.nota>=7?'#10B981':r.nota>=5?'#F59E0B':'#DC2626'
+            return `<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700">${modLabel} · <span style="color:var(--text3);font-weight:400">${perLabel}</span></div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px">${dt} · dificuldade ${r.dificuldade}/5 · ${r.qtd_mensagens} mensagens</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:20px;font-weight:800;color:${notaCor}">${r.nota}</div>
+                ${r.transcricao?`<button onclick="_svVerTranscricao(${_js(r.id)})" class="btn btn-sm" style="padding:5px 10px;font-size:11px">Ver conversa</button>`:''}
+              </div>
+            </div>`
+          }).join(''):'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Nenhuma rodada.</div>'}
+        </div>
+      </div>
+    </div>
+  </div>`
+  const prev=document.getElementById('mod-sv-drilldown');if(prev)prev.remove()
+  document.body.insertAdjacentHTML('beforeend',html)
+}
+window._svFecharDrilldown=()=>{const el=document.getElementById('mod-sv-drilldown');if(el)el.remove()}
+window._svVerTranscricao=async(sesId)=>{
+  const{data}=await sb.from('roleplay_sessoes').select('transcricao,feedback_texto,pontos_positivos,pontos_desenvolver').eq('id',sesId).single()
+  if(!data)return
+  let fb={}
+  try{fb=JSON.parse(data.feedback_texto||'{}')}catch(_){}
+  const html=`<div class="modal-overlay open" id="mod-sv-transc" onclick="if(event.target===this)document.getElementById('mod-sv-transc').remove()">
+    <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">Transcrição da rodada</h3>
+        <button onclick="document.getElementById('mod-sv-transc').remove()" style="background:none;border:0;font-size:22px;cursor:pointer;color:var(--text3)">×</button>
+      </div>
+      <pre style="background:var(--bg2);border-radius:8px;padding:14px;white-space:pre-wrap;font-family:inherit;font-size:12px;line-height:1.5;color:var(--text1);max-height:400px;overflow-y:auto">${_esc(data.transcricao||'(sem transcrição)')}</pre>
+      ${fb.momento_critico?`<div style="margin-top:14px;padding:12px;border-left:4px solid #DC2626;background:var(--bg2);border-radius:0 8px 8px 0">
+        <div style="font-size:11px;font-weight:800;color:#B91C1C;text-transform:uppercase;margin-bottom:6px">🔥 Momento crítico</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:6px"><strong>Erro:</strong> ${_esc(fb.momento_critico.erro||'')}</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:#065F46">O certo seria:</strong> ${_esc(fb.momento_critico.certo_seria||'')}</div>
+      </div>`:''}
+      ${fb.recomendacao_treino?`<div style="margin-top:10px;font-size:12px;color:var(--text2);padding:10px;background:linear-gradient(135deg,rgba(29,164,212,.08),rgba(0,201,167,.08));border-radius:8px"><strong>💡 Recomendação:</strong> ${_esc(fb.recomendacao_treino)}</div>`:''}
+    </div>
+  </div>`
+  const prev=document.getElementById('mod-sv-transc');if(prev)prev.remove()
+  document.body.insertAdjacentHTML('beforeend',html)
 }
 
 function _renderRoleplayFeedback(f){
