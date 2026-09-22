@@ -4909,10 +4909,35 @@ const _RP={
   perfil:null,         // chave de ROLEPLAY_PERFIS
   dificuldade:3,       // 1-5
   personaContexto:'',  // gerado pela IA no início
+  clienteNome:'',      // nome fictício do cliente (Marcos Silva, etc)
   mensagens:[],        // [{role:'consultor'|'cliente', texto, ts}]
   score:50,            // vínculo/score dinâmico interno
   sessaoId:null,       // uuid criado no start
   iniciadaEm:null
+}
+
+// Personas fictícias com dados concretos — sorteia 1 no início da rodada
+const _RP_PERSONAS_MOCK={
+  empresario_familia:[
+    {nome:'Marcos Silva',idade:41,cidade:'Curitiba',negocio:'Marcenaria com 6 funcionários há 12 anos',faturamento:'R$ 45k/mês',familia:'esposa Juliana + filhos João (12) e Laura (7)',plano_atual:'Nossa Saúde coletivo via contador, R$ 890/mês, 4 vidas',dor_real:'contador avisou que operadora vai aumentar 22% em novembro'},
+    {nome:'Rodrigo Almeida',idade:38,cidade:'São Paulo',negocio:'Loja de auto peças, 3 funcionários, 8 anos',faturamento:'R$ 62k/mês',familia:'esposa Fernanda + filha Sofia (5) + bebê no caminho',plano_atual:'Amil One coletivo, R$ 1.320/mês, 3 vidas',dor_real:'nascimento do bebê em 4 meses, quer garantir cobertura obstétrica sem carência'},
+    {nome:'Paulo Henrique Costa',idade:47,cidade:'Belo Horizonte',negocio:'Autoescola familiar, 4 instrutores',faturamento:'R$ 32k/mês',familia:'esposa Cláudia + 3 filhos (18, 15, 11)',plano_atual:'nenhum ativo — perdeu SulAmérica ano passado por preço',dor_real:'filho mais velho vai fazer faculdade fora, precisa cobertura ampla'},
+    {nome:'Renato Meireles',idade:52,cidade:'Porto Alegre',negocio:'Contabilidade própria, 12 funcionários',faturamento:'R$ 88k/mês',familia:'esposa Sônia + 2 filhos adultos independentes',plano_atual:'Unimed empresarial pra funcionários, ele fica de fora',dor_real:'começou a sentir refluxo, se preocupou com saúde própria'}
+  ],
+  senior:[
+    {nome:'Antônio Ribeiro',idade:63,cidade:'Curitiba',negocio:'Aposentado da Petrobrás há 8 meses',faturamento:'aposentadoria R$ 7.500',familia:'esposa Marlene (60) + 2 filhos adultos',plano_atual:'Amil coletivo do trabalho, expira em 90 dias',dor_real:'tratamento cardiológico com Dr. Cavalcanti no Hospital do Coração — não pode perder'},
+    {nome:'Ivone Barreto',idade:67,cidade:'São Paulo',negocio:'Aposentada professora estadual',faturamento:'R$ 4.200',familia:'viúva, 3 filhos adultos que dividem custos',plano_atual:'IAMSPE, quer sair pra rede privada',dor_real:'fila enorme pra endocrinologista, precisa acompanhar diabetes tipo 2'},
+    {nome:'Wilson Kraus',idade:61,cidade:'Balneário Camboriú',negocio:'Aposentado, empresário',faturamento:'aluguéis R$ 12k',familia:'esposa Marta (58) + filha adulta',plano_atual:'SulAmérica há 15 anos, individual, R$ 2.400/mês (achou caro)',dor_real:'operou próstata ano passado, precisa acompanhamento urológico regular'}
+  ],
+  pf_pediatrica:[
+    {nome:'Camila Prestes',idade:32,cidade:'Curitiba',negocio:'RH em multinacional',faturamento:'R$ 8.500 pessoal, marido R$ 11k',familia:'filho Enzo (5 anos)',plano_atual:'ela e marido no plano da empresa, filho ficou de fora',dor_real:'filho teve febre alta semana passada, ficou 3h na fila do PS público, ela se assustou'},
+    {nome:'Larissa Coelho',idade:29,cidade:'Rio de Janeiro',negocio:'Autônoma, designer',faturamento:'R$ 6k/mês instável',familia:'filha Alice (3), separada, pai da criança não ajuda',plano_atual:'só SUS',dor_real:'filha com asma, 3 crises em 6 meses, cansada de esperar UPA'},
+    {nome:'Juliana Amaral',idade:35,cidade:'Belo Horizonte',negocio:'Professora rede privada',faturamento:'R$ 5.800',familia:'2 filhos (Miguel 8, Isabela 4), casada',plano_atual:'plano do marido cobre a família mas rede infantil ruim',dor_real:'filha Isabela precisa acompanhamento com fonoaudióloga, plano do marido não cobre'}
+  ],
+  pme:[
+    {nome:'Fernando Oliveira',idade:44,cidade:'Curitiba',negocio:'Software house, 15 funcionários, 4 anos',faturamento:'R$ 180k/mês',familia:'irrelevante pra decisão B2B',plano_atual:'nenhum benefício de saúde ainda',dor_real:'perdeu 2 desenvolvedores pra concorrente que oferecia plano'},
+    {nome:'Sandra Guimarães',idade:52,cidade:'São Paulo',negocio:'Indústria de embalagens, 42 funcionários',faturamento:'R$ 380k/mês',familia:'não relevante',plano_atual:'Amil Empresarial há 5 anos, R$ 12.500/mês, reajustou 28%',dor_real:'diretoria pediu redução de custo, ela precisa comparar sem perder benefício'}
+  ]
 }
 
 function loadRoleplay(){
@@ -4924,47 +4949,49 @@ function loadRoleplay(){
 function _renderRoleplaySetup(){
   const el=$('p-roleplay');if(!el)return
   el.innerHTML=`
-    <div style="max-width:900px;margin:0 auto">
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:28px;font-weight:800;margin-bottom:4px">🎭 Roleplay MV</div>
-        <div style="font-size:13px;color:var(--text2)">Treino de vendas com IA fazendo o papel de cliente. Sem queimar lead real.</div>
+    <div style="max-width:920px;margin:0 auto">
+      <div style="text-align:center;margin:8px 0 32px">
+        <h1 style="font-size:38px;font-weight:900;letter-spacing:-1px;margin:0;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Roleplay MV</h1>
       </div>
-      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">1. Escolha o módulo</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+      <div style="margin-bottom:22px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">Módulo</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
           ${Object.entries(ROLEPLAY_MODULOS).map(([k,m])=>`
-            <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}" style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:14px;text-align:left;cursor:pointer;transition:all .15s">
-              <div style="font-size:22px;margin-bottom:4px">${m.emoji}</div>
-              <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.label}</div>
-              <div style="font-size:11px;color:var(--text3);line-height:1.3">${m.desc}</div>
+            <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}">
+              <div class="rp-card-title">${m.label}</div>
+              <div class="rp-card-desc">${m.desc}</div>
             </button>
           `).join('')}
         </div>
       </div>
-      <div id="rp-perfil-wrap" style="display:none;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">2. Escolha o perfil do cliente</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-          <button onclick="_rpSelPerfil('surpresa',this)" class="rp-card" data-perfil="surpresa" style="background:linear-gradient(135deg,#F0FDF4,#EFF6FF);border:1.5px solid #86EFAC;border-radius:10px;padding:14px;text-align:left;cursor:pointer">
-            <div style="font-size:22px;margin-bottom:4px">🎲</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:2px">Surpresa</div>
-            <div style="font-size:11px;color:var(--text3);line-height:1.3">Sistema escolhe. Treina versatilidade.</div>
+      <div id="rp-perfil-wrap" style="display:none;margin-bottom:22px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">Perfil do cliente</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+          <button onclick="_rpSelPerfil('surpresa',this)" class="rp-card rp-card-surpresa" data-perfil="surpresa">
+            <div class="rp-card-title">Surpresa</div>
+            <div class="rp-card-desc">Sistema escolhe. Treina versatilidade.</div>
           </button>
           ${Object.entries(ROLEPLAY_PERFIS).map(([k,p])=>`
-            <button onclick="_rpSelPerfil('${k}',this)" class="rp-card" data-perfil="${k}" style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:14px;text-align:left;cursor:pointer">
-              <div style="font-size:22px;margin-bottom:4px">${p.emoji}</div>
-              <div style="font-size:14px;font-weight:700;margin-bottom:2px">${p.label}</div>
-              <div style="font-size:11px;color:var(--text3);line-height:1.3">${p.desc}</div>
+            <button onclick="_rpSelPerfil('${k}',this)" class="rp-card" data-perfil="${k}">
+              <div class="rp-card-title">${p.label}</div>
+              <div class="rp-card-desc">${p.desc}</div>
             </button>
           `).join('')}
         </div>
       </div>
-      <div id="rp-iniciar-wrap" style="display:none;text-align:center">
-        <button onclick="_rpIniciar()" class="btn btn-pri" style="font-size:15px;padding:12px 32px;font-weight:800">Iniciar rodada ▶</button>
+      <div id="rp-iniciar-wrap" style="display:none;text-align:center;margin-top:10px">
+        <button onclick="_rpIniciar()" class="btn btn-pri" style="font-size:14px;padding:14px 42px;font-weight:800;letter-spacing:.3px">INICIAR RODADA</button>
       </div>
     </div>
     <style>
-      .rp-card:hover{border-color:var(--mid);transform:translateY(-1px)}
-      .rp-card.sel{border-color:var(--mid);background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border-width:2px}
+      .rp-card{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;text-align:left;cursor:pointer;transition:all .18s ease;font-family:inherit}
+      .rp-card:hover{border-color:var(--mid);transform:translateY(-1px);box-shadow:0 4px 12px -6px rgba(29,164,212,.25)}
+      .rp-card.sel{border-color:var(--mid);border-width:2px;padding:15px 17px;background:linear-gradient(135deg,rgba(239,246,255,.6),rgba(240,253,244,.6))}
+      .rp-card-title{font-size:14.5px;font-weight:700;color:var(--text1);margin-bottom:4px;letter-spacing:-.2px}
+      .rp-card-desc{font-size:12px;color:var(--text3);line-height:1.4;font-weight:400}
+      .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.06),rgba(37,99,235,.06));border-color:rgba(29,164,212,.35)}
+      :root[data-theme="dark"] .rp-card.sel{background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(0,201,167,.12))}
+      :root[data-theme="dark"] .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.12),rgba(37,99,235,.12))}
     </style>
   `
 }
@@ -5010,7 +5037,11 @@ window._rpIniciar=async()=>{
   _RP.score=[60,55,50,45,30][_RP.dificuldade-1]  // score inicial por dificuldade
   _RP.iniciadaEm=new Date().toISOString()
   _RP.status='rodando'
-  // Cria sessão no banco (a partir do commit da fase de save, se falhar tolera)
+  // Sorteia persona ficcional (com nome real, cidade, dor específica)
+  const personas=_RP_PERSONAS_MOCK[_RP.perfil]||_RP_PERSONAS_MOCK.empresario_familia
+  _RP.persona=personas[Math.floor(Math.random()*personas.length)]
+  _RP.clienteNome=_RP.persona.nome
+  // Cria sessão no banco
   try{
     const{data}=await sb.from('roleplay_sessoes').insert({
       consultor_id:CU.id,modulo:_RP.modulo,perfil_cliente:_RP.perfil,dificuldade:_RP.dificuldade
@@ -5018,7 +5049,6 @@ window._rpIniciar=async()=>{
     if(data) _RP.sessaoId=data.id
   }catch(e){console.warn('rp sessao:',e)}
   _renderRoleplayChat()
-  // Pede primeira mensagem do cliente
   await _rpGerarMensagemCliente(true)
 }
 
@@ -5026,15 +5056,20 @@ function _renderRoleplayChat(){
   const el=$('p-roleplay');if(!el)return
   const modInfo=ROLEPLAY_MODULOS[_RP.modulo]
   const perInfo=ROLEPLAY_PERFIS[_RP.perfil]
+  const nomeCliente=_RP.clienteNome||'(cliente)'
+  const ini=nomeCliente.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
   el.innerHTML=`
     <div style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 120px)">
       <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-        <div>
-          <div style="font-size:14px;font-weight:700">${modInfo.emoji} ${modInfo.label} · ${perInfo.emoji} ${perInfo.label}</div>
-          <div style="font-size:11px;color:var(--text3)">Dificuldade ${_RP.dificuldade}/5 · Rodada em andamento</div>
+        <div style="display:flex;align-items:center;gap:12px;min-width:0">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${ini}</div>
+          <div style="min-width:0">
+            <div style="font-size:15px;font-weight:800;letter-spacing:-.2px">${_esc(nomeCliente)}</div>
+            <div style="font-size:11px;color:var(--text3)">${perInfo.label} · ${modInfo.label} · Dificuldade ${_RP.dificuldade}/5</div>
+          </div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="_rpEncerrar('venda_fechada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:12px;padding:6px 12px">Fechei venda</button>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button onclick="_rpEncerrar('venda_fechada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:12px;padding:6px 12px;font-weight:700">Fechei venda</button>
           <button onclick="_rpEncerrar('cliente_rejeitou')" class="btn btn-sec" style="font-size:12px;padding:6px 12px">Perdi cliente</button>
           <button onclick="loadRoleplay()" class="btn" style="background:transparent;color:var(--text3);border:1.5px solid var(--border);font-size:12px;padding:6px 12px">Cancelar</button>
         </div>
@@ -5073,42 +5108,86 @@ async function _rpGerarMensagemCliente(inicio){
   _RP._digitando=true;_rpRenderMsgs()
   const perfil=ROLEPLAY_PERFIS[_RP.perfil]
   const modulo=ROLEPLAY_MODULOS[_RP.modulo]
-  // Prompt do "Claude cliente"
-  const systemPrompt=`Você é um CLIENTE brasileiro de plano de saúde. Sua função é fazer um roleplay de vendas: o vendedor (usuário) vai tentar te vender um plano. Você reage de forma realista, como cliente real reagiria. NUNCA saia do papel. NUNCA revele que é IA.
+  const p=_RP.persona||{}
+  const systemPrompt=`Você é ${p.nome}, um cliente REAL brasileiro de ${p.cidade}. NÃO é vendedor, NÃO é IA. É um cliente comum interessado em plano de saúde. NUNCA saia desse papel. NUNCA fale como IA ou como vendedor.
 
-═══ SEU PERFIL ═══
+═══ SUA VIDA E CONTEXTO ═══
+- Nome: ${p.nome}
+- Idade: ${p.idade} anos
+- Cidade: ${p.cidade}
+- Ocupação/negócio: ${p.negocio}
+- Renda: ${p.faturamento}
+- Família: ${p.familia}
+- Plano atual: ${p.plano_atual}
+- O QUE MOTIVOU VOCÊ A OUVIR UM CONSULTOR AGORA: ${p.dor_real}
+
+═══ QUEM VOCÊ É COMO PESSOA ═══
 ${_rpDescrPerfil()}
 
-═══ NÍVEL DE DIFICULDADE: ${_RP.dificuldade}/5 ═══
+═══ DIFICULDADE COMPORTAMENTAL: ${_RP.dificuldade}/5 ═══
 ${_rpDescrDificuldade()}
 
-═══ REGRAS COMPORTAMENTAIS ═══
-1. Responda em português brasileiro, informal ou formal conforme sua personalidade.
-2. RESPOSTAS CURTAS. Cliente real não escreve parágrafos. 1-3 linhas. Às vezes só "hmm", "sei", "ok".
-3. NÃO ajude o consultor. Não dê pistas fáceis. Ele tem que descobrir.
-4. Se ele fizer SPIN (perguntas boas): abra progressivamente conforme técnica.
-5. Se ele PRESUMIR sua dor sem perguntar: reaja neutro ou reticente.
-6. Se ele PEDIR DESCONTO sem diagnosticar: reaja mal ("hmm, mas nem falamos direito ainda").
-7. Se ele usar frases genéricas ("posso te ajudar", "fico à disposição"): responda curto e desinteressado.
-8. Se ele USAR TÉCNICA CORRETA (ancoragem, diagnóstico, valida sua preocupação): abra mais.
-9. VOCÊ TEM UMA OBJEÇÃO REAL escondida. Se ele DIAGNOSTICAR bem (pergunta como "comparado com o quê?" / "o que ainda falta?"), VOCÊ REVELA. Senão, dá objeção mentirosa superficial ("caro", "vou pensar").
-10. Se score consultor muito baixo (nível 4-5 dificuldade + consultor falha muito): pare de responder ou responda "vou pensar depois te falo" e fique quieto.
-11. Se ele acertar consistentemente: mostre sinais de compra (pergunta operacional: "como funciona a carência?", "quando começa?").
+═══ REGRAS DE COMPORTAMENTO — LEIA COM ATENÇÃO ═══
 
-═══ ESTADO ATUAL DA CONVERSA ═══
+FLUIDEZ:
+- Você é uma PESSOA, não um formulário. Fale natural, coloquial. Erros pequenos de digitação são aceitos (ex: "ta", "vc", "eh").
+- Cliente real NÃO fica batendo na mesma tecla ("meu contador disse..." toda vez). Varia o ângulo, muda de assunto às vezes, faz digressão pequena tipo "deixa eu ver aqui...".
+- Suas respostas têm ritmo variado: às vezes 1 linha, às vezes 3-4 linhas quando algo te tocou.
+
+REVELAÇÃO GRADUAL:
+- Você NÃO joga todos os dados de uma vez. Se o consultor perguntar "qual plano você tem?", NÃO fale operadora + valor + tempo tudo junto. Fala só operadora primeiro. Se ele perguntar mais, revela mais.
+- Sua DOR REAL (${p.dor_real}) só aparece se o consultor CONQUISTAR sua confiança primeiro. Nas primeiras 3-4 trocas, você fala superficialidades. Só abre a dor real se:
+  * Ele fez pergunta específica que te sensibilizou
+  * Ele validou uma preocupação sua antes
+  * Ele mostrou entender seu contexto
+
+OBJEÇÃO MENTIROSA (importante):
+- Sua PRIMEIRA objeção é sempre SUPERFICIAL ou mentirosa. Nunca é a real. Ex: você fala "tá caro" mas na verdade sua preocupação é ${p.dor_real}.
+- Se o consultor SIMPLESMENTE aceitar sua objeção mentirosa e sair defendendo preço → você fica frio. Ele errou.
+- Se o consultor DIAGNOSTICAR ("comparado com o quê?", "o que ainda te preocupa mais?", "tem algo além do preço?") → aí você pode revelar mais.
+
+REAÇÃO A TÉCNICAS DO CONSULTOR:
+- Ele fez SPIN de verdade (perguntas de Situação, Problema, Implicação, Necessidade em sequência)? Você abre mais.
+- Ele usou ANCORAGEM concreta (UTI R$ 8-15k/dia, consulta particular R$ 300, faixa R$ 300-900)? Você processa em silêncio ou faz pergunta operacional.
+- Ele usou frase da BLACKLIST ("posso te ajudar", "fico à disposição", "aguardo retorno")? Você responde curto e desinteressado. Score cai.
+- Ele PRESUMIU sua dor sem perguntar? Você fica neutro/reticente, não colabora.
+- Ele te chamou pelo nome + palavra de reforço ("Perfeito, ${(p.nome||'').split(' ')[0]}") — você percebe e responde melhor.
+- Ele VALIDOU uma preocupação sua antes de contornar? Você se abre.
+
+SINAIS DE COMPRA (só aparecem se ele merecer):
+- Se ele acertou consistentemente + score alto: faça pergunta operacional real. Ex: "como que funciona a carência?", "quando começa?", "como paga?".
+- Se ele estiver mediano: você fica em "vou pensar" ou "preciso conversar com minha esposa".
+- Se ele estiver ruim: mensagens cada vez mais espaçadas, tom seco.
+
+VOCÊ PODE SUMIR:
+- Se score estiver abaixo de 20 E já trocaram 8+ mensagens: você para de responder OU manda "vou avaliar aqui, obrigado" e fecha o assunto.
+
+VOCÊ TEM VIDA:
+- Não fica DEDICADO 100% à conversa. Às vezes fala "peraí, tô com cliente na loja, já respondo" (não literalmente, mas dá pra simular pausa).
+- Interrompe pra falar de outra coisa às vezes (filho chegou da escola, marido perguntou algo).
+- Tem HUMOR: pode ser mais calmo, mais impaciente, mais brincalhão dependendo do momento.
+
+═══ REGRAS DURAS ═══
+- NUNCA use vocabulário técnico de vendas ("SPIN", "objeção", "score", "CTA")
+- NUNCA revele seus dados internos (dor real, dificuldade, score)
+- NUNCA elogie o consultor abertamente ("boa pergunta!") — cliente real não faz isso
+- NUNCA aja como AI assistente ("Certo, entendi. Vou responder:") — fale como pessoa
+- Respostas curtas, naturais, com pausa. Português BR coloquial.
+
+═══ ESTADO ATUAL ═══
 Módulo: ${modulo.label} — ${modulo.desc}
-Mensagens trocadas: ${_RP.mensagens.length}
-Score interno do consultor até agora: ${_RP.score}/100 (não revele isso ao vendedor)
+Mensagens trocadas até agora: ${_RP.mensagens.length}
+Seu "sentimento interno" sobre o consultor: score ${_RP.score}/100 (baixo=frio, alto=quente)
 
-═══ FORMATO DE RESPOSTA ═══
-Retorne APENAS JSON válido, sem markdown:
+═══ FORMATO DE RESPOSTA (JSON puro, sem markdown) ═══
 {
-  "mensagem": "sua resposta como cliente",
-  "score_delta": número entre -15 e +15 (quanto o consultor ganhou/perdeu com esta troca),
-  "sinal": "engajado" | "neutro" | "friccao" | "abandono" (seu estado interno após a última mensagem do consultor)
+  "mensagem": "sua resposta natural como cliente (1-4 linhas normalmente, curta)",
+  "score_delta": inteiro entre -15 e +15 (quanto o consultor ganhou/perdeu com a última mensagem dele),
+  "sinal": "engajado" | "neutro" | "friccao" | "abandono"
 }
 
-Se for a primeira mensagem (inicio=true), quem inicia é você — apresente o contexto minimamente (ex: "Oi, tô vendo aqui uma cotação sua..."). Se não for, RESPONDA a última mensagem do consultor.`
+Se inicio=true: você INICIA a conversa. Você é o cliente respondendo a uma cotação enviada, ou entrando em contato por indicação. Seja natural, curto (1-2 linhas), como se estivesse mandando primeiro WhatsApp. NÃO revele sua dor real ainda.
+Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
 
   const conversaTexto=_RP.mensagens.map(m=>`${m.role==='consultor'?'VENDEDOR':'VOCÊ (cliente)'}: ${m.texto}`).join('\n')
   const userPrompt=inicio
@@ -5126,10 +5205,19 @@ Se for a primeira mensagem (inicio=true), quem inicia é você — apresente o c
       })
     })
     const data=await res.json()
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error))
     const text=data.content?.[0]?.text||''
-    const clean=text.replace(/```json|```/g,'').trim()
-    const match=clean.match(/\{[\s\S]*\}/)
-    const parsed=match?JSON.parse(match[0]):{mensagem:'(cliente não respondeu)',score_delta:0,sinal:'neutro'}
+    let parsed=null
+    try{parsed=JSON.parse(text.trim())}catch(_){}
+    if(!parsed){
+      const clean=text.replace(/```json/gi,'').replace(/```/g,'').trim()
+      try{parsed=JSON.parse(clean)}catch(_){}
+    }
+    if(!parsed){
+      const match=text.match(/\{[\s\S]*\}/)
+      if(match){try{parsed=JSON.parse(match[0])}catch(_){}}
+    }
+    if(!parsed) parsed={mensagem:text||'(cliente não respondeu)',score_delta:0,sinal:'neutro'}
     _RP._digitando=false
     _RP.mensagens.push({role:'cliente',texto:parsed.mensagem||'…',ts:Date.now()})
     _RP.score=Math.max(0,Math.min(100,_RP.score+Number(parsed.score_delta||0)))
@@ -5148,10 +5236,10 @@ Se for a primeira mensagem (inicio=true), quem inicia é você — apresente o c
 
 function _rpDescrPerfil(){
   const P={
-    empresario_familia:`Você é um pequeno empresário, casado, com 2 filhos entre 5 e 15 anos. Tem um negócio (padaria/loja/serviço). Renda R$ 8-25k/mês. Tem plano de saúde do seu contador ou algum coletivo, mas tá insatisfeito ou vai perder. Sua esposa tem forte opinião em decisões que envolvem os filhos. Você já ouviu 3 corretores, todos parecem iguais. Objeção real: você não confia fácil em corretor — quer alguém que pareça consultor, não vendedor. Sua palavra escondida é a esposa: se consultor não perguntar dela, você "vai pensar".`,
-    senior:`Você tem 63 anos. Vai se aposentar em breve (ou já se aposentou) e vai perder plano do trabalho. Tem colesterol alto e faz acompanhamento cardiológico. Tem 1-2 filhos adultos que às vezes participam da decisão. Renda R$ 4-8k. Cauteloso, informal mas educado, cansa de vendedor apressado. Sua objeção real: MEDO da carência. Você precisa continuar o tratamento cardiológico sem interrupção. Se consultor não mencionar portabilidade (RN 279), você acha que vai ficar 24 meses sem cobertura cardíaca e desiste.`,
-    pf_pediatrica:`Você é uma mãe de 32 anos. Filho de 5 anos. Marido trabalha em empresa que dá plano só pra ele, você e o filho ficam no SUS. Filho teve uma febre alta semana passada, ficou 3h no PS. Você se assustou. Quer plano SÓ pro filho (você aguenta o SUS, mas o filho não). Renda familiar R$ 6-12k. Insegura sobre gastar sem consultar marido. Objeção real escondida: você não sabe se vale a pena pagar R$ 200-400/mês por algo que talvez não use muito. Se consultor não ancorar em "consulta particular do pediatra R$ 400 vs. mensalidade", você não fecha.`,
-    pme:`Você é dono/RH de uma empresa com 15 funcionários. Está considerando oferecer plano como benefício pra reter pessoas boas. Um funcionário-chave pediu recentemente. Você já tem preço na cabeça: R$ 200-400 por vida. Objetivo real: entender se vale investir R$ 3-6k/mês (5% do faturamento) em benefício. Objeção real: não sabe se colaboradores vão usar/valorizar. Se consultor não perguntar sobre custo de turnover ou histórico de perda de talento, você fica no "vou pensar".`
+    empresario_familia:`PERSONALIDADE: pequeno empresário casado com filhos. Vive puxando as decisões financeiras da casa. Já ouviu vários corretores e todos parecem iguais — vendem mais do que consultam. Ceticismo com corretores é natural: vai testar se você é consultor ou só mais um "batendo meta". Sua esposa tem palavra forte em decisões que envolvem os filhos e cobertura — se consultor não perguntar pela esposa em algum momento, você "vai pensar" (defesa). Fala natural, direto, um jeito de dono de negócio: bem prático, sem enrolação. Frequentemente cita comparações com custos da empresa que ele conhece bem ("é quase o que pago de aluguel").`,
+    senior:`PERSONALIDADE: educado, cauteloso, formal moderado. Fala com calma e experiência de vida. Perdeu ou está prestes a perder plano do trabalho e sente medo real de ficar sem cobertura em idade avançada. Tem médicos e hospitais de referência que USA hoje — apego forte. Frequentemente menciona filhos ou netos (fonte de motivação pra se cuidar). Testa consultor com perguntas específicas sobre carência, portabilidade, doença preexistente. Se consultor não souber RN 279 (portabilidade sem carência se tinha coletivo 10+ anos), sua confiança despenca — você acha que ele não é especialista. Fala "olha, filho..." às vezes, calorosamente.`,
+    pf_pediatrica:`PERSONALIDADE: mãe preocupada, tom emocional presente. Fala coloquial, natural, com trechos de afeto pelo filho ("meu pequeno teve febre semana passada, meu Deus"). Mesmo com renda ok, sente que "só pro filho" é gasto novo — hesita. Marido decide o financeiro sem que ela precise pedir permissão explícita, mas ela consulta. Foco absoluto no filho, não em ela mesma — se consultor tentar vender plano familiar no primeiro contato, você fica arisca. Palavras que te tocam: pediatra, hospital infantil, urgência, tranquilidade. Se consultor ancorar em "R$ X é 2 consultas particulares/ano", você processa em silêncio (bom sinal). Frequentemente pergunta detalhes específicos sobre a rede pediátrica.`,
+    pme:`PERSONALIDADE: dono/gestor pragmático, foco em métricas. Fala numa mistura de coloquial e formal. Já perdeu talento — a dor é concreta, não hipotética. Foco em ROI: pergunta muito "isso vai ajudar a reter?" e "quanto por vida?". Tem em mente 5% do faturamento como teto pra beneficio. Se consultor não perguntar sobre histórico de turnover ou perfil dos colaboradores, você fica preso em preço puro. Se consultor mostrar cálculo de custo de contratação vs. plano, seu interesse dispara. Fala em números com frequência. Coloquial ("cara"), sem gíria pesada.`
   }
   return P[_RP.perfil]||P.empresario_familia
 }
@@ -5258,11 +5346,28 @@ Seja severo. Seja útil. Seja honesto.`
       })
     })
     const data=await res.json()
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error))
     const text=data.content?.[0]?.text||''
-    const clean=text.replace(/```json|```/g,'').trim()
-    const match=clean.match(/\{[\s\S]*\}/)
-    const parsed=match?JSON.parse(match[0]):null
-    if(!parsed) throw new Error('Resposta de avaliação inválida')
+    if(!text) throw new Error('Resposta vazia da API')
+    // Parser robusto — tenta múltiplas estratégias
+    let parsed=null
+    // Estratégia 1: JSON puro
+    try{parsed=JSON.parse(text.trim())}catch(_){}
+    // Estratégia 2: remove markdown ```json ... ```
+    if(!parsed){
+      const clean=text.replace(/```json/gi,'').replace(/```/g,'').trim()
+      try{parsed=JSON.parse(clean)}catch(_){}
+    }
+    // Estratégia 3: pega o primeiro { ... } válido
+    if(!parsed){
+      const match=text.match(/\{[\s\S]*\}/)
+      if(match){try{parsed=JSON.parse(match[0])}catch(_){}}
+    }
+    if(!parsed){
+      console.error('Resposta bruta:',text)
+      throw new Error('Não consegui interpretar a avaliação. Tente encerrar a rodada novamente.')
+    }
+    if(typeof parsed.nota==='undefined') throw new Error('Avaliação sem nota. Refaça.')
     // Salva no banco
     try{
       const upd={
