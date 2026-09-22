@@ -5623,7 +5623,7 @@ async function loadSvRoleplay(){
       </div>
       <div class="card">
         <div style="overflow-x:auto"><table class="tbl">
-          <thead><tr><th>Consultor</th><th>Status</th><th style="text-align:center">Rodadas</th><th style="text-align:center">Nota média</th><th style="text-align:center">Tendência</th><th>Última rodada</th><th></th></tr></thead>
+          <thead><tr><th>Consultor</th><th style="text-align:center">Roleplay</th><th>Status</th><th style="text-align:center">Rodadas</th><th style="text-align:center">Nota média</th><th style="text-align:center">Tendência</th><th>Última rodada</th><th></th></tr></thead>
           <tbody>${stats.length?stats.map(s=>{
             const cor=s.media===null?'var(--text3)':(s.media>=7?'#10B981':s.media>=5?'#F59E0B':'#DC2626')
             const tCor=s.tend==='↑'?'#10B981':s.tend==='↓'?'#DC2626':'var(--text3)'
@@ -5639,6 +5639,7 @@ async function loadSvRoleplay(){
             const ultimaTxt=s.ultRodada?new Date(s.ultRodada.encerrada_em||s.ultRodada.iniciada_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):'—'
             return `<tr>
               <td><div style="display:flex;align-items:center;gap:10px">${avatarHtml}<div><div style="font-weight:700">${_esc(s.cons.nome||'')}</div></div></div></td>
+              <td style="text-align:center"><label class="rp-toggle"><input type="checkbox" ${s.cons.roleplay_liberado?'checked':''} onchange="_toggleRoleplayLiberado('${s.cons.id}',this.checked,this);setTimeout(loadSvRoleplay,600)"><span class="rp-toggle-slider"></span></label></td>
               <td>${statusHtml}</td>
               <td style="text-align:center;font-weight:700">${s.rodadas}</td>
               <td style="text-align:center;font-weight:800;color:${cor};font-size:15px">${s.media!==null?s.media.toFixed(1):'—'}</td>
@@ -5646,10 +5647,19 @@ async function loadSvRoleplay(){
               <td style="font-size:12px;color:var(--text3)">${ultimaTxt}</td>
               <td><button onclick="_svAbrirDrilldown('${s.cons.id}',${_js(s.cons.nome)})" class="btn btn-sm" style="padding:5px 10px;font-size:11px" ${s.rodadas===0?'disabled style="opacity:.4;cursor:not-allowed;padding:5px 10px;font-size:11px"':''}>Ver detalhes →</button></td>
             </tr>`
-          }).join(''):'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhum consultor na equipe.</td></tr>'}
+          }).join(''):'<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3)">Nenhum consultor na equipe.</td></tr>'}
           </tbody>
         </table></div>
       </div>
+      <style>
+        .rp-toggle{position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;margin:0}
+        .rp-toggle input{opacity:0;width:0;height:0}
+        .rp-toggle-slider{position:absolute;inset:0;background:#CBD5E1;border-radius:22px;transition:.2s}
+        .rp-toggle-slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+        .rp-toggle input:checked+.rp-toggle-slider{background:#10B981}
+        .rp-toggle input:checked+.rp-toggle-slider:before{transform:translateX(16px)}
+        :root[data-theme="dark"] .rp-toggle-slider{background:#374151}
+      </style>
     </div>
   `
 }
@@ -5860,6 +5870,17 @@ window._maResponderContest=async(id,decisao)=>{
   }
   mostrarToast('Feito',`Contestação ${decisao}.`,'sucesso')
   loadMaContestacoes()
+}
+
+// Toggle de liberação de Roleplay — usado por master (aba Usuários) e supervisor (dashboard equipe)
+window._toggleRoleplayLiberado=async(userId,liberado,inputEl)=>{
+  const{error}=await sb.from('usuarios').update({roleplay_liberado:!!liberado}).eq('id',userId)
+  if(error){
+    mostrarToast('Erro',error.message,'erro')
+    if(inputEl) inputEl.checked=!liberado  // reverte visual
+    return
+  }
+  mostrarToast(liberado?'Liberado':'Bloqueado',`Roleplay ${liberado?'liberado':'bloqueado'} pro usuário.`,'sucesso')
 }
 
 // Badge de contestações pendentes na sidebar (só master)
@@ -8425,18 +8446,28 @@ async function loadMaUsuarios(){
       </div>
       <button class="btn btn-pri" onclick="abrirModalNovoUsuario()">+ Novo usuário</button>
     </div>
-    <div class="card"><table class="tbl">
-      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead>
+    <div class="card"><div style="overflow-x:auto"><table class="tbl">
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Equipe</th><th style="text-align:center">Roleplay</th><th>Ações</th></tr></thead>
       <tbody>${users.map(u=>`
         <tr>
           <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:30px;height:30px;font-size:11px">${ini(u.nome)}</div><span style="font-weight:600">${_esc(u.nome)}</span></div></td>
           <td style="color:var(--text3);font-size:13px">${_esc(u.email||'—')}</td>
           <td><span class="pill ${u.perfil==='supervisor'?'p-wn':'p-ok'}" style="font-size:11px">${u.perfil}</span></td>
           <td style="font-size:13px">${_esc(u.equipes?.nome||'—')}</td>
+          <td style="text-align:center"><label class="rp-toggle"><input type="checkbox" ${u.roleplay_liberado?'checked':''} onchange="_toggleRoleplayLiberado('${u.id}',this.checked,this)"><span class="rp-toggle-slider"></span></label></td>
           <td><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}',${_js(u.nome)})">🗑 Excluir</button></td>
         </tr>`).join('')}
       </tbody>
-    </table></div>
+    </table></div></div>
+    <style>
+      .rp-toggle{position:relative;display:inline-block;width:38px;height:22px;cursor:pointer}
+      .rp-toggle input{opacity:0;width:0;height:0}
+      .rp-toggle-slider{position:absolute;inset:0;background:#CBD5E1;border-radius:22px;transition:.2s}
+      .rp-toggle-slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+      .rp-toggle input:checked+.rp-toggle-slider{background:#10B981}
+      .rp-toggle input:checked+.rp-toggle-slider:before{transform:translateX(16px)}
+      :root[data-theme="dark"] .rp-toggle-slider{background:#374151}
+    </style>
     <!-- Modal novo usuário -->
     <div id="modal-novo-usu" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
       <div class="card" style="width:100%;max-width:460px;margin:20px">
