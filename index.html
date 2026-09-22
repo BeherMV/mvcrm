@@ -3848,6 +3848,7 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
 // NAVEGAÇÃO
 // ════════════════════════════════════════
 function setupConsultor(){
+  const roleplayItem=CU.roleplay_liberado?`<button class="sb-btn" onclick="navTo('p-roleplay',this,'Roleplay')">🎭 Roleplay <span class="pill-new">treino</span></button>`:''
   $('sb-nav').innerHTML=`
     <div class="sb-section">Principal</div>
     <button class="sb-btn active" onclick="navTo('p-home',this,'Meu painel')">📊 Meu painel</button>
@@ -3857,6 +3858,7 @@ function setupConsultor(){
     <div class="sb-section">Resultados</div>
     <button class="sb-btn" onclick="navTo('p-drives',this,'Drives')">📁 Drives</button>
     <button class="sb-btn" onclick="navTo('p-historico',this,'Histórico')">📋 Histórico</button>
+    ${roleplayItem?`<div class="sb-section">Treino</div>${roleplayItem}`:''}
     <div class="sb-section">Rede social</div>
     <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
     <div class="sb-section">Financeiro</div>
@@ -3872,11 +3874,13 @@ function setupConsultor(){
     <div id="p-perfil" class="page"></div>
     <div id="p-feed" class="page"></div>
     <div id="p-comissao" class="page"></div>
+    <div id="p-roleplay" class="page"></div>
   `
   loadCoHome()
 }
 
 function setupSupervisor(){
+  const roleplayItem=CU.roleplay_liberado?`<button class="sb-btn" onclick="navTo('p-roleplay',this,'Roleplay')">🎭 Roleplay <span class="pill-new">treino</span></button>`:''
   $('sb-nav').innerHTML=`
     <div class="sb-section">Visão geral</div>
     <button class="sb-btn active" onclick="navTo('p-sv-home',this,'Dashboard da equipe')">📊 Dashboard</button>
@@ -3885,6 +3889,7 @@ function setupSupervisor(){
     <div class="sb-section">Minha produção</div>
     <button class="sb-btn" onclick="navTo('p-sv-meus-leads',this,'Meus Leads')">👤 Meus Leads<span id="badge-fup-leads" class="pill-fup" style="display:none"></span></button>
     <button class="sb-btn" onclick="navTo('p-sv-meu-funil',this,'Meu Funil')">🔽 Meu Funil</button>
+    ${roleplayItem?`<div class="sb-section">Treino</div>${roleplayItem}`:''}
     <div class="sb-section">Gestão</div>
     <button class="sb-btn" onclick="navTo('p-sv-metas',this,'Metas')">🎯 Metas</button>
     <button class="sb-btn" onclick="navTo('p-sv-ranking',this,'Ranking')">🏆 Ranking</button>
@@ -3916,6 +3921,7 @@ function setupSupervisor(){
     <div id="p-sv-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
     <div id="p-feed" class="page"></div>
+    <div id="p-roleplay" class="page"></div>
   `
   loadSvHome()
 }
@@ -3979,7 +3985,8 @@ window.navTo=(id,btn,title)=>{
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
-    'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe
+    'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe,
+    'p-roleplay':loadRoleplay
   }
   if(map[id]) map[id]()
 }
@@ -4874,6 +4881,422 @@ window.copiarFollowUp=(i)=>{
   navigator.clipboard.writeText(versao.conteudo).then(()=>{
     mostrarToast('Copiado!','Mensagem copiada para a área de transferência','sucesso')
   })
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ROLEPLAY — treino de vendas com Claude atuando como cliente
+// Sprint 1A: MVP com módulo 'completa' + perfil 'empresario_familia'
+// ═══════════════════════════════════════════════════════════════════════
+
+const ROLEPLAY_PERFIS={
+  empresario_familia:{label:'Pequeno empresário família',emoji:'👔',desc:'Dono de pequeno negócio, casado, com filhos. Objeções via esposa.'},
+  senior:{label:'Sênior 60+',emoji:'👴',desc:'Aposentado/em aposentadoria, preocupado com carência e portabilidade.'},
+  pf_pediatrica:{label:'Mãe pro filho',emoji:'👩‍👦',desc:'Mãe buscando plano só pro filho pequeno.'},
+  pme:{label:'PME 2-99',emoji:'🏢',desc:'Dono ou RH de empresa pequena buscando benefício.'}
+}
+const ROLEPLAY_MODULOS={
+  completa:{label:'Rodada completa',emoji:'🎯',desc:'Do primeiro contato ao fechamento. Treino integral.'},
+  spin:{label:'SPIN diagnóstico',emoji:'❓',desc:'Cliente só responde perguntas. Treina S/P/I/N.'},
+  ancoragem:{label:'Ancoragem de valor',emoji:'⚓',desc:'Cliente pede preço. Ancore antes de dizer R$.'},
+  objecao:{label:'Contorno de objeção',emoji:'🛡️',desc:'Cliente ataca com objeção. Contorne com diagnóstico.'},
+  fechamento:{label:'Fechamento',emoji:'🤝',desc:'Cliente perguntou operacional. Não deixe escapar.'},
+  followup:{label:'Follow-up adormecido',emoji:'⏰',desc:'Cliente sumiu há X dias. Reative sem parecer desespero.'}
+}
+
+const _RP={
+  status:'idle',       // 'idle' | 'setup' | 'rodando' | 'encerrada'
+  modulo:null,         // chave de ROLEPLAY_MODULOS
+  perfil:null,         // chave de ROLEPLAY_PERFIS
+  dificuldade:3,       // 1-5
+  personaContexto:'',  // gerado pela IA no início
+  mensagens:[],        // [{role:'consultor'|'cliente', texto, ts}]
+  score:50,            // vínculo/score dinâmico interno
+  sessaoId:null,       // uuid criado no start
+  iniciadaEm:null
+}
+
+function loadRoleplay(){
+  const el=$('p-roleplay');if(!el)return
+  _RP.status='idle';_RP.modulo=null;_RP.perfil=null;_RP.mensagens=[];_RP.score=50;_RP.personaContexto='';_RP.sessaoId=null
+  _renderRoleplaySetup()
+}
+
+function _renderRoleplaySetup(){
+  const el=$('p-roleplay');if(!el)return
+  el.innerHTML=`
+    <div style="max-width:900px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:28px;font-weight:800;margin-bottom:4px">🎭 Roleplay MV</div>
+        <div style="font-size:13px;color:var(--text2)">Treino de vendas com IA fazendo o papel de cliente. Sem queimar lead real.</div>
+      </div>
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">1. Escolha o módulo</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+          ${Object.entries(ROLEPLAY_MODULOS).map(([k,m])=>`
+            <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}" style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:14px;text-align:left;cursor:pointer;transition:all .15s">
+              <div style="font-size:22px;margin-bottom:4px">${m.emoji}</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.label}</div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.3">${m.desc}</div>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div id="rp-perfil-wrap" style="display:none;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">2. Escolha o perfil do cliente</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+          <button onclick="_rpSelPerfil('surpresa',this)" class="rp-card" data-perfil="surpresa" style="background:linear-gradient(135deg,#F0FDF4,#EFF6FF);border:1.5px solid #86EFAC;border-radius:10px;padding:14px;text-align:left;cursor:pointer">
+            <div style="font-size:22px;margin-bottom:4px">🎲</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">Surpresa</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.3">Sistema escolhe. Treina versatilidade.</div>
+          </button>
+          ${Object.entries(ROLEPLAY_PERFIS).map(([k,p])=>`
+            <button onclick="_rpSelPerfil('${k}',this)" class="rp-card" data-perfil="${k}" style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:14px;text-align:left;cursor:pointer">
+              <div style="font-size:22px;margin-bottom:4px">${p.emoji}</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">${p.label}</div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.3">${p.desc}</div>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div id="rp-iniciar-wrap" style="display:none;text-align:center">
+        <button onclick="_rpIniciar()" class="btn btn-pri" style="font-size:15px;padding:12px 32px;font-weight:800">Iniciar rodada ▶</button>
+      </div>
+    </div>
+    <style>
+      .rp-card:hover{border-color:var(--mid);transform:translateY(-1px)}
+      .rp-card.sel{border-color:var(--mid);background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border-width:2px}
+    </style>
+  `
+}
+window._rpSelModulo=(k,btn)=>{
+  _RP.modulo=k
+  document.querySelectorAll('.rp-card[data-modulo]').forEach(b=>b.classList.remove('sel'))
+  btn.classList.add('sel')
+  $('rp-perfil-wrap').style.display='block'
+  _rpAtualizarBotaoIniciar()
+}
+window._rpSelPerfil=(k,btn)=>{
+  if(k==='surpresa'){
+    const keys=Object.keys(ROLEPLAY_PERFIS)
+    _RP.perfil=keys[Math.floor(Math.random()*keys.length)]
+  }else{
+    _RP.perfil=k
+  }
+  document.querySelectorAll('.rp-card[data-perfil]').forEach(b=>b.classList.remove('sel'))
+  btn.classList.add('sel')
+  _rpAtualizarBotaoIniciar()
+}
+function _rpAtualizarBotaoIniciar(){
+  if(_RP.modulo&&_RP.perfil) $('rp-iniciar-wrap').style.display='block'
+}
+
+// Ajusta dificuldade baseado na média das últimas 5 rodadas
+async function _rpCalcularDificuldade(){
+  try{
+    const{data}=await sb.from('roleplay_sessoes').select('nota').eq('consultor_id',CU.id).not('nota','is',null).order('encerrada_em',{ascending:false}).limit(5)
+    if(!data||!data.length) return 3
+    const media=data.reduce((s,x)=>s+Number(x.nota||0),0)/data.length
+    if(media>=8) return 5
+    if(media>=6.5) return 4
+    if(media>=5) return 3
+    if(media>=3.5) return 2
+    return 1
+  }catch(e){return 3}
+}
+
+window._rpIniciar=async()=>{
+  _RP.dificuldade=await _rpCalcularDificuldade()
+  _RP.mensagens=[]
+  _RP.score=[60,55,50,45,30][_RP.dificuldade-1]  // score inicial por dificuldade
+  _RP.iniciadaEm=new Date().toISOString()
+  _RP.status='rodando'
+  // Cria sessão no banco (a partir do commit da fase de save, se falhar tolera)
+  try{
+    const{data}=await sb.from('roleplay_sessoes').insert({
+      consultor_id:CU.id,modulo:_RP.modulo,perfil_cliente:_RP.perfil,dificuldade:_RP.dificuldade
+    }).select('id').single()
+    if(data) _RP.sessaoId=data.id
+  }catch(e){console.warn('rp sessao:',e)}
+  _renderRoleplayChat()
+  // Pede primeira mensagem do cliente
+  await _rpGerarMensagemCliente(true)
+}
+
+function _renderRoleplayChat(){
+  const el=$('p-roleplay');if(!el)return
+  const modInfo=ROLEPLAY_MODULOS[_RP.modulo]
+  const perInfo=ROLEPLAY_PERFIS[_RP.perfil]
+  el.innerHTML=`
+    <div style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 120px)">
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${modInfo.emoji} ${modInfo.label} · ${perInfo.emoji} ${perInfo.label}</div>
+          <div style="font-size:11px;color:var(--text3)">Dificuldade ${_RP.dificuldade}/5 · Rodada em andamento</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="_rpEncerrar('venda_fechada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:12px;padding:6px 12px">Fechei venda</button>
+          <button onclick="_rpEncerrar('cliente_rejeitou')" class="btn btn-sec" style="font-size:12px;padding:6px 12px">Perdi cliente</button>
+          <button onclick="loadRoleplay()" class="btn" style="background:transparent;color:var(--text3);border:1.5px solid var(--border);font-size:12px;padding:6px 12px">Cancelar</button>
+        </div>
+      </div>
+      <div id="rp-msgs" style="flex:1;overflow-y:auto;background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:8px">
+        <textarea id="rp-input" placeholder="Sua mensagem... (Enter envia, Shift+Enter quebra linha)" rows="2" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;resize:none;background:var(--card)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_rpEnviarMsg()}"></textarea>
+        <button onclick="_rpEnviarMsg()" class="btn btn-pri" style="padding:0 20px">Enviar</button>
+      </div>
+    </div>
+  `
+  _rpRenderMsgs()
+}
+
+function _rpRenderMsgs(){
+  const box=$('rp-msgs');if(!box)return
+  box.innerHTML=_RP.mensagens.map(m=>{
+    if(m.role==='consultor'){
+      return `<div style="align-self:flex-end;background:#25D366;color:#fff;padding:8px 12px;border-radius:12px 12px 0 12px;max-width:75%;font-size:13px;white-space:pre-wrap;line-height:1.4">${_esc(m.texto)}</div>`
+    }
+    return `<div style="align-self:flex-start;background:var(--card);border:1px solid var(--border);padding:8px 12px;border-radius:12px 12px 12px 0;max-width:75%;font-size:13px;white-space:pre-wrap;line-height:1.4">${_esc(m.texto)}</div>`
+  }).join('')+(_RP._digitando?`<div style="align-self:flex-start;background:var(--card);border:1px solid var(--border);padding:8px 12px;border-radius:12px;font-size:12px;color:var(--text3);font-style:italic">Cliente digitando…</div>`:'')
+  box.scrollTop=box.scrollHeight
+}
+
+window._rpEnviarMsg=async()=>{
+  const inp=$('rp-input');if(!inp)return
+  const txt=inp.value.trim();if(!txt)return
+  inp.value=''
+  _RP.mensagens.push({role:'consultor',texto:txt,ts:Date.now()})
+  _rpRenderMsgs()
+  await _rpGerarMensagemCliente(false)
+}
+
+async function _rpGerarMensagemCliente(inicio){
+  _RP._digitando=true;_rpRenderMsgs()
+  const perfil=ROLEPLAY_PERFIS[_RP.perfil]
+  const modulo=ROLEPLAY_MODULOS[_RP.modulo]
+  // Prompt do "Claude cliente"
+  const systemPrompt=`Você é um CLIENTE brasileiro de plano de saúde. Sua função é fazer um roleplay de vendas: o vendedor (usuário) vai tentar te vender um plano. Você reage de forma realista, como cliente real reagiria. NUNCA saia do papel. NUNCA revele que é IA.
+
+═══ SEU PERFIL ═══
+${_rpDescrPerfil()}
+
+═══ NÍVEL DE DIFICULDADE: ${_RP.dificuldade}/5 ═══
+${_rpDescrDificuldade()}
+
+═══ REGRAS COMPORTAMENTAIS ═══
+1. Responda em português brasileiro, informal ou formal conforme sua personalidade.
+2. RESPOSTAS CURTAS. Cliente real não escreve parágrafos. 1-3 linhas. Às vezes só "hmm", "sei", "ok".
+3. NÃO ajude o consultor. Não dê pistas fáceis. Ele tem que descobrir.
+4. Se ele fizer SPIN (perguntas boas): abra progressivamente conforme técnica.
+5. Se ele PRESUMIR sua dor sem perguntar: reaja neutro ou reticente.
+6. Se ele PEDIR DESCONTO sem diagnosticar: reaja mal ("hmm, mas nem falamos direito ainda").
+7. Se ele usar frases genéricas ("posso te ajudar", "fico à disposição"): responda curto e desinteressado.
+8. Se ele USAR TÉCNICA CORRETA (ancoragem, diagnóstico, valida sua preocupação): abra mais.
+9. VOCÊ TEM UMA OBJEÇÃO REAL escondida. Se ele DIAGNOSTICAR bem (pergunta como "comparado com o quê?" / "o que ainda falta?"), VOCÊ REVELA. Senão, dá objeção mentirosa superficial ("caro", "vou pensar").
+10. Se score consultor muito baixo (nível 4-5 dificuldade + consultor falha muito): pare de responder ou responda "vou pensar depois te falo" e fique quieto.
+11. Se ele acertar consistentemente: mostre sinais de compra (pergunta operacional: "como funciona a carência?", "quando começa?").
+
+═══ ESTADO ATUAL DA CONVERSA ═══
+Módulo: ${modulo.label} — ${modulo.desc}
+Mensagens trocadas: ${_RP.mensagens.length}
+Score interno do consultor até agora: ${_RP.score}/100 (não revele isso ao vendedor)
+
+═══ FORMATO DE RESPOSTA ═══
+Retorne APENAS JSON válido, sem markdown:
+{
+  "mensagem": "sua resposta como cliente",
+  "score_delta": número entre -15 e +15 (quanto o consultor ganhou/perdeu com esta troca),
+  "sinal": "engajado" | "neutro" | "friccao" | "abandono" (seu estado interno após a última mensagem do consultor)
+}
+
+Se for a primeira mensagem (inicio=true), quem inicia é você — apresente o contexto minimamente (ex: "Oi, tô vendo aqui uma cotação sua..."). Se não for, RESPONDA a última mensagem do consultor.`
+
+  const conversaTexto=_RP.mensagens.map(m=>`${m.role==='consultor'?'VENDEDOR':'VOCÊ (cliente)'}: ${m.texto}`).join('\n')
+  const userPrompt=inicio
+    ?'Inicie a conversa. Você é o cliente entrando em contato pela primeira vez ou respondendo um lead que o vendedor deixou. Seja natural, curto (1-2 linhas).'
+    :`Conversa até agora:\n${conversaTexto}\n\nResponda a última mensagem do VENDEDOR mantendo seu papel de cliente. JSON puro.`
+
+  try{
+    const res=await fetch('/api/followup',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:600,
+        system:systemPrompt,
+        messages:[{role:'user',content:userPrompt}]
+      })
+    })
+    const data=await res.json()
+    const text=data.content?.[0]?.text||''
+    const clean=text.replace(/```json|```/g,'').trim()
+    const match=clean.match(/\{[\s\S]*\}/)
+    const parsed=match?JSON.parse(match[0]):{mensagem:'(cliente não respondeu)',score_delta:0,sinal:'neutro'}
+    _RP._digitando=false
+    _RP.mensagens.push({role:'cliente',texto:parsed.mensagem||'…',ts:Date.now()})
+    _RP.score=Math.max(0,Math.min(100,_RP.score+Number(parsed.score_delta||0)))
+    _rpRenderMsgs()
+    // Se cliente sinaliza abandono E score muito baixo, encerra sozinho
+    if(parsed.sinal==='abandono'&&_RP.score<20&&_RP.mensagens.length>10){
+      setTimeout(()=>_rpEncerrar('cliente_sumiu'),1500)
+    }
+  }catch(e){
+    console.error('rp cliente:',e)
+    _RP._digitando=false
+    _RP.mensagens.push({role:'cliente',texto:'(erro ao gerar resposta — tente enviar de novo)',ts:Date.now()})
+    _rpRenderMsgs()
+  }
+}
+
+function _rpDescrPerfil(){
+  const P={
+    empresario_familia:`Você é um pequeno empresário, casado, com 2 filhos entre 5 e 15 anos. Tem um negócio (padaria/loja/serviço). Renda R$ 8-25k/mês. Tem plano de saúde do seu contador ou algum coletivo, mas tá insatisfeito ou vai perder. Sua esposa tem forte opinião em decisões que envolvem os filhos. Você já ouviu 3 corretores, todos parecem iguais. Objeção real: você não confia fácil em corretor — quer alguém que pareça consultor, não vendedor. Sua palavra escondida é a esposa: se consultor não perguntar dela, você "vai pensar".`,
+    senior:`Você tem 63 anos. Vai se aposentar em breve (ou já se aposentou) e vai perder plano do trabalho. Tem colesterol alto e faz acompanhamento cardiológico. Tem 1-2 filhos adultos que às vezes participam da decisão. Renda R$ 4-8k. Cauteloso, informal mas educado, cansa de vendedor apressado. Sua objeção real: MEDO da carência. Você precisa continuar o tratamento cardiológico sem interrupção. Se consultor não mencionar portabilidade (RN 279), você acha que vai ficar 24 meses sem cobertura cardíaca e desiste.`,
+    pf_pediatrica:`Você é uma mãe de 32 anos. Filho de 5 anos. Marido trabalha em empresa que dá plano só pra ele, você e o filho ficam no SUS. Filho teve uma febre alta semana passada, ficou 3h no PS. Você se assustou. Quer plano SÓ pro filho (você aguenta o SUS, mas o filho não). Renda familiar R$ 6-12k. Insegura sobre gastar sem consultar marido. Objeção real escondida: você não sabe se vale a pena pagar R$ 200-400/mês por algo que talvez não use muito. Se consultor não ancorar em "consulta particular do pediatra R$ 400 vs. mensalidade", você não fecha.`,
+    pme:`Você é dono/RH de uma empresa com 15 funcionários. Está considerando oferecer plano como benefício pra reter pessoas boas. Um funcionário-chave pediu recentemente. Você já tem preço na cabeça: R$ 200-400 por vida. Objetivo real: entender se vale investir R$ 3-6k/mês (5% do faturamento) em benefício. Objeção real: não sabe se colaboradores vão usar/valorizar. Se consultor não perguntar sobre custo de turnover ou histórico de perda de talento, você fica no "vou pensar".`
+  }
+  return P[_RP.perfil]||P.empresario_familia
+}
+
+function _rpDescrDificuldade(){
+  const D={
+    1:'FÁCIL. Cliente colaborativo. Reage bem a técnica mesmo mediana. Objeções superficiais. Fecha se consultor fizer o básico.',
+    2:'MÉDIO-FÁCIL. Cliente engajado mas quer ser bem tratado. Perde interesse com mensagem genérica.',
+    3:'MÉDIO (padrão). Cliente neutro. Testa consultor. Se ele diagnosticar, abre. Se aceitar objeção seca, fecha.',
+    4:'MÉDIO-DIFÍCIL. Cliente cauteloso. Dá objeção mentirosa forçando diagnóstico. Só abre se consultor for muito bom.',
+    5:'DIFÍCIL. Cliente cético desde 1º contato. Curto. Pode dar 2 objeções em sequência. Score começa em 30. Apenas consultor sênior fecha.'
+  }
+  return D[_RP.dificuldade]||D[3]
+}
+
+window._rpEncerrar=async(resultado)=>{
+  _RP.status='encerrada'
+  if(_RP.mensagens.length<3){mostrarToast('Rodada curta demais','Faça pelo menos 3 trocas antes de encerrar.','info');_RP.status='rodando';return}
+  const modInfo=ROLEPLAY_MODULOS[_RP.modulo]
+  const perInfo=ROLEPLAY_PERFIS[_RP.perfil]
+  const el=$('p-roleplay');if(!el)return
+  el.innerHTML=`<div style="max-width:900px;margin:40px auto;text-align:center">
+    <div style="font-size:20px;font-weight:800;margin-bottom:8px">Gerando avaliação…</div>
+    <div style="font-size:13px;color:var(--text3)">O simulador está analisando sua rodada. Aguarde.</div>
+    <div style="margin-top:20px;font-size:32px">⏳</div>
+  </div>`
+  const conversa=_RP.mensagens.map(m=>`${m.role==='consultor'?'CONSULTOR':'CLIENTE'}: ${m.texto}`).join('\n')
+  const avalPrompt=`Você é um AVALIADOR de vendas da MV Corretora. Um consultor acabou de fazer um roleplay com um cliente simulado.
+
+═══ CONTEXTO ═══
+Módulo treinado: ${modInfo.label} (${modInfo.desc})
+Perfil do cliente: ${perInfo.label}
+Dificuldade: ${_RP.dificuldade}/5
+Score final acumulado: ${_RP.score}/100
+Resultado declarado pelo consultor: ${resultado}
+
+═══ TRANSCRIÇÃO DA RODADA ═══
+${conversa}
+
+═══ SUA TAREFA ═══
+Avaliar a atuação do consultor conforme as técnicas MV. Seja SÉRIO, DIRETO, HONESTO. Sem bajulação. Sem "parabéns pela dedicação". Se foi mal, diga que foi mal. Se foi bem, também.
+
+Critérios (baseados no material Alta Performance):
+- SPIN aplicado (S/P/I/N presentes)?
+- Ancoragem em números concretos?
+- Diagnosticou objeção antes de responder?
+- Usou palavra reforço + nome cliente?
+- Validou preocupação negativa antes de contornar?
+- Terminou mensagens com pergunta ≤10 palavras?
+- Adaptou tom ao perfil?
+- Usou blacklist ("fico à disposição", "posso te ajudar", "aguardo retorno", etc)?
+- Sugeriu próximo passo concreto (agenda, canal alternativo)?
+- Reforçou diferencial pós-venda MV concretamente?
+- Perguntou pelo decisor secundário (esposa, filhos) quando pertinente?
+- Criou vínculo (0-10)?
+
+═══ FORMATO DE RESPOSTA (JSON puro) ═══
+{
+  "nota": número inteiro 0-10,
+  "vinculo": número 0-10,
+  "resultado_rodada": "${resultado}",
+  "pontos_positivos": [3-5 strings, ações concretas que o consultor fez bem],
+  "pontos_desenvolver": [3-5 strings, ações concretas que faltaram ou foram feitas mal],
+  "momento_critico": {"turno": número (posição da mensagem no chat), "erro": "descrição do erro", "certo_seria": "o que deveria ter sido feito com script exato"},
+  "recomendacao_treino": "sugestão específica de próximos módulos para focar",
+  "referencia_material": "página específica do PDF Alta Performance"
+}`
+
+  try{
+    const res=await fetch('/api/followup',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:2000,
+        messages:[{role:'user',content:avalPrompt}]
+      })
+    })
+    const data=await res.json()
+    const text=data.content?.[0]?.text||''
+    const clean=text.replace(/```json|```/g,'').trim()
+    const match=clean.match(/\{[\s\S]*\}/)
+    const parsed=match?JSON.parse(match[0]):null
+    if(!parsed) throw new Error('Resposta de avaliação inválida')
+    // Salva no banco
+    try{
+      const upd={
+        nota:parsed.nota,
+        qtd_mensagens:_RP.mensagens.length,
+        duracao_seg:Math.round((Date.now()-new Date(_RP.iniciadaEm).getTime())/1000),
+        pontos_positivos:parsed.pontos_positivos||[],
+        pontos_desenvolver:parsed.pontos_desenvolver||[],
+        feedback_texto:JSON.stringify({momento_critico:parsed.momento_critico,recomendacao_treino:parsed.recomendacao_treino,referencia_material:parsed.referencia_material,vinculo:parsed.vinculo,resultado_rodada:parsed.resultado_rodada,score_final:_RP.score}),
+        transcricao:conversa,
+        encerrada_em:new Date().toISOString()
+      }
+      if(_RP.sessaoId){
+        await sb.from('roleplay_sessoes').update(upd).eq('id',_RP.sessaoId)
+      }
+    }catch(e){console.warn('rp save:',e)}
+    _renderRoleplayFeedback(parsed)
+  }catch(e){
+    console.error('rp aval:',e)
+    el.innerHTML=`<div style="max-width:900px;margin:40px auto;text-align:center;padding:20px">
+      <div style="font-size:16px;color:var(--red)">Erro ao gerar avaliação: ${_esc(e.message)}</div>
+      <button onclick="loadRoleplay()" class="btn btn-pri" style="margin-top:14px">Voltar</button>
+    </div>`
+  }
+}
+
+function _renderRoleplayFeedback(f){
+  const el=$('p-roleplay');if(!el)return
+  const notaCor=f.nota>=8?'#10B981':f.nota>=6?'#F59E0B':'#DC2626'
+  el.innerHTML=`
+    <div style="max-width:900px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:16px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:6px">Sua nota</div>
+        <div style="font-size:64px;font-weight:900;color:${notaCor};line-height:1">${f.nota}<span style="font-size:24px;color:var(--text3)">/10</span></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:6px">Vínculo criado: <strong>${f.vinculo}/10</strong> · Resultado: ${f.resultado_rodada}</div>
+      </div>
+      <div class="g2">
+        <div class="card" style="border-top:4px solid #10B981">
+          <div class="card-head"><span class="card-title" style="color:#065F46">✅ Pontos positivos</span></div>
+          <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.6">${(f.pontos_positivos||[]).map(p=>`<li>${_esc(p)}</li>`).join('')}</ul>
+        </div>
+        <div class="card" style="border-top:4px solid #F59E0B">
+          <div class="card-head"><span class="card-title" style="color:#B45309">⚠️ A desenvolver</span></div>
+          <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.6">${(f.pontos_desenvolver||[]).map(p=>`<li>${_esc(p)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      ${f.momento_critico?`<div class="card" style="border-left:4px solid #DC2626;margin-top:12px">
+        <div class="card-head"><span class="card-title" style="color:#B91C1C">🔥 Momento crítico da rodada</span></div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px"><strong>Erro:</strong> ${_esc(f.momento_critico.erro||'')}</div>
+        <div style="font-size:13px;color:var(--text2);background:var(--bg2);padding:10px 12px;border-radius:8px"><strong style="color:#065F46">O certo seria:</strong> ${_esc(f.momento_critico.certo_seria||'')}</div>
+      </div>`:''}
+      ${f.recomendacao_treino?`<div class="card" style="margin-top:12px;background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border:1.5px solid #93C5FD">
+        <div style="font-size:12px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Recomendação de próximo treino</div>
+        <div style="font-size:13px">${_esc(f.recomendacao_treino)}</div>
+        ${f.referencia_material?`<div style="font-size:11px;color:var(--text3);margin-top:6px">📖 ${_esc(f.referencia_material)}</div>`:''}
+      </div>`:''}
+      <div style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center">
+        <button onclick="loadRoleplay()" class="btn btn-pri">▶ Nova rodada</button>
+        <button onclick="navTo('p-home',document.querySelector('.sb-btn'),'Meu painel')" class="btn btn-sec">Voltar ao painel</button>
+      </div>
+    </div>
+  `
 }
 
 window.excluirLead=async(id,nome)=>{
