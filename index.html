@@ -5119,8 +5119,8 @@ Se for a primeira mensagem (inicio=true), quem inicia é você — apresente o c
     const res=await fetch('/api/followup',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:600,
+        model:'claude-sonnet-5',
+        max_tokens:800,
         system:systemPrompt,
         messages:[{role:'user',content:userPrompt}]
       })
@@ -5179,53 +5179,81 @@ window._rpEncerrar=async(resultado)=>{
     <div style="margin-top:20px;font-size:32px">⏳</div>
   </div>`
   const conversa=_RP.mensagens.map(m=>`${m.role==='consultor'?'CONSULTOR':'CLIENTE'}: ${m.texto}`).join('\n')
-  const avalPrompt=`Você é um AVALIADOR de vendas da MV Corretora. Um consultor acabou de fazer um roleplay com um cliente simulado.
+  const avalPrompt=`Você é um AVALIADOR RIGOROSO de vendas da MV Corretora. Sua função é analisar a atuação de um consultor num roleplay e devolver uma nota HONESTA, sem bajulação, sem "nota consolo".
 
-═══ CONTEXTO ═══
+═══ FILOSOFIA DE AVALIAÇÃO ═══
+Você é como um coach sênior de vendas com 20 anos de experiência. Seu trabalho é IDENTIFICAR OS ERROS, não elogiar. Um consultor melhora só quando enxerga o que fez errado com clareza. Bajulação atrasa o desenvolvimento.
+
+REGRAS DE OURO DA AVALIAÇÃO:
+1. Se o consultor não fez SPIN completo (S+P+I+N), nota MÁXIMA é 6.
+2. Se usou frase da blacklist ("fico à disposição", "posso te ajudar", "aguardo retorno", "qualquer coisa me chama", "pensa e me avisa"), nota MÁXIMA é 5.
+3. Se deu desconto/preço antes de diagnosticar objeção, nota MÁXIMA é 4.
+4. Se não usou "palavra reforço + nome" NENHUMA VEZ, nota MÁXIMA é 6.
+5. Se não terminou mensagens com pergunta em ≥70% das mensagens, nota MÁXIMA é 6.
+6. Se cliente sumiu (resultado: cliente_sumiu), nota MÁXIMA é 4 — independente do que fez antes.
+7. Se aplicou ANCORAGEM concreta (UTI, internação, consulta particular, faixa), +1 ponto no cap.
+8. Se validou preocupação negativa ANTES de contornar (não usou "mas..."), +1 ponto no cap.
+9. Se perguntou pelo decisor secundário (esposa, filho, sócio), +0.5 ponto.
+10. Se reforçou diferencial pós-venda MV com AÇÃO CONCRETA (não "temos ótimo pós-venda"), +0.5 ponto.
+
+═══ RÉGUA DE NOTAS (SIGA ESTRITAMENTE) ═══
+- **10** = Excepcional. Fechou venda + SPIN completo + ancoragem + diagnóstico de objeção + vínculo alto + zero blacklist + zero improviso. RARÍSSIMO.
+- **9** = Muito bom. Fechou/quase fechou + SPIN quase completo + boa técnica + máx 1 erro pequeno.
+- **8** = Bom. Fechou ou avançou proposta + SPIN parcial + ancoragem OU diagnóstico bem feito + poucos erros técnicos.
+- **7** = Aceitável. Próximo passo agendado + técnica presente mas incompleta + vínculo médio.
+- **6** = Mediano. Fez parte das técnicas mas com furos. Cliente engajado sem sinal claro de compra.
+- **5** = Fraco. Blacklist violada OU SPIN ausente OU não diagnosticou objeção. Consultor precisa treinar mais.
+- **4** = Ruim. Cliente sumiu OU consultor pediu desconto sem diagnóstico OU 3+ erros técnicos graves.
+- **3** = Ruim demais. Zero SPIN + blacklist múltipla + vínculo zero.
+- **2** = Péssimo. Consultor confuso, sem estrutura, ignorou cliente.
+- **1** = Consultor não pareceu vendedor MV. Desalinhado com material.
+- **0** = Foi ofensivo, prometeu impossível, ou totalmente inadequado.
+
+═══ CONTEXTO DA RODADA ═══
 Módulo treinado: ${modInfo.label} (${modInfo.desc})
 Perfil do cliente: ${perInfo.label}
 Dificuldade: ${_RP.dificuldade}/5
-Score final acumulado: ${_RP.score}/100
-Resultado declarado pelo consultor: ${resultado}
+Score interno acumulado: ${_RP.score}/100
+Resultado declarado: ${resultado}
 
-═══ TRANSCRIÇÃO DA RODADA ═══
+═══ TRANSCRIÇÃO ═══
 ${conversa}
 
-═══ SUA TAREFA ═══
-Avaliar a atuação do consultor conforme as técnicas MV. Seja SÉRIO, DIRETO, HONESTO. Sem bajulação. Sem "parabéns pela dedicação". Se foi mal, diga que foi mal. Se foi bem, também.
+═══ AVALIE COM EVIDÊNCIA ═══
+Cada ponto positivo e cada ponto a desenvolver DEVE citar EVIDÊNCIA CONCRETA da transcrição — trecho específico, turno específico, ação específica. NÃO ACEITAR generalidades tipo "boa comunicação" ou "poderia melhorar".
 
-Critérios (baseados no material Alta Performance):
-- SPIN aplicado (S/P/I/N presentes)?
-- Ancoragem em números concretos?
-- Diagnosticou objeção antes de responder?
-- Usou palavra reforço + nome cliente?
-- Validou preocupação negativa antes de contornar?
-- Terminou mensagens com pergunta ≤10 palavras?
-- Adaptou tom ao perfil?
-- Usou blacklist ("fico à disposição", "posso te ajudar", "aguardo retorno", etc)?
-- Sugeriu próximo passo concreto (agenda, canal alternativo)?
-- Reforçou diferencial pós-venda MV concretamente?
-- Perguntou pelo decisor secundário (esposa, filhos) quando pertinente?
-- Criou vínculo (0-10)?
+Se algo NÃO foi feito, aponte. Ex: "Não fez pergunta de Implicação em nenhum momento — cliente nunca sentiu o custo real de não decidir."
 
-═══ FORMATO DE RESPOSTA (JSON puro) ═══
+Vínculo (0-10) mede QUANTO cliente CONFIOU + ABRIU + ENGAJOU independente de venda. Não é bônus — é métrica dura. Zero se cliente se manteve fechado.
+
+═══ FORMATO DE RESPOSTA (JSON PURO, sem markdown) ═══
 {
-  "nota": número inteiro 0-10,
-  "vinculo": número 0-10,
+  "nota": número 0-10 inteiro,
+  "vinculo": número 0-10 inteiro,
   "resultado_rodada": "${resultado}",
-  "pontos_positivos": [3-5 strings, ações concretas que o consultor fez bem],
-  "pontos_desenvolver": [3-5 strings, ações concretas que faltaram ou foram feitas mal],
-  "momento_critico": {"turno": número (posição da mensagem no chat), "erro": "descrição do erro", "certo_seria": "o que deveria ter sido feito com script exato"},
-  "recomendacao_treino": "sugestão específica de próximos módulos para focar",
-  "referencia_material": "página específica do PDF Alta Performance"
-}`
+  "pontos_positivos": [
+    "3 a 4 strings COM EVIDÊNCIA CONCRETA (trecho, turno, técnica específica)"
+  ],
+  "pontos_desenvolver": [
+    "3 a 5 strings COM EVIDÊNCIA CONCRETA. Priorize erros mais impactantes."
+  ],
+  "momento_critico": {
+    "turno": número (posição da mensagem no chat, começa em 1),
+    "erro": "descrição objetiva do erro cometido pelo consultor",
+    "certo_seria": "script exato que deveria ter sido enviado, com técnica MV aplicada"
+  },
+  "recomendacao_treino": "recomendação prática — quais módulos rodar em seguida e o que focar",
+  "referencia_material": "página específica do PDF Alta Performance ou seção do prompt do CRM"
+}
+
+Seja severo. Seja útil. Seja honesto.`
 
   try{
     const res=await fetch('/api/followup',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:2000,
+        model:'claude-sonnet-5',
+        max_tokens:2500,
         messages:[{role:'user',content:avalPrompt}]
       })
     })
