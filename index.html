@@ -2395,6 +2395,8 @@ async function iniciarApp(){
   _autoFecharMesAnterior()
   // Follow-ups: badge + banner persistente + modal de boas-vindas 1x por sessão
   if(CU.perfil!=='master') atualizarFollowupBadge({mostrarModal:true})
+  // Master: badge de contestações Roleplay pendentes
+  if(CU.perfil==='master') setTimeout(()=>{try{_atualizarBadgeContest()}catch(e){}},400)
   // Detecta novas versões do CRM sem exigir hard refresh do usuário
   _iniciarChecagemVersao()
 }
@@ -3947,6 +3949,7 @@ function setupMaster(){
     <div class="sb-section">Sistema</div>
     <button class="sb-btn" onclick="navTo('p-ma-equipe',this,'Equipe')">👥 Equipe</button>
     <button class="sb-btn" onclick="navTo('p-ma-usuarios',this,'Usuários')">👤 Usuários</button>
+    <button class="sb-btn" onclick="navTo('p-ma-contest',this,'Contestações Roleplay')">⚖ Contestações IA <span id="badge-contest" class="pill-fup" style="display:none"></span></button>
     <div class="sb-section">Financeiro</div>
     <button class="sb-btn" onclick="navTo('p-com-eq',this,'Provisionamento geral')">💰 Provisionamento</button>
     <div class="sb-section">Rede social</div>
@@ -3967,6 +3970,7 @@ function setupMaster(){
     <div id="p-ma-usuarios" class="page"></div>
     <div id="p-ma-equipe" class="page"></div>
     <div id="p-ma-perfil" class="page"></div>
+    <div id="p-ma-contest" class="page"></div>
     <div id="p-feed" class="page"></div>
     <div id="p-com-eq" class="page"></div>
   `
@@ -3986,7 +3990,7 @@ window.navTo=(id,btn,title)=>{
     'p-sv-home':loadSvHome,'p-sv-consultores':loadSvConsultores,'p-sv-funil':loadSvFunil,'p-sv-meus-leads':()=>loadSvMeusLeads(),'p-sv-meu-funil':()=>loadSvMeuFunil(),
     'p-sv-metas':loadSvMetas,'p-sv-ranking':loadSvRanking,'p-sv-curvas':loadSvCurvas,'p-sv-prov':loadSvProv,'p-sv-recusas':loadSvRecusas,'p-sv-engajamento':loadSvEngajamento,'p-sv-historico':loadSvHistorico,
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
-    'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,
+    'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,'p-ma-contest':loadMaContestacoes,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
     'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe,
     'p-roleplay':loadRoleplay,'p-sv-roleplay':loadSvRoleplay
@@ -5734,6 +5738,148 @@ window._svAbrirDrilldown=async(consultorId,consultorNome)=>{
   document.body.insertAdjacentHTML('beforeend',html)
 }
 window._svFecharDrilldown=()=>{const el=document.getElementById('mod-sv-drilldown');if(el)el.remove()}
+// ═══════════════════════════════════════════════════════════════════════
+// ROLEPLAY — Análise de Contestações (só master)
+// ═══════════════════════════════════════════════════════════════════════
+async function loadMaContestacoes(){
+  const el=$('p-ma-contest');if(!el)return
+  el.innerHTML='<div class="loading">Carregando…</div>'
+  const{data,error}=await sb.from('roleplay_contestacoes')
+    .select('*, sessao:roleplay_sessoes(consultor_id,modulo,perfil_cliente,nota,pontos_positivos,pontos_desenvolver,feedback_texto,transcricao,iniciada_em,encerrada_em), consultor:consultor_id(nome,foto_url)')
+    .order('criada_em',{ascending:false})
+    .limit(100)
+  if(error){el.innerHTML=`<div class="empty">Erro: ${_esc(error.message)}</div>`;return}
+  const contest=data||[]
+  const pendentes=contest.filter(c=>c.status==='pendente')
+  const aprovadas=contest.filter(c=>c.status==='aprovada')
+  const rejeitadas=contest.filter(c=>c.status==='rejeitada')
+  // Atualiza badge da sidebar
+  _atualizarBadgeContest(pendentes.length)
+  const cardContest=c=>{
+    const s=c.sessao||{}
+    const cons=c.consultor||{}
+    const modLabel=ROLEPLAY_MODULOS[s.modulo]?.label||s.modulo||'—'
+    const perLabel=ROLEPLAY_PERFIS[s.perfil_cliente]?.label||s.perfil_cliente||'—'
+    let fb={}
+    try{fb=JSON.parse(s.feedback_texto||'{}')}catch(_){}
+    const ini=(cons.nome||'').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
+    const avatarHtml=cons.foto_url
+      ?`<img src="${_safeUrl(cons.foto_url)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">`
+      :`<div class="av" style="width:36px;height:36px;font-size:12px;background:#E0FAF5;color:#065F46;border-radius:50%">${ini}</div>`
+    const dtCr=new Date(c.criada_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
+    const statusPill=c.status==='pendente'
+      ?`<span class="pill" style="background:#FEF3C7;color:#92400E">Pendente</span>`
+      :c.status==='aprovada'
+        ?`<span class="pill" style="background:#D1FAE5;color:#065F46">✓ Aprovada</span>`
+        :`<span class="pill" style="background:#FEE2E2;color:#B91C1C">✗ Rejeitada</span>`
+    return `<div class="card" style="margin-bottom:12px;padding:16px 18px;border-left:4px solid ${c.status==='pendente'?'#F59E0B':c.status==='aprovada'?'#10B981':'#DC2626'}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          ${avatarHtml}
+          <div style="min-width:0">
+            <div style="font-weight:800;font-size:14px">${_esc(cons.nome||'')}</div>
+            <div style="font-size:11px;color:var(--text3)">${modLabel} · ${perLabel} · nota IA: <strong>${s.nota||'—'}/10</strong></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${statusPill}
+          <span style="font-size:11px;color:var(--text3)">${dtCr}</span>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Motivo do consultor</div>
+        <div style="font-size:13px;color:var(--text1);white-space:pre-wrap;line-height:1.4">${_esc(c.motivo)}</div>
+      </div>
+      ${(s.pontos_desenvolver&&s.pontos_desenvolver.length)?`<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Pontos a desenvolver (IA disse)</div>
+        <ul style="margin:0;padding-left:20px;font-size:12px;color:var(--text2);line-height:1.4">${s.pontos_desenvolver.map(p=>`<li>${_esc(p)}</li>`).join('')}</ul>
+      </div>`:''}
+      ${fb.momento_critico?`<div style="background:linear-gradient(90deg,#FEF2F2,transparent);border-left:3px solid #DC2626;padding:8px 12px;margin-bottom:10px;font-size:12px">
+        <strong style="color:#B91C1C">Momento crítico:</strong> ${_esc(fb.momento_critico.erro||'')}<br>
+        <span style="color:var(--text2)"><strong style="color:#065F46">Certo seria:</strong> ${_esc(fb.momento_critico.certo_seria||'')}</span>
+      </div>`:''}
+      ${c.resposta_master?`<div style="background:linear-gradient(90deg,rgba(29,164,212,.08),transparent);border-left:3px solid var(--mid);padding:8px 12px;margin-bottom:10px;font-size:12px">
+        <strong style="color:var(--mid)">Sua resposta:</strong> ${_esc(c.resposta_master)}
+      </div>`:''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${s.transcricao?`<button onclick="_svVerTranscricao(${_js(c.sessao_id)})" class="btn btn-sec" style="font-size:11px;padding:5px 10px">Ver conversa</button>`:''}
+        ${c.status==='pendente'?`
+          <button onclick="_maResponderContest(${_js(c.id)},'aprovada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:11px;padding:5px 12px;font-weight:700">✓ Aprovar</button>
+          <button onclick="_maResponderContest(${_js(c.id)},'rejeitada')" class="btn" style="background:#DC2626;color:#fff;border:0;font-size:11px;padding:5px 12px;font-weight:700">✗ Rejeitar</button>
+        `:''}
+      </div>
+    </div>`
+  }
+  el.innerHTML=`
+    <div style="max-width:1000px;margin:0 auto">
+      <h2 style="margin:0 0 4px;font-size:22px;font-weight:800">Contestações Roleplay</h2>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:18px">Consultores discordando da avaliação da IA. Aprovar alimenta a base de aprendizado.</div>
+      <div class="metrics m4" style="margin-bottom:20px">
+        <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-val" style="color:#F59E0B">${pendentes.length}</div><div class="metric-sub">aguardando análise</div></div>
+        <div class="metric"><div class="metric-label">Aprovadas</div><div class="metric-val" style="color:#10B981">${aprovadas.length}</div><div class="metric-sub">alimentam a IA</div></div>
+        <div class="metric"><div class="metric-label">Rejeitadas</div><div class="metric-val" style="color:#DC2626">${rejeitadas.length}</div><div class="metric-sub">avaliação IA mantida</div></div>
+        <div class="metric"><div class="metric-label">Total</div><div class="metric-val">${contest.length}</div><div class="metric-sub">últimas 100</div></div>
+      </div>
+      ${pendentes.length?`<div style="font-size:12px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Pendentes de análise (${pendentes.length})</div>${pendentes.map(cardContest).join('')}`:''}
+      ${aprovadas.length||rejeitadas.length?`<div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin:24px 0 10px">Já revisadas</div>${[...aprovadas,...rejeitadas].map(cardContest).join('')}`:''}
+      ${!contest.length?`<div class="card" style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">⚖</div>Nenhuma contestação ainda.</div>`:''}
+    </div>
+  `
+}
+
+window._maResponderContest=async(id,decisao)=>{
+  const acao=decisao==='aprovada'?'aprovar':'rejeitar'
+  const resposta=prompt(`Sua resposta ao consultor sobre esta contestação (opcional):`)
+  if(resposta===null) return  // cancelou
+  const updates={
+    status:decisao,
+    revisada_por:CU.id,
+    revisada_em:new Date().toISOString(),
+    resposta_master:resposta||null
+  }
+  const{error}=await sb.from('roleplay_contestacoes').update(updates).eq('id',id)
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  // Se aprovou, também grava na base de aprendizado
+  if(decisao==='aprovada'){
+    try{
+      const{data:c}=await sb.from('roleplay_contestacoes')
+        .select('sessao_id, motivo, sessao:roleplay_sessoes(nota,transcricao,feedback_texto)')
+        .eq('id',id).single()
+      if(c){
+        await sb.from('ia_aprendizado').insert({
+          origem:'roleplay_contest',
+          sessao_id:c.sessao_id,
+          contestacao_id:id,
+          contexto:(c.sessao?.transcricao||'').substring(0,4000),
+          nota_ia:c.sessao?.nota||null,
+          ajuste_manual:`Consultor argumentou: ${c.motivo}\n\nMaster aprovou.\nResposta: ${resposta||'(sem resposta)'}`,
+          criada_por:CU.id
+        })
+      }
+    }catch(e){console.warn('ia_aprendizado:',e)}
+  }
+  mostrarToast('Feito',`Contestação ${decisao}.`,'sucesso')
+  loadMaContestacoes()
+}
+
+// Badge de contestações pendentes na sidebar (só master)
+async function _atualizarBadgeContest(count){
+  if(CU?.perfil!=='master') return
+  const el=document.getElementById('badge-contest')
+  if(!el) return
+  if(count===undefined){
+    const{data}=await sb.from('roleplay_contestacoes').select('id',{count:'exact',head:true}).eq('status','pendente')
+    count=data?.length||0
+    // supabase v2: usar count property
+    try{
+      const r=await sb.from('roleplay_contestacoes').select('*',{count:'exact',head:true}).eq('status','pendente')
+      count=r.count||0
+    }catch(e){}
+  }
+  el.textContent=count>0?String(count):''
+  el.style.display=count>0?'inline-block':'none'
+}
+
 window._svVerTranscricao=async(sesId)=>{
   const{data}=await sb.from('roleplay_sessoes').select('transcricao,feedback_texto,pontos_positivos,pontos_desenvolver').eq('id',sesId).single()
   if(!data)return
@@ -5760,6 +5906,7 @@ window._svVerTranscricao=async(sesId)=>{
 
 function _renderRoleplayFeedback(f){
   const el=$('p-roleplay');if(!el)return
+  window._fbAtual=f
   const notaCor=f.nota>=8?'#10B981':f.nota>=6?'#F59E0B':'#DC2626'
   el.innerHTML=`
     <div style="max-width:900px;margin:0 auto">
@@ -5788,12 +5935,47 @@ function _renderRoleplayFeedback(f){
         <div style="font-size:13px">${_esc(f.recomendacao_treino)}</div>
         ${f.referencia_material?`<div style="font-size:11px;color:var(--text3);margin-top:6px">📖 ${_esc(f.referencia_material)}</div>`:''}
       </div>`:''}
-      <div style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center">
+      <div style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button onclick="loadRoleplay()" class="btn btn-pri">▶ Nova rodada</button>
         <button onclick="navTo('p-home',document.querySelector('.sb-btn'),'Meu painel')" class="btn btn-sec">Voltar ao painel</button>
+        <button onclick="_rpAbrirDiscordo()" class="btn" style="background:transparent;color:#B45309;border:1.5px solid #F59E0B;font-weight:700">⚖ Discordo do resultado</button>
       </div>
     </div>
   `
+}
+
+window._rpAbrirDiscordo=()=>{
+  if(!_RP.sessaoId){mostrarToast('Erro','Sessão não registrada, não é possível contestar.','erro');return}
+  const prev=document.getElementById('mod-rp-discordo');if(prev)prev.remove()
+  const html=`<div class="modal-overlay open" id="mod-rp-discordo" onclick="if(event.target===this)_rpFecharDiscordo()">
+    <div class="modal-box" style="max-width:520px">
+      <div style="font-size:10px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Contestação</div>
+      <h3 style="margin:0 0 6px;font-size:20px">Discordo do resultado</h3>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5">Explique por que você acha que a avaliação foi injusta ou incorreta. O master vai analisar teu ponto e, se concordar, atualiza a base pra melhorar a IA.</div>
+      <div class="mfield" style="margin-bottom:14px">
+        <label style="font-size:11px">Seu ponto de vista *</label>
+        <textarea id="rp-discordo-motivo" rows="5" placeholder="Ex: A IA baixou a nota porque disse que não fiz SPIN, mas fiz a pergunta de Implicação no turno 8. / A IA disse que usei blacklist, mas '${''}' não é blacklist no meu ver..." style="font-size:12px;background:var(--card);color:var(--text1)"></textarea>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">
+        📋 Junto com sua contestação, o master vai ver: a nota que a IA deu (${window._fbAtual?.nota||'—'}/10), transcrição da rodada e o momento crítico apontado pela IA.
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-sec" onclick="_rpFecharDiscordo()">Cancelar</button>
+        <button class="btn btn-pri" onclick="_rpEnviarDiscordo()">Enviar contestação</button>
+      </div>
+    </div>
+  </div>`
+  document.body.insertAdjacentHTML('beforeend',html)
+  setTimeout(()=>document.getElementById('rp-discordo-motivo')?.focus(),100)
+}
+window._rpFecharDiscordo=()=>{const el=document.getElementById('mod-rp-discordo');if(el)el.remove()}
+window._rpEnviarDiscordo=async()=>{
+  const motivo=document.getElementById('rp-discordo-motivo')?.value.trim()
+  if(!motivo||motivo.length<15){mostrarToast('Motivo curto','Explique com pelo menos 15 caracteres.','info');return}
+  const{error}=await sb.from('roleplay_contestacoes').insert({sessao_id:_RP.sessaoId,consultor_id:CU.id,motivo})
+  if(error){mostrarToast('Erro',error.message,'erro');return}
+  _rpFecharDiscordo()
+  mostrarToast('Enviado','Sua contestação foi registrada. O master vai analisar.','sucesso')
 }
 
 window.excluirLead=async(id,nome)=>{
