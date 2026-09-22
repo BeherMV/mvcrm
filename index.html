@@ -5012,7 +5012,7 @@ const _RP_PERSONAS_MOCK={
     {nome:'Rodrigo Almeida',idade:38,cidade:'Pinhais (RMC)',negocio:'Loja de auto peças, 3 funcionários, 8 anos',faturamento:'R$ 62k/mês',familia:'esposa Fernanda + filha Sofia (5) + bebê no caminho',plano_atual:'Amil coletivo, R$ 1.320/mês, 3 vidas',dor_real:'nascimento do bebê em 4 meses, quer cobertura obstétrica sem carência e o médico está saindo da Amil'},
     {nome:'Paulo Henrique Costa',idade:47,cidade:'Curitiba (Portão)',negocio:'Autoescola familiar, 4 instrutores',faturamento:'R$ 32k/mês',familia:'esposa Cláudia + 3 filhos (18, 15, 11)',plano_atual:'nenhum ativo — perdeu Bradesco Saúde ano passado por preço',dor_real:'filho mais velho vai fazer faculdade em Florianópolis, precisa cobertura que atenda fora de Curitiba'},
     {nome:'Renato Meireles',idade:52,cidade:'Curitiba (Ecoville)',negocio:'Escritório de arquitetura próprio, 8 funcionários',faturamento:'R$ 88k/mês',familia:'esposa Sônia + 2 filhos adultos independentes',plano_atual:'Unimed empresarial pra funcionários, ele fica de fora',dor_real:'começou a sentir refluxo, precisou pagar consulta particular R$ 550 no Hospital Marcelino Champagnat'},
-    {nome:'Diego Ferreira',idade:36,cidade:'São José dos Pinhais',negocio:'Restaurante próprio, 12 funcionários',faturamento:'R$ 55k/mês',familia:'esposa Bruna + filho Théo (2)',plano_atual:'Clinipam coletivo, R$ 720/mês, 3 vidas',dor_real:'demora extrema pra marcar pediatra na Clinipam, filho pequeno gera muita urgência'},
+    {nome:'Diego Ferreira',idade:36,cidade:'São José dos Pinhais',negocio:'Restaurante próprio, 12 funcionários',faturamento:'R$ 55k/mês',familia:'esposa Bruna + filho Théo (2)',plano_atual:'Hapvida coletivo, R$ 720/mês, 3 vidas',dor_real:'demora extrema pra marcar pediatra na Hapvida, filho pequeno gera muita urgência'},
     {nome:'Vinícius Machado',idade:44,cidade:'Curitiba (Água Verde)',negocio:'Distribuidora de bebidas, 10 funcionários',faturamento:'R$ 120k/mês',familia:'esposa Karen + 2 filhas adolescentes',plano_atual:'MedSul coletivo, R$ 1.100/mês, 4 vidas',dor_real:'família cresceu, precisa de rede maior em Curitiba (MedSul tem pouco na cidade)'}
   ],
   senior:[
@@ -5360,7 +5360,7 @@ Você conhece essas operadoras pelo que a família/amigos/vizinhos falam. Não u
 - Unimed: rede grande em Curitiba, mas guias demoram, alguns médicos saindo
 - Amil: rede pequena virou pior, muito descredenciamento último ano
 - SulAmérica: cara, mas atendimento pós-venda ótimo (comentam)
-- Clinipam: bom preço, mas fila enorme pra marcar
+- Hapvida: bom preço, mas fila enorme pra marcar
 - Nossa Saúde: bom preço, dificuldade pra marcar exames
 - MedSenior: só pra idosos, preço bom
 - MedSul: rede pequena em Curitiba, forte no litoral
@@ -5523,16 +5523,16 @@ Use pra avaliar se consultor recomendou operadora ADEQUADA pra dor do cliente:
 - Unimed → maior rede credenciada de Curitiba, urgência nacional, SOS Ambulância. Contra: liberação de guia lenta, cancelamento unilateral.
 - Amil → boa rede a partir de 2 vidas, laboratório A+. Contra: alto descredenciamento, urgência nacional falha.
 - SulAmérica → nacional, ótimo pós-venda, empresa 127 anos. Contra: caro.
-- Clinipam → melhor custo-benefício, boas estruturas próprias. Contra: extremamente difícil marcar consultas/exames.
+- Hapvida → melhor custo-benefício, boas estruturas próprias. Contra: extremamente difícil marcar consultas/exames.
 - Nossa Saúde → bom custo-benefício, hospitais próprios. Contra: idem, rede sobrecarregada.
 - MedSenior → bom custo-benefício, foco 60+. Contra: rede sobrecarregada.
 - MedSul → bom custo, forte na RMC e litoral. Contra: rede pequena em Curitiba capital.
 - Paraná Clínicas → bom custo, Hospital Santa Cruz (top 10 Brasil). Contra: rede própria em poucos bairros.
 - Bradesco Saúde → linha de reembolso ótima, ótimo pós-venda. Contra: pelo preço, rede pequena.
 
-Se consultor recomendou operadora INADEQUADA pra dor específica (ex: cliente com dor "não consigo marcar exame" e consultor sugeriu Clinipam/Nossa Saúde), penalize com evidência.
+Se consultor recomendou operadora INADEQUADA pra dor específica (ex: cliente com dor "não consigo marcar exame" e consultor sugeriu Hapvida/Nossa Saúde), penalize com evidência.
 Se consultor recomendou operadora ADEQUADA com justificativa correta, valorize.
-NÃO existe Select, Leve Saúde ou Hapvida em Curitiba pela MV — se consultor mencionou, é erro grave.
+NÃO existe Select ou Leve Saúde vendida em Curitiba pela MV — se consultor mencionou, é erro grave.
 
 REGRAS DE OURO DA AVALIAÇÃO:
 1. Se o consultor não fez SPIN completo (S+P+I+N), nota MÁXIMA é 6.
