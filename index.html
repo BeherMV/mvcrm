@@ -4902,6 +4902,87 @@ const ROLEPLAY_MODULOS={
   fechamento:{label:'Fechamento',emoji:'🤝',desc:'Cliente perguntou operacional. Não deixe escapar.'},
   followup:{label:'Follow-up adormecido',emoji:'⏰',desc:'Cliente sumiu há X dias. Reative sem parecer desespero.'}
 }
+// Mini-tutoriais — conteúdo detalhado por módulo e perfil
+const ROLEPLAY_TUTORIAIS={
+  modulo:{
+    completa:{
+      treina:'O ciclo integral de venda — do primeiro contato até o fechamento. É o módulo mais próximo da realidade.',
+      cliente:'Cliente entra em contato pela primeira vez ou respondendo uma cotação. Vai passar por várias etapas: qualificação, apresentação, objeção, decisão.',
+      esperado:['Aplicar SPIN completo (S/P/I/N) no diagnóstico','Usar ancoragem antes de falar preço','Diagnosticar objeção antes de responder','Sugerir próximo passo com prazo concreto','Fechar OU agendar próximo contato'],
+      avaliacao:'Nota máxima 10. Se pular SPIN, cair em blacklist ou dar desconto sem diagnóstico, cap de 5-6. Cliente sumindo cai pra 4.',
+      referencia:'PDF Alta Performance — página 3 (SPIN), 5 (Rapport/Ancoragem), 7 (Objeções + Fechamento)'
+    },
+    spin:{
+      treina:'Só a técnica SPIN Selling — 4 categorias de perguntas que fazem o cliente enxergar sozinho a dor e a necessidade.',
+      cliente:'Só responde suas perguntas. Não colabora dando informação espontânea. Você tem que conduzir todo o diagnóstico.',
+      esperado:['Fazer AS 4 CATEGORIAS: S (Situação) → P (Problema) → I (Implicação) → N (Necessidade)','Deixar cliente NOMEAR a dor, não presumir','Amplificar custo do problema ANTES de sugerir solução','Terminar com pergunta N — cliente pede a solução'],
+      avaliacao:'Nota máxima 10. Se pular qualquer categoria do SPIN, nota cai forte. Se presumir problema, cai. Se cliente pedir a solução no final (N bem feita), nota sobe.',
+      referencia:'PDF Alta Performance — página 3-4 (SPIN Selling completo)'
+    },
+    ancoragem:{
+      treina:'A técnica de ancoragem numérica de Kahneman — plantar um número alto antes de revelar o preço, pra tornar o preço percebido como pequeno.',
+      cliente:'Já perguntou "quanto custa?" ou pediu proposta. Você tem que apresentar valor ANTES do preço, senão parece caro.',
+      esperado:['Ancorar em custo alto REAL (UTI R$ 8-15k/dia, internação R$ 40-80k)','Usar equivalência cotidiana (R$ 18/dia = menos que um almoço)','Apresentar faixa antes do valor específico (R$ 300-900, o seu cai no meio)','Reforçar pós-preço com âncora imediata'],
+      avaliacao:'Nota máxima 10. Se falar preço sem ancorar, cap de 5. Se usar âncora oficial MV, +1. Se ancorar com número inventado, nota cai.',
+      referencia:'PDF Alta Performance — página 5 (Ancoragem/Kahneman)'
+    },
+    objecao:{
+      treina:'Contorno de objeção com diagnóstico. Cliente traz objeção — nem sempre a real. Você diagnostica antes de responder.',
+      cliente:'Já vem objetando desde o começo. Objeção INICIAL é superficial ou mentirosa. Se você aceitar direto, cliente fica frio. Se diagnosticar, pode revelar a real.',
+      esperado:['Diagnosticar com pergunta ANTES de responder: "Comparado com o quê?" / "O que ainda falta?"','Nunca dar desconto sem diagnóstico (Regra Voss)','Identificar a causa raiz: preço / confiança / timing / decisor / carência','Aplicar contorno específico pra causa raiz descoberta'],
+      avaliacao:'Nota máxima 10. Se responder objeção direto sem diagnosticar, cap de 4. Se der desconto sem diagnóstico, cap de 3. Se descobrir e resolver a objeção real, nota alta.',
+      referencia:'PDF Alta Performance — página 7 e 11 (Árvore de Objeções)'
+    },
+    fechamento:{
+      treina:'Reconhecer sinal de compra e não deixar cliente escapar. Momento decisivo da venda.',
+      cliente:'Já perguntou algo OPERACIONAL ("como funciona a carência?", "aceita qual médico?", "quando começa?"). Sinal claro de compra. Você não pode voltar a apresentar — tem que FECHAR.',
+      esperado:['Reconhecer o sinal (cliente perguntando operacional = comprando)','Não voltar pra apresentação/venda — próximo passo é fechamento','Aplicar padrão de fechamento: assumido / alternativo / por resumo','Agendar próximo passo CONCRETO com prazo','Confirmar compromisso'],
+      avaliacao:'Nota máxima 10. Se voltar pra apresentação após sinal de compra, cap de 4. Se agendar próximo passo concreto, +2. Se aplicar fechamento formal, +2.',
+      referencia:'PDF Alta Performance — página 7 (Fechamento — Sinal/Script/Regra)'
+    },
+    followup:{
+      treina:'Reativação de lead adormecido. Cliente sumiu há dias/semanas. Você retoma sem parecer desespero.',
+      cliente:'Não respondeu suas últimas mensagens. Não tá motivado a responder de novo. Você precisa dar razão CONCRETA pra ele voltar.',
+      esperado:['Justificar contato com NOVIDADE (não "só passando aqui")','Reancorar valor com número/mudança concreta','Fazer pergunta curta que exige resposta binária','Não pressionar — sugerir horário específico se cabível','Aceitar se ele não voltar, mas plantar semente'],
+      avaliacao:'Nota máxima 10. Se usar "só passando aqui" ou "qualquer coisa me chama", cap de 4. Se dar razão concreta pra retomada, +2. Se ele responder (qualquer coisa), +2.',
+      referencia:'PDF Alta Performance — página 6 (Reativação de leads)'
+    }
+  },
+  perfil:{
+    empresario_familia:{
+      quemE:'Dono de pequeno negócio, casado, com filhos. Renda R$ 8-45k/mês. Ceticismo natural com corretores (já ouviu vários). Prático, direto.',
+      dor:'Proteger família + previsibilidade financeira. Frequentemente vem porque plano coletivo do contador vai reajustar ou vai perder.',
+      decisor:'Ele + cônjuge. Cônjuge pesa em rede/hospital pra filhos. Se você não perguntar da esposa, ele "vai pensar" como defesa.',
+      gatilho:'"E se acontecer com seu filho/a?" — muito mais forte que "e se acontecer com você" (empresário se acha imortal).',
+      argumento:'Previsibilidade + comparação com custos empresariais que ele já aceita (aluguel, contador, funcionário).',
+      cuidado:'Não force plano individual — ele quer familiar. Não assuste com dor pessoal. Não use urgência artificial.'
+    },
+    senior:{
+      quemE:'60+ anos, aposentado ou perto de aposentar. Perdeu ou vai perder plano do trabalho. Cauteloso, formal moderado, testa consultor com perguntas técnicas.',
+      dor:'Medo de ficar sem cobertura em idade delicada. Doença preexistente com carência longa. Apego forte a médicos e hospitais que já usa.',
+      decisor:'Ele/ela + filhos frequentemente participam. Às vezes filhos adultos (já clientes MV) que trazem o pai.',
+      gatilho:'Portabilidade sem carência (RN 279 ANS) — se estava em coletivo há 10+ anos. Casos de amigos que perderam plano e enfrentaram doença sem cobertura.',
+      argumento:'Rede hospitalar que ele já conhece + cobertura de doença preexistente após CPT + tranquilidade.',
+      cuidado:'NÃO ancore em UTI R$ 15k/dia (assusta demais, ele sabe que é real). Ancore em consulta particular (R$ 300-500) × frequência mensal.'
+    },
+    pf_pediatrica:{
+      quemE:'Mãe (majoritariamente), 25-40 anos, filho pequeno. Renda familiar R$ 5-15k. Insegura sobre gastar sem consultar marido em decisões financeiras maiores.',
+      dor:'Proteger o filho pequeno. Frequentemente vem porque filho teve algo recente (febre, PS, exame necessário) e ela se assustou.',
+      decisor:'Ela (mãe, maioria). Marido decide financeiro em vários casos.',
+      gatilho:'Cobertura pediátrica + hospital infantil da região (Pequeno Príncipe, etc). Urgência: "carência começa a contar HOJE".',
+      argumento:'Rede pediátrica + rapidez vs. SUS. Âncora: "R$ X é custo de 2 consultas particulares do pediatra por ano".',
+      cuidado:'ELA QUER PLANO SÓ PRO FILHO, não pra ela. NÃO force upsell familiar no primeiro contato. Sem linguagem empresarial. Sem âncora de UTI adulta.'
+    },
+    pme:{
+      quemE:'Dono/RH de empresa 2-99 funcionários. Pragmático, foco em métricas. Fala em números com frequência.',
+      dor:'Perder talento pra concorrente que oferece plano. Turnover é dor concreta, não hipotética.',
+      decisor:'Dono (até 10 vidas) ou RH + dono (10-99). Envolve orçamento aprovado.',
+      gatilho:'Custo de turnover vs. custo do plano por vida. Perfil de colaboradores que precisam.',
+      argumento:'Competitividade no mercado de talentos + saúde ocupacional evita afastamento.',
+      cuidado:'Sem foco em "família" (é decisão B2B). Se não perguntar sobre histórico de perda de talento, fica preso em preço puro.'
+    }
+  }
+}
 
 const _RP={
   status:'idle',       // 'idle' | 'setup' | 'rodando' | 'encerrada'
@@ -4957,10 +5038,13 @@ function _renderRoleplaySetup(){
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">Módulo</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
           ${Object.entries(ROLEPLAY_MODULOS).map(([k,m])=>`
-            <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}">
-              <div class="rp-card-title">${m.label}</div>
-              <div class="rp-card-desc">${m.desc}</div>
-            </button>
+            <div style="position:relative">
+              <button onclick="_rpSelModulo('${k}',this)" class="rp-card" data-modulo="${k}" style="width:100%">
+                <div class="rp-card-title">${m.label}</div>
+                <div class="rp-card-desc">${m.desc}</div>
+              </button>
+              <button onclick="event.stopPropagation();_rpAbrirTutorial('modulo','${k}')" class="rp-help-btn" title="Como funciona este módulo">?</button>
+            </div>
           `).join('')}
         </div>
       </div>
@@ -4972,10 +5056,13 @@ function _renderRoleplaySetup(){
             <div class="rp-card-desc">Sistema escolhe. Treina versatilidade.</div>
           </button>
           ${Object.entries(ROLEPLAY_PERFIS).map(([k,p])=>`
-            <button onclick="_rpSelPerfil('${k}',this)" class="rp-card" data-perfil="${k}">
-              <div class="rp-card-title">${p.label}</div>
-              <div class="rp-card-desc">${p.desc}</div>
-            </button>
+            <div style="position:relative">
+              <button onclick="_rpSelPerfil('${k}',this)" class="rp-card" data-perfil="${k}" style="width:100%">
+                <div class="rp-card-title">${p.label}</div>
+                <div class="rp-card-desc">${p.desc}</div>
+              </button>
+              <button onclick="event.stopPropagation();_rpAbrirTutorial('perfil','${k}')" class="rp-help-btn" title="Como funciona este perfil">?</button>
+            </div>
           `).join('')}
         </div>
       </div>
@@ -4987,11 +5074,13 @@ function _renderRoleplaySetup(){
       .rp-card{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;text-align:left;cursor:pointer;transition:all .18s ease;font-family:inherit}
       .rp-card:hover{border-color:var(--mid);transform:translateY(-1px);box-shadow:0 4px 12px -6px rgba(29,164,212,.25)}
       .rp-card.sel{border-color:var(--mid);border-width:2px;padding:15px 17px;background:linear-gradient(135deg,rgba(239,246,255,.6),rgba(240,253,244,.6))}
-      .rp-card-title{font-size:14.5px;font-weight:700;color:var(--text1);margin-bottom:4px;letter-spacing:-.2px}
+      .rp-card-title{font-size:14.5px;font-weight:700;color:var(--text1);margin-bottom:4px;letter-spacing:-.2px;padding-right:24px}
       .rp-card-desc{font-size:12px;color:var(--text3);line-height:1.4;font-weight:400}
       .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.06),rgba(37,99,235,.06));border-color:rgba(29,164,212,.35)}
       :root[data-theme="dark"] .rp-card.sel{background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(0,201,167,.12))}
       :root[data-theme="dark"] .rp-card-surpresa{background:linear-gradient(135deg,rgba(0,201,167,.12),rgba(37,99,235,.12))}
+      .rp-help-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);color:var(--text3);font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .15s;z-index:2}
+      .rp-help-btn:hover{background:var(--mid);color:#fff;border-color:var(--mid);transform:scale(1.1)}
     </style>
   `
 }
@@ -5002,6 +5091,48 @@ window._rpSelModulo=(k,btn)=>{
   $('rp-perfil-wrap').style.display='block'
   _rpAtualizarBotaoIniciar()
 }
+window._rpAbrirTutorial=(tipo,chave)=>{
+  const dados=ROLEPLAY_TUTORIAIS[tipo]?.[chave];if(!dados)return
+  const titulo=tipo==='modulo'?ROLEPLAY_MODULOS[chave]?.label:ROLEPLAY_PERFIS[chave]?.label
+  const badge=tipo==='modulo'?'Módulo de treino':'Perfil de cliente'
+  const prev=document.getElementById('mod-rp-tutorial');if(prev)prev.remove()
+  const secao=(icone,titulo,conteudo)=>`
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:800;color:var(--mid);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${icone} ${titulo}</div>
+      ${conteudo}
+    </div>`
+  const listaHtml=arr=>`<ul style="margin:0;padding-left:20px;font-size:13px;color:var(--text2);line-height:1.6">${arr.map(x=>`<li>${_esc(x)}</li>`).join('')}</ul>`
+  const paragrafo=t=>`<div style="font-size:13px;color:var(--text2);line-height:1.5">${_esc(t)}</div>`
+  let corpo=''
+  if(tipo==='modulo'){
+    corpo=
+      secao('▶','O que treina',paragrafo(dados.treina))+
+      secao('👤','Como o cliente vai reagir',paragrafo(dados.cliente))+
+      secao('🎯','O que se espera de você',listaHtml(dados.esperado))+
+      secao('📊','Como é avaliado',paragrafo(dados.avaliacao))+
+      secao('📖','Material de referência',paragrafo(dados.referencia))
+  }else{
+    corpo=
+      secao('👤','Quem é',paragrafo(dados.quemE))+
+      secao('💔','Dor central',paragrafo(dados.dor))+
+      secao('🧠','Decisor',paragrafo(dados.decisor))+
+      secao('🎯','Gatilho vencedor',paragrafo(dados.gatilho))+
+      secao('💡','Argumento vencedor',paragrafo(dados.argumento))+
+      secao('⚠','Cuidado',paragrafo(dados.cuidado))
+  }
+  const html=`<div class="modal-overlay open" id="mod-rp-tutorial" onclick="if(event.target===this)_rpFecharTutorial()">
+    <div class="modal-box" style="max-width:560px;max-height:85vh;overflow-y:auto">
+      <div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">${badge}</div>
+      <h3 style="margin:0 0 18px;font-size:22px;letter-spacing:-.3px">${_esc(titulo)}</h3>
+      ${corpo}
+      <div class="modal-btns" style="margin-top:20px">
+        <button class="btn btn-pri" onclick="_rpFecharTutorial()" style="width:100%">Entendi, quero treinar</button>
+      </div>
+    </div>
+  </div>`
+  document.body.insertAdjacentHTML('beforeend',html)
+}
+window._rpFecharTutorial=()=>{const el=document.getElementById('mod-rp-tutorial');if(el)el.remove()}
 window._rpSelPerfil=(k,btn)=>{
   if(k==='surpresa'){
     const keys=Object.keys(ROLEPLAY_PERFIS)
