@@ -5004,6 +5004,70 @@ const _RP={
   iniciadaEm:null
 }
 
+// 15 objeções realistas em vendas de plano de saúde — usadas no módulo Contorno de Objeção
+const ROLEPLAY_OBJECOES=[
+  {id:'caro',label:'"Está caro"',fala:'Achei bem caro, sinceramente',causa:'valor percebido < preço',diagnostico:'"Comparado com o quê?" ou calcular junto custo de internação'},
+  {id:'vou_pensar',label:'"Vou pensar"',fala:'Preciso pensar melhor antes de fechar',causa:'insegurança não expressa',diagnostico:'"O que ainda falta pra você se sentir seguro pra decidir?"'},
+  {id:'trabalho',label:'"Tenho pelo trabalho"',fala:'Já tenho plano pela empresa, não precisaria de outro',causa:'falsa segurança / coletivo é vulnerabilidade',diagnostico:'"Se empresa trocar de operadora ou você sair, qual seu plano B?"'},
+  {id:'conjuge',label:'"Vou falar com esposa/marido"',fala:'Preciso conversar com minha esposa antes',causa:'decisão compartilhada ou desculpa',diagnostico:'"Faz total sentido. Qual a maior preocupação dela sobre isso?"'},
+  {id:'pesquisar',label:'"Vou pesquisar outras opções"',fala:'Quero comparar com outras corretoras antes de fechar',causa:'medo de errar / falta confiança',diagnostico:'"Qual critério você vai usar pra decidir entre elas?"'},
+  {id:'medico',label:'"Meu médico não atende esse plano"',fala:'Já tem meu médico há anos, ele não atende esse plano',causa:'apego a especialista específico',diagnostico:'"Além do Dr. X, quantos outros dessa área você consultou nos últimos 5 anos?"'},
+  {id:'ja_tive',label:'"Já tive plano e não gostei"',fala:'Eu já tive plano antes, tive problema e cancelei',causa:'trauma específico passado',diagnostico:'"O que exatamente aconteceu? Foi negativa, demora, cancelamento?"'},
+  {id:'nao_uso',label:'"Não vou usar tanto"',fala:'Nem uso médico, tô com saúde ok, seria gasto à toa',causa:'subestima risco imprevisível',diagnostico:'"Se precisar de cirurgia amanhã, quanto sua reserva aguenta?"'},
+  {id:'guardar',label:'"Prefiro guardar o dinheiro"',fala:'Prefiro juntar esse dinheiro e usar direto quando precisar',causa:'não enxerga plano como seguro contra risco alto',diagnostico:'"3 anos de plano dá R$ 20k. Isso paga UMA cirurgia?"'},
+  {id:'amigo_ruim',label:'"Amigo/vizinho teve problema com essa operadora"',fala:'Meu vizinho teve dor de cabeça com essa operadora, medo de passar pelo mesmo',causa:'prova social negativa / desconfiança',diagnostico:'"Sabe o caso específico? Muitas vezes é problema pontual"'},
+  {id:'particular',label:'"Prefiro consultar particular"',fala:'Quando precisar, pago particular e resolvo',causa:'subestima custo de internação/UTI',diagnostico:'"Consulta particular OK. Se precisar internar, UTI R$ 8-15k/dia — banca?"'},
+  {id:'nunca_usei',label:'"Meu pai/mãe nunca usaram plano"',fala:'Meus pais nunca tiveram plano e viveram bem',causa:'negação do risco pessoal',diagnostico:'"Época era outra. Se seu pai precisasse UTI hoje, teria como pagar?"'},
+  {id:'esperar',label:'"Vou esperar mais um pouco"',fala:'Não é o momento agora, deixa pra depois',causa:'procrastinação / falta gatilho',diagnostico:'"Quando seria o momento? O que precisa mudar pra contratar?"'},
+  {id:'carencia_longa',label:'"Carência muito longa"',fala:'Essa carência é longa demais, não vou aguentar esperar',causa:'precisa cobertura pra doença atual ou contínua',diagnostico:'"Você tinha plano anterior? Podemos usar portabilidade (RN 279) e eliminar carência"'},
+  {id:'colaborador_nao',label:'"Colaboradores não valorizam"',fala:'Não sei se meu time vai valorizar o benefício',causa:'nunca mediu impacto de retenção',diagnostico:'"Quanto custou o último desligamento? Contratação + treinamento?"'}
+]
+
+// Configuração de cada módulo — cenário inicial, duração, rótulos, critérios
+const ROLEPLAY_MODULO_CFG={
+  completa:{
+    duracaoMax:30,
+    rotuloOk:'Fechei venda',rotuloFail:'Perdi cliente',
+    contextoInicial:'primeiro_contato',
+    escopoAvaliacao:['SPIN completo (S+P+I+N)?','Ancoragem em números concretos?','Diagnóstico antes de responder objeção?','Palavra reforço + nome usado?','Fechamento aplicado no momento certo?','Tom MV aderente?','Blacklist evitada?']
+  },
+  spin:{
+    duracaoMax:15,
+    rotuloOk:'Concluí diagnóstico',rotuloFail:'Diagnóstico incompleto',
+    contextoInicial:'aguardando_perguntas',
+    escopoAvaliacao:['Fez pergunta de SITUAÇÃO?','Fez pergunta de PROBLEMA (deixou cliente nomear)?','Fez pergunta de IMPLICAÇÃO (amplificou custo)?','Fez pergunta de NECESSIDADE (cliente descreveu solução)?','Ordem SPIN foi respeitada?','Perguntas abertas ou fechadas?','Presumiu problema em algum momento?'],
+    ignora:['ancoragem','fechamento','contorno de objeção','apresentação de plano']
+  },
+  ancoragem:{
+    duracaoMax:8,
+    rotuloOk:'Apresentei valor',rotuloFail:'Cliente reagiu mal ao preço',
+    contextoInicial:'pediu_preco',
+    escopoAvaliacao:['Ancorou ANTES de dizer preço?','Usou âncora oficial MV (UTI R$ 8-15k, internação R$ 40-80k, R$ 18/dia)?','Fez equivalência cotidiana?','Apresentou faixa antes do valor específico?','Reforçou pós-preço com âncora?','Cliente teve reação neutra/positiva?'],
+    ignora:['SPIN completo','fechamento formal','contorno detalhado']
+  },
+  objecao:{
+    duracaoMax:12,
+    rotuloOk:'Contornei objeção',rotuloFail:'Cliente resistiu',
+    contextoInicial:'objecao_inicial',
+    escopoAvaliacao:['Diagnosticou com pergunta ANTES de responder?','Identificou causa raiz correta?','Aplicou script adequado pra causa raiz?','Deu desconto sem diagnosticar? (Regra Voss)','Cliente revelou objeção real ou ficou na superficial?'],
+    ignora:['SPIN completo','ancoragem detalhada','fechamento formal']
+  },
+  fechamento:{
+    duracaoMax:8,
+    rotuloOk:'Fechei venda',rotuloFail:'Cliente resistiu no fechamento',
+    contextoInicial:'sinal_compra',
+    escopoAvaliacao:['Reconheceu sinal de compra na primeira mensagem?','NÃO voltou pra apresentação?','Aplicou padrão de fechamento (assumido/alternativo/por resumo)?','Agendou próximo passo CONCRETO com prazo?','Confirmou compromisso?'],
+    ignora:['SPIN','ancoragem detalhada','contorno de objeção genérico']
+  },
+  followup:{
+    duracaoMax:6,
+    rotuloOk:'Reativei cliente',rotuloFail:'Não reativei',
+    contextoInicial:'cliente_silente',
+    escopoAvaliacao:['Deu razão CONCRETA pra retomada (não "só passando aqui")?','Reancorou valor com número/mudança?','CTA foi binária?','Sugeriu horário específico?','Evitou blacklist?','Aceitou não-retorno com dignidade quando cliente sinalizou não interesse?'],
+    ignora:['SPIN completo','fechamento longo']
+  }
+}
+
 // Personas fictícias com dados concretos — sorteia 1 no início da rodada
 // TODAS em Curitiba/RMC/PR — foco geográfico da MV Corretora
 const _RP_PERSONAS_MOCK={
@@ -5103,6 +5167,14 @@ function _renderRoleplaySetup(){
           `).join('')}
         </div>
       </div>
+      <div id="rp-objecao-wrap" style="display:none;margin-bottom:22px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">Objeção específica (opcional)</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Deixe em <strong>Aleatória</strong> pra treinar versatilidade. Ou escolha uma específica pra dominar aquela objeção.</div>
+        <select id="rp-objecao-select" style="width:100%;max-width:480px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text1)" onchange="_RP.objecaoEscolhida=this.value">
+          <option value="">🎲 Aleatória (sorteia)</option>
+          ${ROLEPLAY_OBJECOES.map(o=>`<option value="${o.id}">${o.label}</option>`).join('')}
+        </select>
+      </div>
       <div id="rp-iniciar-wrap" style="display:none;text-align:center;margin-top:10px">
         <button onclick="_rpIniciar()" class="btn btn-pri" style="font-size:14px;padding:14px 42px;font-weight:800;letter-spacing:.3px">INICIAR RODADA</button>
       </div>
@@ -5130,9 +5202,23 @@ function _renderRoleplaySetup(){
 }
 window._rpSelModulo=(k,btn)=>{
   _RP.modulo=k
+  _RP.objecaoEscolhida=''
+  _RP.perfil=null
   document.querySelectorAll('.rp-card[data-modulo]').forEach(b=>b.classList.remove('sel'))
   btn.classList.add('sel')
-  $('rp-perfil-wrap').style.display='block'
+  // Perfil só aparece na Rodada Completa. Nos módulos específicos, é sorteado automaticamente.
+  const perfilW=$('rp-perfil-wrap')
+  if(perfilW) perfilW.style.display=k==='completa'?'block':'none'
+  if(k!=='completa'){
+    const keys=Object.keys(ROLEPLAY_PERFIS)
+    _RP.perfil=keys[Math.floor(Math.random()*keys.length)]
+    document.querySelectorAll('.rp-card[data-perfil]').forEach(b=>b.classList.remove('sel'))
+  }
+  // Dropdown de objeção só quando módulo=objecao
+  const objW=$('rp-objecao-wrap')
+  if(objW) objW.style.display=k==='objecao'?'block':'none'
+  const sel=$('rp-objecao-select')
+  if(sel) sel.value=''
   _rpAtualizarBotaoIniciar()
 }
 window._rpAbrirTutorial=(tipo,chave)=>{
@@ -5209,17 +5295,25 @@ async function _rpCalcularDificuldade(){
 window._rpIniciar=async()=>{
   _RP.dificuldade=await _rpCalcularDificuldade()
   _RP.mensagens=[]
-  _RP.score=[60,55,50,45,30][_RP.dificuldade-1]  // score inicial por dificuldade
+  _RP.score=[60,55,50,45,30][_RP.dificuldade-1]
   _RP.iniciadaEm=new Date().toISOString()
   _RP.status='rodando'
-  // Sorteia persona ficcional (com nome real, cidade, dor específica)
   const personas=_RP_PERSONAS_MOCK[_RP.perfil]||_RP_PERSONAS_MOCK.empresario_familia
   _RP.persona=personas[Math.floor(Math.random()*personas.length)]
   _RP.clienteNome=_RP.persona.nome
-  // Cria sessão no banco
+  // Se módulo=objeção, sorteia (ou usa escolhida)
+  if(_RP.modulo==='objecao'){
+    const idEscolhida=_RP.objecaoEscolhida
+    _RP.objecaoAtiva=idEscolhida
+      ?ROLEPLAY_OBJECOES.find(o=>o.id===idEscolhida)
+      :ROLEPLAY_OBJECOES[Math.floor(Math.random()*ROLEPLAY_OBJECOES.length)]
+  }else{
+    _RP.objecaoAtiva=null
+  }
   try{
     const{data}=await sb.from('roleplay_sessoes').insert({
-      consultor_id:CU.id,modulo:_RP.modulo,perfil_cliente:_RP.perfil,dificuldade:_RP.dificuldade
+      consultor_id:CU.id,modulo:_RP.modulo,perfil_cliente:_RP.perfil,dificuldade:_RP.dificuldade,
+      objecao_forte:_RP.objecaoAtiva?.id||null
     }).select('id').single()
     if(data) _RP.sessaoId=data.id
   }catch(e){console.warn('rp sessao:',e)}
@@ -5245,8 +5339,8 @@ function _renderRoleplayChat(){
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
           <button onclick="_rpQuandoEncerrar()" class="rp-help-btn" style="position:static;margin-right:2px" title="Quando encerrar a rodada?">?</button>
-          <button onclick="_rpEncerrar('venda_fechada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:12px;padding:6px 12px;font-weight:700" title="Cliente aceitou fechar, pediu forma de pagamento, ou disse 'vamos fechar' claramente">Fechei venda</button>
-          <button onclick="_rpEncerrar('cliente_rejeitou')" class="btn btn-sec" style="font-size:12px;padding:6px 12px" title="Cliente disse 'não' definitivo, não me interessa, ou não vai fechar">Perdi cliente</button>
+          <button onclick="_rpEncerrar('venda_fechada')" class="btn" style="background:#10B981;color:#fff;border:0;font-size:12px;padding:6px 12px;font-weight:700" title="${_rpTituloBotaoOk()}">${(ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).rotuloOk}</button>
+          <button onclick="_rpEncerrar('cliente_rejeitou')" class="btn btn-sec" style="font-size:12px;padding:6px 12px" title="${_rpTituloBotaoFail()}">${(ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).rotuloFail}</button>
           <button onclick="loadRoleplay()" class="btn" style="background:transparent;color:var(--text3);border:1.5px solid var(--border);font-size:12px;padding:6px 12px">Cancelar</button>
         </div>
       </div>
@@ -5429,12 +5523,13 @@ Seu "sentimento interno" sobre o consultor: score ${_RP.score}/100 (baixo=frio, 
   "sinal": "engajado" | "neutro" | "friccao" | "abandono"
 }
 
-Se inicio=true: você INICIA a conversa. Você é o cliente respondendo a uma cotação enviada, ou entrando em contato por indicação. Seja natural, curto (1-2 linhas), como se estivesse mandando primeiro WhatsApp. NÃO revele sua dor real ainda.
+${_rpCenarioModuloPrompt()}
+
 Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
 
   const conversaTexto=_RP.mensagens.map(m=>`${m.role==='consultor'?'VENDEDOR':'VOCÊ (cliente)'}: ${m.texto}`).join('\n')
   const userPrompt=inicio
-    ?'Inicie a conversa. Você é o cliente entrando em contato pela primeira vez ou respondendo um lead que o vendedor deixou. Seja natural, curto (1-2 linhas).'
+    ?_rpMensagemInicialModulo()
     :`Conversa até agora:\n${conversaTexto}\n\nResponda a última mensagem do VENDEDOR mantendo seu papel de cliente. JSON puro.`
 
   // Chamada com fallback: Sonnet -> Haiku
@@ -5468,6 +5563,13 @@ Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
     _RP.mensagens.push({role:'cliente',texto:parsed.mensagem||'…',ts:Date.now()})
     _RP.score=Math.max(0,Math.min(100,_RP.score+Number(parsed.score_delta||0)))
     _rpRenderMsgs()
+    // Limite de mensagens por módulo — força encerramento
+    const durMax=(ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).duracaoMax||30
+    if(_RP.mensagens.length>=durMax){
+      mostrarToast('Rodada estourou',`Limite de ${durMax} mensagens atingido pro módulo ${_RP.modulo}.`,'info')
+      setTimeout(()=>_rpEncerrar('cliente_sumiu'),1500)
+      return
+    }
     // Se cliente sinaliza abandono E score muito baixo, encerra sozinho
     if(parsed.sinal==='abandono'&&_RP.score<20&&_RP.mensagens.length>10){
       setTimeout(()=>_rpEncerrar('cliente_sumiu'),1500)
@@ -5477,6 +5579,86 @@ Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
     _RP._digitando=false
     _RP.mensagens.push({role:'cliente',texto:'(erro ao gerar resposta — tente enviar de novo)',ts:Date.now()})
     _rpRenderMsgs()
+  }
+}
+
+// Cenário específico por módulo — instrução extra no system prompt do cliente
+function _rpTituloBotaoOk(){
+  const map={completa:'Cliente aceitou fechar, pediu forma de pagamento ou disse vamos fechar claramente',spin:'Considerei que consegui diagnosticar a situação/problema/implicação/necessidade do cliente',ancoragem:'Apresentei valor com âncora e preço, cliente reagiu neutro/positivo',objecao:'Diagnostiquei e contornei a objeção — cliente aceitou próximo passo',fechamento:'Cliente aceitou fechar após meu fechamento formal',followup:'Cliente respondeu e engajou de volta'}
+  return map[_RP.modulo]||map.completa
+}
+function _rpTituloBotaoFail(){
+  const map={completa:'Cliente disse não definitivo ou sumiu sem próximo passo',spin:'Não consegui diagnosticar direito, faltou informação chave',ancoragem:'Cliente reagiu mal ao preço, não convenci do valor',objecao:'Cliente manteve a objeção, não abriu, ficou frio',fechamento:'Cliente resistiu no fechamento, não converteu o sinal',followup:'Cliente não respondeu / disse que perdeu interesse'}
+  return map[_RP.modulo]||map.completa
+}
+function _rpCenarioModuloPrompt(){
+  const cfg=ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa
+  const p=_RP.persona||{}
+  switch(cfg.contextoInicial){
+    case 'primeiro_contato':
+      return `Se inicio=true: você INICIA a conversa. É o cliente respondendo a uma cotação enviada ou entrando em contato por indicação. Seja natural, curto (1-2 linhas). NÃO revele sua dor real ainda.`
+    case 'aguardando_perguntas':
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO SPIN ═══
+Você é um LEAD NOVO que acabou de responder um primeiro contato do consultor. Não passou por qualificação ainda. Está aguardando ele te fazer perguntas pra entender sua situação.
+Se inicio=true: seja bem CURTO ("Oi, tudo bem?" ou "Bom dia, aqui é o ${p.nome?.split(' ')[0]||''}"). Só apresenta-se. Aguarda perguntas.
+COMPORTAMENTO NESTE MÓDULO: só responda o que ele perguntar. NÃO ofereça informação espontaneamente. Se ele tentar pular pra apresentação/preço, reaja "peraí, você tá me oferecendo o que exatamente?". NUNCA revele sua dor real se ele não fizer pergunta específica.`
+    case 'pediu_preco':
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO ANCORAGEM ═══
+Contexto fictício: você já conversou com esse consultor antes (ontem/dia anterior). Ele te passou algumas informações sobre plano de saúde. Você tá voltando pra saber PREÇO agora.
+Se inicio=true: mande MENSAGEM DIRETA pedindo preço. Exemplos: "Boa tarde, então quanto ficaria aquele plano familiar que você me falou?" ou "Oi, cheguei a uma decisão de pedir uma proposta — qual o valor?"
+COMPORTAMENTO NESTE MÓDULO: se ele jogar PREÇO direto sem ancorar em risco/valor primeiro, reaja MAL ("hmm... tá bem caro né"). Se ele ancorar (mencionar UTI, internação, comparação), reaja NEUTRO/CURIOSO. Módulo curto — 3-6 trocas no máximo.`
+    case 'objecao_inicial':
+      const obj=_RP.objecaoAtiva||ROLEPLAY_OBJECOES[0]
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO OBJEÇÃO ═══
+Contexto fictício: você já recebeu proposta desse consultor. Agora está entrando em contato pra dar RETORNO — e trazendo uma OBJEÇÃO.
+SUA OBJEÇÃO SUPERFICIAL (o que você fala): "${obj.fala}"
+SUA CAUSA RAIZ VERDADEIRA (não revele até ser diagnosticado): ${obj.causa}
+Se inicio=true: mande a objeção superficial na primeira mensagem, adaptada ao seu jeito de falar. Ex: "Oi, olhei sua proposta aqui. ${obj.fala}"
+COMPORTAMENTO NESTE MÓDULO:
+- Se consultor RESPONDER a objeção SEM diagnosticar (defender preço, argumentar direto, dar desconto), você FICA FRIO. Repita "é... vou pensar" ou "não sei" e não abre.
+- Se consultor DIAGNOSTICAR com pergunta reveladora (${obj.diagnostico}), REVELE gradualmente a causa raiz. Aí ele pode contornar de verdade.
+- Se ele APLICAR contorno adequado após diagnóstico, você fica engajado.
+Máximo 12 trocas — se consultor não contornar em ~8 msgs, você desiste.`
+    case 'sinal_compra':
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO FECHAMENTO ═══
+Contexto fictício: você já passou por qualificação, viu proposta, gostou. Está no MOMENTO DECISIVO. Vai fazer PERGUNTA OPERACIONAL (sinal claro de compra).
+Se inicio=true: pergunta OPERACIONAL sobre carência, pagamento, prazos, ou como funciona algo. Exemplos: "Boa tarde, tudo certo. Só uma dúvida: como que funciona a carência dos exames?" ou "Beleza, e o pagamento pode ser boleto?" ou "Se eu assinar hoje, quando começa a valer?"
+COMPORTAMENTO NESTE MÓDULO:
+- Se consultor RECONHECER o sinal e propor fechamento formal (assumido/alternativo/por resumo) com prazo concreto, você ACEITA.
+- Se consultor VOLTAR a apresentar planos ou explicar coisas gerais, você FICA IRRITADO ("já entendi, tô perguntando se dá pra fechar").
+- Se consultor não responder direto a sua pergunta operacional, você INSISTE.
+Máximo 6-8 trocas — momento é decisivo.`
+    case 'cliente_silente':
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO FOLLOW-UP ADORMECIDO ═══
+Contexto fictício: você recebeu proposta desse consultor há uns 10 dias. Achou meio caro na hora e não respondeu mais. O consultor está tentando reativar você agora.
+Se inicio=true: NÃO RESPONDA. Retorne mensagem: "(cliente não responde — está avaliando)". O consultor precisa MANDAR a primeira mensagem primeiro. Retorne mensagem vazia ou algum indicativo de "silêncio".
+COMPORTAMENTO NESTE MÓDULO:
+- Se a mensagem do consultor for GENÉRICA ("só passando aqui pra ver", "qualquer coisa me chama"): você IGNORA. Retorne mensagem "..." ou similar mínimo, ou nem responda.
+- Se a mensagem do consultor tiver RAZÃO CONCRETA (novidade, mudança de valor, escassez real, dado novo): você RESPONDE com curiosidade curta.
+- Se ele mandar 3+ mensagens genéricas sem razão concreta, você MANDA UMA MSG DEFINITIVA tipo "olha, sinceramente perdi interesse" e some.
+- Se você responder e ele continuar bem, engaje minimamente.
+Máximo 6 trocas — foco em REATIVAR, não em fechar aqui.`
+    default:
+      return `Se inicio=true: você INICIA a conversa naturalmente.`
+  }
+}
+function _rpMensagemInicialModulo(){
+  const cfg=ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa
+  switch(cfg.contextoInicial){
+    case 'aguardando_perguntas':
+      return 'Inicie a conversa MUITO curta (1 linha, tipo "Oi, tudo bem?"). Aguarde perguntas do consultor. NÃO ofereça informação espontânea.'
+    case 'pediu_preco':
+      return 'Inicie pedindo PREÇO diretamente (contexto: já conversou antes). Ex: "Boa tarde, então quanto ficaria?"'
+    case 'objecao_inicial':
+      const obj=_RP.objecaoAtiva
+      return `Inicie apresentando a objeção superficial adaptada ao seu jeito de falar. Objeção-base: "${obj?.fala||'achei caro'}"`
+    case 'sinal_compra':
+      return 'Inicie com pergunta OPERACIONAL (sinal de compra). Ex sobre carência, pagamento ou início do plano. NÃO peça mais informação sobre o plano.'
+    case 'cliente_silente':
+      return 'Contexto: você já recebeu proposta há 10 dias e sumiu. Aguarde consultor te contactar. Retorne uma mensagem MÍNIMA representando silêncio (ex: "...", ou string vazia).'
+    case 'primeiro_contato':
+    default:
+      return 'Inicie a conversa. Você é o cliente entrando em contato pela primeira vez ou respondendo a uma cotação. Curto, natural, 1-2 linhas.'
   }
 }
 
@@ -5588,6 +5770,15 @@ Perfil do cliente: ${perInfo.label}
 Dificuldade: ${_RP.dificuldade}/5
 Score interno acumulado: ${_RP.score}/100
 Resultado declarado: ${resultado}
+${_RP.objecaoAtiva?`Objeção foco: ${_RP.objecaoAtiva.label} (causa raiz esperada: ${_RP.objecaoAtiva.causa}; diagnóstico esperado: ${_RP.objecaoAtiva.diagnostico})`:''}
+
+═══ ESCOPO DE AVALIAÇÃO — MÓDULO ${(ROLEPLAY_MODULO_CFG[_RP.modulo]||{}).rotuloOk?_RP.modulo.toUpperCase():'COMPLETA'} ═══
+FOQUE SUA AVALIAÇÃO APENAS NESTES CRITÉRIOS:
+${((ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).escopoAvaliacao||[]).map((c,i)=>`${i+1}. ${c}`).join('\n')}
+
+${((ROLEPLAY_MODULO_CFG[_RP.modulo]||{}).ignora||[]).length?`IGNORE nesta rodada (não penalize se ausente):\n- ${(ROLEPLAY_MODULO_CFG[_RP.modulo].ignora||[]).join('\n- ')}`:''}
+
+Se o consultor fez ALÉM do escopo do módulo, MENCIONE como bônus mas não é obrigatório. Foco é o escopo.
 
 ═══ TRANSCRIÇÃO ═══
 ${conversa}
