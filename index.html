@@ -4907,7 +4907,7 @@ const ROLEPLAY_MODULOS={
   ancoragem:{label:'Ancoragem de valor',emoji:'⚓',desc:'Cliente pede preço. Ancore antes de dizer R$.'},
   objecao:{label:'Contorno de objeção',emoji:'🛡️',desc:'Cliente ataca com objeção. Contorne com diagnóstico.'},
   fechamento:{label:'Fechamento',emoji:'🤝',desc:'Cliente perguntou operacional. Não deixe escapar.'},
-  followup:{label:'Follow-up adormecido',emoji:'⏰',desc:'Cliente sumiu há X dias. Reative sem parecer desespero.'}
+  followup:{label:'Follow-up de proposta',emoji:'⏰',desc:'Cliente já viu proposta e pediu tempo. Retome e leve pra fechamento ou reunião.'}
 }
 // Mini-tutoriais — conteúdo detalhado por módulo e perfil
 const ROLEPLAY_TUTORIAIS={
@@ -4948,11 +4948,11 @@ const ROLEPLAY_TUTORIAIS={
       referencia:'PDF Alta Performance — página 7 (Fechamento — Sinal/Script/Regra)'
     },
     followup:{
-      treina:'Reativação de lead adormecido. Cliente sumiu há dias/semanas. Você retoma sem parecer desespero.',
-      cliente:'Não respondeu suas últimas mensagens. Não tá motivado a responder de novo. Você precisa dar razão CONCRETA pra ele voltar.',
-      esperado:['Justificar contato com NOVIDADE (não "só passando aqui")','Reancorar valor com número/mudança concreta','Fazer pergunta curta que exige resposta binária','Não pressionar — sugerir horário específico se cabível','Aceitar se ele não voltar, mas plantar semente'],
-      avaliacao:'Nota máxima 10. Se usar "só passando aqui" ou "qualquer coisa me chama", cap de 4. Se dar razão concreta pra retomada, +2. Se ele responder (qualquer coisa), +2.',
-      referencia:'PDF Alta Performance — página 6 (Reativação de leads)'
+      treina:'Follow-up MV real: cliente já viu proposta, pediu tempo pra pensar. Você retoma pra levar pro FECHAMENTO ou marcar REUNIÃO firme. Sem margem pra desconto — preço é tabelado.',
+      cliente:'Já foi apresentado a proposta (operadora + valor mostrados no briefing acima do chat). Ele reagiu bem mas pediu tempo. Tem um motivo REAL oculto pro "vou pensar" (esposa, orçamento, comparação, não entendeu, etc) — cabe a você diagnosticar. Se você for genérico, ele te devolve genérico.',
+      esperado:['Retomar contexto ESPECÍFICO da conversa (operadora, valor, o que ele disse na apresentação)','Diagnosticar o motivo REAL do "vou pensar" antes de contornar','Reforçar valor com dado CONCRETO da proposta (rede, benefício, cobertura)','Fazer CTA binária COM prazo real ("posso te ligar hoje 18h ou amanhã 10h?")','Oferecer ferramenta de desbloqueio quando cabível (reunião com esposa/sócio, áudio pra terceiro, ligação rápida)','Respeitar cadência MV: D+1 → se pediu tempo, D+3, D+5, D+10','Se cliente sinalizar "não" claro: aceitar com dignidade (plantar semente pro futuro)'],
+      avaliacao:'Sucesso = FECHOU ou marcou REUNIÃO firme (data/hora). Blacklist ("só passando", "aguardo retorno", "qualquer coisa me avisa") cap de 4. Ofereceu desconto por conta própria cap de 4 (MV não tem margem). Não retomou contexto específico cap de 6. Diagnosticou motivo real: +2.',
+      referencia:'PDF Alta Performance — página 6 (Follow-up estruturado)'
     }
   },
   perfil:{
@@ -5001,7 +5001,8 @@ const _RP={
   mensagens:[],        // [{role:'consultor'|'cliente', texto, ts}]
   score:50,            // vínculo/score dinâmico interno
   sessaoId:null,       // uuid criado no start
-  iniciadaEm:null
+  iniciadaEm:null,
+  followupCtx:null     // {operadora,valor,motivo,tentativa} — só quando modulo=followup
 }
 
 // 15 objeções realistas em vendas de plano de saúde — usadas no módulo Contorno de Objeção
@@ -5060,11 +5061,11 @@ const ROLEPLAY_MODULO_CFG={
     ignora:['SPIN','ancoragem detalhada','contorno de objeção genérico']
   },
   followup:{
-    duracaoMax:6,
-    rotuloOk:'Reativei cliente',rotuloFail:'Não reativei',
-    contextoInicial:'cliente_silente',
-    escopoAvaliacao:['Deu razão CONCRETA pra retomada (não "só passando aqui")?','Reancorou valor com número/mudança?','CTA foi binária?','Sugeriu horário específico?','Evitou blacklist?','Aceitou não-retorno com dignidade quando cliente sinalizou não interesse?'],
-    ignora:['SPIN completo','fechamento longo']
+    duracaoMax:10,
+    rotuloOk:'Fechei ou marquei reunião',rotuloFail:'Não avançou',
+    contextoInicial:'followup_proposta',
+    escopoAvaliacao:['Retomou contexto ESPECÍFICO da conversa anterior (operadora, valor, motivo do "vou pensar")?','Diagnosticou objeção REAL antes de tentar contornar (não aceitou "ainda estou analisando" seco)?','Reforçou valor com dado CONCRETO do plano apresentado (rede, benefício, cobertura) — não vago?','Fez CTA binária COM prazo real (data/hora específica, não "quando puder")?','Ofereceu ferramenta de desbloqueio (reunião com decisor, áudio/material pra terceiro, ligação rápida)?','Evitou blacklist ("só passando", "aguardo seu retorno", "qualquer coisa me avisa")?','Respeitou cadência MV (D+1 → se pediu tempo, D+3, D+5, D+10) sem ser inconveniente?','Tom firme mas não desesperado?'],
+    ignora:['SPIN completo (já foi feito na apresentação)','ancoragem inicial (já foi feita)','oferecer desconto (MV NÃO tem margem — preço é tabelado)']
   }
 }
 
@@ -5310,6 +5311,43 @@ window._rpIniciar=async()=>{
   }else{
     _RP.objecaoAtiva=null
   }
+  // Se módulo=followup, sorteia contexto (operadora, valor, motivo oculto, tentativa D+X)
+  if(_RP.modulo==='followup'){
+    const OPS=['Clinipam','Unimed','Amil','Nossa Saúde','SulAmérica','Bradesco','Hapvida','MedSênior','MedSul','Qualicorp','Leve Saúde']
+    const VALORES_POR_PERFIL={
+      empresario_familia:[1150,1280,1450,1620,1780,1950,2180],
+      senior:[1800,2100,2450,2780,3150,3600],
+      pf_pediatrica:[280,340,410,480,560,640],
+      pme:[8500,12400,18200,24600,32800]
+    }
+    const MOTIVOS=[
+      {id:'caro',oculto:'achou acima do orçamento que tinha em mente',superficie:'ainda estou analisando'},
+      {id:'compara',oculto:'quer comparar com uma cotação de outra corretora que a esposa/sócio pediu',superficie:'vou pensar mais um pouquinho'},
+      {id:'decisor',oculto:'esposa/sócio ainda não viu a proposta e ele não decide sem consultar',superficie:'preciso conversar com [decisor] antes'},
+      {id:'orcamento',oculto:'medo de comprometer orçamento familiar num momento apertado',superficie:'esse mês tá meio complicado, deixa eu ver'},
+      {id:'nao_entendeu',oculto:'não entendeu direito a rede/carência mas tem vergonha de admitir',superficie:'só quero conferir uns detalhes'},
+      {id:'empurrao',oculto:'está genuinamente decidindo, só falta um empurrão pra bater o martelo',superficie:'semana que vem eu te dou uma posição'}
+    ]
+    const TENTS=[
+      {label:'D+1',dias:1,peso:2,ctx:'É o dia SEGUINTE ao envio da proposta. Cliente ainda tem tudo fresco na cabeça. Primeira tentativa do consultor.'},
+      {label:'D+3',dias:3,peso:3,ctx:'Já se passaram 3 dias desde o envio. Cliente pediu tempo em D+1 e disse que ia avaliar. Segunda tentativa.'},
+      {label:'D+5',dias:5,peso:3,ctx:'5 dias desde o envio. Cliente já foi contactado 2x e pediu mais tempo. Terceira tentativa. Consultor precisa dar razão nova pra retomar.'},
+      {label:'D+10',dias:10,peso:2,ctx:'10 dias desde o envio. Cliente já foi contactado 3x e enrolou. Última tentativa antes de dar como perdido. Precisa razão MUITO forte ou aceitar não com dignidade.'}
+    ]
+    // sorteio ponderado da tentativa
+    const totalPeso=TENTS.reduce((a,t)=>a+t.peso,0)
+    let r=Math.random()*totalPeso,tent=TENTS[0]
+    for(const t of TENTS){if((r-=t.peso)<=0){tent=t;break}}
+    const valores=VALORES_POR_PERFIL[_RP.perfil]||VALORES_POR_PERFIL.empresario_familia
+    _RP.followupCtx={
+      operadora:OPS[Math.floor(Math.random()*OPS.length)],
+      valor:valores[Math.floor(Math.random()*valores.length)],
+      motivo:MOTIVOS[Math.floor(Math.random()*MOTIVOS.length)],
+      tentativa:tent
+    }
+  }else{
+    _RP.followupCtx=null
+  }
   try{
     const{data}=await sb.from('roleplay_sessoes').insert({
       consultor_id:CU.id,modulo:_RP.modulo,perfil_cliente:_RP.perfil,dificuldade:_RP.dificuldade,
@@ -5327,8 +5365,16 @@ function _renderRoleplayChat(){
   const perInfo=ROLEPLAY_PERFIS[_RP.perfil]
   const nomeCliente=_RP.clienteNome||'(cliente)'
   const ini=nomeCliente.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
+  const fc=_RP.followupCtx
+  const briefFollowup=(_RP.modulo==='followup'&&fc)?`
+    <div style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:1.5px solid #F59E0B;border-radius:12px;padding:12px 16px;margin-bottom:12px;font-size:12px;color:#78350F">
+      <div style="font-weight:800;margin-bottom:6px;font-size:11px;letter-spacing:.3px;text-transform:uppercase">📋 Briefing — o que você já fez com esse cliente</div>
+      <div style="line-height:1.6"><b>Proposta apresentada:</b> ${_esc(fc.operadora)} — R$ ${fc.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}/mês · <b>Reação do cliente:</b> pediu tempo pra pensar · <b>Cadência atual:</b> ${fc.tentativa.label} (${fc.tentativa.dias} ${fc.tentativa.dias===1?'dia':'dias'} desde o envio)</div>
+      <div style="margin-top:6px;font-size:11px;opacity:.85"><i>Sua missão: retomar esse cliente e levar pra FECHAMENTO ou MARCAR REUNIÃO firme com data/hora. Diagnostique o motivo real do "vou pensar" antes de contornar.</i></div>
+    </div>`:''
   el.innerHTML=`
     <div style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 120px)">
+      ${briefFollowup}
       <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:12px;min-width:0">
           <div style="width:42px;height:42px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${ini}</div>
@@ -5628,16 +5674,45 @@ COMPORTAMENTO NESTE MÓDULO:
 - Se consultor VOLTAR a apresentar planos ou explicar coisas gerais, você FICA IRRITADO ("já entendi, tô perguntando se dá pra fechar").
 - Se consultor não responder direto a sua pergunta operacional, você INSISTE.
 Máximo 6-8 trocas — momento é decisivo.`
-    case 'cliente_silente':
-      return `═══ CENÁRIO ESPECÍFICO — MÓDULO FOLLOW-UP ADORMECIDO ═══
-Contexto fictício: você recebeu proposta desse consultor há uns 10 dias. Achou meio caro na hora e não respondeu mais. O consultor está tentando reativar você agora.
-Se inicio=true: NÃO RESPONDA. Retorne mensagem: "(cliente não responde — está avaliando)". O consultor precisa MANDAR a primeira mensagem primeiro. Retorne mensagem vazia ou algum indicativo de "silêncio".
-COMPORTAMENTO NESTE MÓDULO:
-- Se a mensagem do consultor for GENÉRICA ("só passando aqui pra ver", "qualquer coisa me chama"): você IGNORA. Retorne mensagem "..." ou similar mínimo, ou nem responda.
-- Se a mensagem do consultor tiver RAZÃO CONCRETA (novidade, mudança de valor, escassez real, dado novo): você RESPONDE com curiosidade curta.
-- Se ele mandar 3+ mensagens genéricas sem razão concreta, você MANDA UMA MSG DEFINITIVA tipo "olha, sinceramente perdi interesse" e some.
-- Se você responder e ele continuar bem, engaje minimamente.
-Máximo 6 trocas — foco em REATIVAR, não em fechar aqui.`
+    case 'followup_proposta':
+      const fc=_RP.followupCtx
+      const valorFmt=fc?fc.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'
+      return `═══ CENÁRIO ESPECÍFICO — MÓDULO FOLLOW-UP DE PROPOSTA ═══
+
+CONTEXTO PRÉVIO (o que ACONTECEU antes desse contato):
+- Esse consultor já te apresentou uma proposta da operadora ${fc?.operadora||'—'} no valor de R$ ${valorFmt}/mês.
+- Você reagiu na hora com algo tipo: "Show, gostei, vou dar uma pensada" — pediu tempo. Foi cordial.
+- Momento atual da cadência: ${fc?.tentativa.label||'D+3'} — ${fc?.tentativa.ctx||''}
+
+MOTIVO REAL DO SEU "VOU PENSAR" (OCULTO — NÃO REVELE de cara):
+> ${fc?.motivo.oculto||'está genuinamente avaliando'}
+
+FRASE DE SUPERFÍCIE que você usa se consultor perguntar genérico:
+> "${fc?.motivo.superficie||'ainda estou avaliando'}"
+
+Se inicio=true: aguarde consultor te contactar. Retorne "(cliente ainda não respondeu — aguardando abordagem)".
+
+COMPORTAMENTO NESTE MÓDULO (segue à risca):
+- Você JÁ CONHECE esse consultor, JÁ VIU a proposta. Não é frio. Responde educadamente quando ele chegar.
+- NÃO ABRA o motivo real de primeira. Devolva a frase de superfície e observe se o consultor diagnostica.
+- Se consultor fizer pergunta GENÉRICA ("e aí, decidiu?", "conseguiu ver?", "alguma novidade?"): você devolve genérico e NÃO avança ("ainda tô avaliando", "essa semana te falo").
+- Se consultor NÃO RETOMAR o contexto específico (não mencionar operadora/valor/o que você disse): fica com pé atrás — parece que ele nem lembra de você.
+- Se consultor DIAGNOSTICAR bem ("do que a gente conversou, o que mais tá te segurando?" / "quando você falou em pensar com a [decisor], o que mais te deixou na dúvida?" / "tem alguma coisa da proposta que ficou meio nebulosa?"): você abre PARCIALMENTE o motivo real.
+- Se consultor REFORÇAR VALOR com dado CONCRETO da proposta (rede que atende seu médico/hospital, benefício específico, cobertura que você precisa): você engaja.
+- Se consultor OFERECER FERRAMENTA DE DESBLOQUEIO (reunião de 15-20 min pra rever junto, ligação com o decisor, áudio explicando pra terceiro, material específico): você pode aceitar — DEPENDE da qualidade do diagnóstico anterior.
+- Se consultor FIZER CTA BINÁRIA COM PRAZO REAL ("posso te ligar hoje 18h ou amanhã 10h?", "fecho hoje e você entra dia 1º, ou marcamos 20 min amanhã?"): você tende a aceitar SE já engajou.
+- Se consultor for GENÉRICO 3+ vezes seguidas: "olha, quando eu decidir eu te chamo" (sinal de perdido — não responde mais).
+- Se consultor OFERECER DESCONTO por conta própria: você fica DESCONFIADO ("por que só agora esse preço?") — perde autoridade. IMPORTANTE: MV NÃO tem margem, preço é tabelado, então se ele fizer isso está errado.
+- Se consultor RESPEITAR seu "não" com dignidade (não insistir grudento quando você já sinalizou desinteresse claro): você fica bem impressionado — pode voltar no futuro.
+
+FRASES QUE VOCÊ NÃO ACEITA (sinaliza incômodo ou some):
+- "Só passando aqui pra ver"
+- "Aguardo seu retorno"
+- "Qualquer coisa me avisa"
+- "Fico à disposição"
+
+OBJETIVO DO CONSULTOR: fechar agora OU marcar reunião firme com data/hora pra fechar.
+Máximo 10 trocas — se em 8 msgs não avançou nada, você fecha genericamente ("te falo depois, tá?").`
     default:
       return `Se inicio=true: você INICIA a conversa naturalmente.`
   }
@@ -5654,8 +5729,8 @@ function _rpMensagemInicialModulo(){
       return `Inicie apresentando a objeção superficial adaptada ao seu jeito de falar. Objeção-base: "${obj?.fala||'achei caro'}"`
     case 'sinal_compra':
       return 'Inicie com pergunta OPERACIONAL (sinal de compra). Ex sobre carência, pagamento ou início do plano. NÃO peça mais informação sobre o plano.'
-    case 'cliente_silente':
-      return 'Contexto: você já recebeu proposta há 10 dias e sumiu. Aguarde consultor te contactar. Retorne uma mensagem MÍNIMA representando silêncio (ex: "...", ou string vazia).'
+    case 'followup_proposta':
+      return 'Contexto: você já recebeu a proposta desse consultor há alguns dias e pediu tempo pra pensar. Aguarde ele te contactar. Retorne uma mensagem tipo "(cliente aguardando contato — ainda não respondeu)".'
     case 'primeiro_contato':
     default:
       return 'Inicie a conversa. Você é o cliente entrando em contato pela primeira vez ou respondendo a uma cotação. Curto, natural, 1-2 linhas.'
@@ -5771,6 +5846,15 @@ Dificuldade: ${_RP.dificuldade}/5
 Score interno acumulado: ${_RP.score}/100
 Resultado declarado: ${resultado}
 ${_RP.objecaoAtiva?`Objeção foco: ${_RP.objecaoAtiva.label} (causa raiz esperada: ${_RP.objecaoAtiva.causa}; diagnóstico esperado: ${_RP.objecaoAtiva.diagnostico})`:''}
+${_RP.followupCtx?`
+Contexto FOLLOW-UP:
+- Proposta apresentada: ${_RP.followupCtx.operadora} — R$ ${_RP.followupCtx.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}/mês
+- Cadência: ${_RP.followupCtx.tentativa.label} (${_RP.followupCtx.tentativa.dias} ${_RP.followupCtx.tentativa.dias===1?'dia':'dias'} desde o envio)
+- Motivo REAL oculto do "vou pensar": ${_RP.followupCtx.motivo.oculto}
+- Frase de superfície que cliente usou: "${_RP.followupCtx.motivo.superficie}"
+- Avalie se consultor: (1) retomou contexto ESPECÍFICO (operadora/valor/o que cliente disse na apresentação); (2) diagnosticou o motivo REAL vs aceitou a superfície; (3) reforçou valor com dado concreto do plano; (4) fez CTA binária com data/hora; (5) ofereceu ferramenta de desbloqueio (reunião, áudio, ligação com decisor); (6) evitou blacklist.
+- REGRA ESPECÍFICA MV: NÃO existe margem pra desconto — se consultor ofereceu desconto por conta própria, é erro GRAVE (nota máx 4). Preço é tabelado.
+- REGRA ESPECÍFICA MV: reunião com esposa/sócio e áudio pra terceiro são jogadas oficiais MV — valorize quando aplicadas corretamente.`:''}
 
 ═══ ESCOPO DE AVALIAÇÃO — MÓDULO ${(ROLEPLAY_MODULO_CFG[_RP.modulo]||{}).rotuloOk?_RP.modulo.toUpperCase():'COMPLETA'} ═══
 FOQUE SUA AVALIAÇÃO APENAS NESTES CRITÉRIOS:
