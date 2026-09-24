@@ -5027,41 +5027,41 @@ const ROLEPLAY_OBJECOES=[
 // Configuração de cada módulo — cenário inicial, duração, rótulos, critérios
 const ROLEPLAY_MODULO_CFG={
   completa:{
-    duracaoMax:30,
+    duracaoMax:40,
     rotuloOk:'Fechei venda',rotuloFail:'Perdi cliente',
     contextoInicial:'primeiro_contato',
     escopoAvaliacao:['SPIN completo (S+P+I+N)?','Ancoragem em números concretos?','Diagnóstico antes de responder objeção?','Palavra reforço + nome usado?','Fechamento aplicado no momento certo?','Tom MV aderente?','Blacklist evitada?']
   },
   spin:{
-    duracaoMax:15,
+    duracaoMax:20,
     rotuloOk:'Concluí diagnóstico',rotuloFail:'Diagnóstico incompleto',
     contextoInicial:'aguardando_perguntas',
     escopoAvaliacao:['Fez pergunta de SITUAÇÃO?','Fez pergunta de PROBLEMA (deixou cliente nomear)?','Fez pergunta de IMPLICAÇÃO (amplificou custo)?','Fez pergunta de NECESSIDADE (cliente descreveu solução)?','Ordem SPIN foi respeitada?','Perguntas abertas ou fechadas?','Presumiu problema em algum momento?'],
     ignora:['ancoragem','fechamento','contorno de objeção','apresentação de plano']
   },
   ancoragem:{
-    duracaoMax:8,
+    duracaoMax:14,
     rotuloOk:'Apresentei valor',rotuloFail:'Cliente reagiu mal ao preço',
     contextoInicial:'pediu_preco',
     escopoAvaliacao:['Ancorou ANTES de dizer preço?','Usou âncora oficial MV (UTI R$ 8-15k, internação R$ 40-80k, R$ 18/dia)?','Fez equivalência cotidiana?','Apresentou faixa antes do valor específico?','Reforçou pós-preço com âncora?','Cliente teve reação neutra/positiva?'],
     ignora:['SPIN completo','fechamento formal','contorno detalhado']
   },
   objecao:{
-    duracaoMax:12,
+    duracaoMax:18,
     rotuloOk:'Contornei objeção',rotuloFail:'Cliente resistiu',
     contextoInicial:'objecao_inicial',
     escopoAvaliacao:['Diagnosticou com pergunta ANTES de responder?','Identificou causa raiz correta?','Aplicou script adequado pra causa raiz?','Deu desconto sem diagnosticar? (Regra Voss)','Cliente revelou objeção real ou ficou na superficial?'],
     ignora:['SPIN completo','ancoragem detalhada','fechamento formal']
   },
   fechamento:{
-    duracaoMax:8,
+    duracaoMax:12,
     rotuloOk:'Fechei venda',rotuloFail:'Cliente resistiu no fechamento',
     contextoInicial:'sinal_compra',
     escopoAvaliacao:['Reconheceu sinal de compra na primeira mensagem?','NÃO voltou pra apresentação?','Aplicou padrão de fechamento (assumido/alternativo/por resumo)?','Agendou próximo passo CONCRETO com prazo?','Confirmou compromisso?'],
     ignora:['SPIN','ancoragem detalhada','contorno de objeção genérico']
   },
   followup:{
-    duracaoMax:10,
+    duracaoMax:12,
     rotuloOk:'Fechei ou marquei reunião',rotuloFail:'Não avançou',
     contextoInicial:'followup_proposta',
     escopoAvaliacao:['Retomou contexto ESPECÍFICO da conversa anterior (operadora, valor, motivo do "vou pensar")?','Diagnosticou objeção REAL antes de tentar contornar (não aceitou "ainda estou analisando" seco)?','Reforçou valor com dado CONCRETO do plano apresentado (rede, benefício, cobertura) — não vago?','Fez CTA binária COM prazo real (data/hora específica, não "quando puder")?','Ofereceu ferramenta de desbloqueio (reunião com decisor, áudio/material pra terceiro, ligação rápida)?','Evitou blacklist ("só passando", "aguardo seu retorno", "qualquer coisa me avisa")?','Respeitou cadência MV (D+1 → se pediu tempo, D+3, D+5, D+10) sem ser inconveniente?','Tom firme mas não desesperado?'],
@@ -5451,7 +5451,7 @@ window._rpQuandoEncerrar=()=>{
       </div>
 
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5">
-        💡 <strong>Dica:</strong> uma rodada ideal tem 15-25 mensagens. Se passar de 30 sem sinal claro, cliente já se cansou — considere "Perdi cliente" e revise técnica no feedback.
+        💡 <strong>Dica:</strong> uma rodada ideal tem 20-32 mensagens. Se passar disso sem sinal claro, cliente já se cansou — considere "Perdi cliente" e revise técnica no feedback.
       </div>
 
       <div class="modal-btns" style="margin-top:16px">
@@ -5507,7 +5507,7 @@ Você conhece essas operadoras pelo que a família/amigos/vizinhos falam. Não u
 - Paraná Clínicas: hospital Santa Cruz é ótimo, mas rede própria só em alguns bairros
 - Bradesco Saúde: caro, boa linha de reembolso
 
-Se o consultor citar outra operadora que NÃO está nessa lista (ex: Select, Hapvida), reaja com estranheza: "Nunca ouvi falar" / "Não é daqui de Curitiba?".
+Se o consultor citar operadora que NÃO está nessa lista (ex: Select, Leve Saúde, Notre Dame, Amil One), reaja com estranheza: "Nunca ouvi falar" / "Não é daqui de Curitiba?".
 Sua reação a operadoras vem do FEEDBACK DA COMUNIDADE — nunca fale como se fosse expert. É opinião de leigo.
 
 ═══ REGRAS DE COMPORTAMENTO — LEIA COM ATENÇÃO ═══
@@ -5664,7 +5664,7 @@ COMPORTAMENTO NESTE MÓDULO:
 - Se consultor RESPONDER a objeção SEM diagnosticar (defender preço, argumentar direto, dar desconto), você FICA FRIO. Repita "é... vou pensar" ou "não sei" e não abre.
 - Se consultor DIAGNOSTICAR com pergunta reveladora (${obj.diagnostico}), REVELE gradualmente a causa raiz. Aí ele pode contornar de verdade.
 - Se ele APLICAR contorno adequado após diagnóstico, você fica engajado.
-Máximo 12 trocas — se consultor não contornar em ~8 msgs, você desiste.`
+Máximo 18 mensagens — se consultor não contornar em ~12 msgs, você desiste.`
     case 'sinal_compra':
       return `═══ CENÁRIO ESPECÍFICO — MÓDULO FECHAMENTO ═══
 Contexto fictício: você já passou por qualificação, viu proposta, gostou. Está no MOMENTO DECISIVO. Vai fazer PERGUNTA OPERACIONAL (sinal claro de compra).
@@ -5673,7 +5673,7 @@ COMPORTAMENTO NESTE MÓDULO:
 - Se consultor RECONHECER o sinal e propor fechamento formal (assumido/alternativo/por resumo) com prazo concreto, você ACEITA.
 - Se consultor VOLTAR a apresentar planos ou explicar coisas gerais, você FICA IRRITADO ("já entendi, tô perguntando se dá pra fechar").
 - Se consultor não responder direto a sua pergunta operacional, você INSISTE.
-Máximo 6-8 trocas — momento é decisivo.`
+Máximo 12 mensagens — momento é decisivo, seja direto.`
     case 'followup_proposta':
       const fc=_RP.followupCtx
       const valorFmt=fc?fc.valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'
@@ -5712,7 +5712,7 @@ FRASES QUE VOCÊ NÃO ACEITA (sinaliza incômodo ou some):
 - "Fico à disposição"
 
 OBJETIVO DO CONSULTOR: fechar agora OU marcar reunião firme com data/hora pra fechar.
-Máximo 10 trocas — se em 8 msgs não avançou nada, você fecha genericamente ("te falo depois, tá?").`
+Máximo 12 mensagens no total — se o consultor não avançou nada até lá, você fecha genericamente ("te falo depois, tá?").`
     default:
       return `Se inicio=true: você INICIA a conversa naturalmente.`
   }
@@ -5798,9 +5798,9 @@ CENÁRIO: consultor sugere fechar rápido ("fecha hoje?", "consegue enviar docs 
 
 Motivo do erro nos pontos_desenvolver: "pressão inadequada — cliente citou X como bloqueio (esposa/tempo/dúvida) e consultor forçou fechamento sem endereçar isso".
 
-═══ OPERADORAS QUE A MV VENDE EM CURITIBA (contexto real) ═══
-Use pra avaliar se consultor recomendou operadora ADEQUADA pra dor do cliente:
-- Unimed → maior rede credenciada de Curitiba, urgência nacional, SOS Ambulância. Contra: liberação de guia lenta, cancelamento unilateral.
+═══ OPERADORAS QUE A MV VENDE EM CURITIBA (contexto de referência) ═══
+Base pra avaliar se o CONSULTOR CONHECE as operadoras que trabalha e se SONDOU o problema do cliente antes de recomendar. Prós/contras servem de referência do que o cliente-IA pode citar como argumento na conversa — NUNCA como base pra dizer "consultor errou ao oferecer X".
+- Unimed → maior rede credenciada de Curitiba, urgência nacional, SOS Ambulância. Contra que cliente pode citar: liberação de guia lenta, cancelamento unilateral.
 - Amil → boa rede a partir de 2 vidas, laboratório A+. Contra: alto descredenciamento, urgência nacional falha.
 - SulAmérica → nacional, ótimo pós-venda, empresa 127 anos. Contra: caro.
 - Hapvida → melhor custo-benefício, boas estruturas próprias. Contra: extremamente difícil marcar consultas/exames.
@@ -5810,9 +5810,13 @@ Use pra avaliar se consultor recomendou operadora ADEQUADA pra dor do cliente:
 - Paraná Clínicas → bom custo, Hospital Santa Cruz (top 10 Brasil). Contra: rede própria em poucos bairros.
 - Bradesco Saúde → linha de reembolso ótima, ótimo pós-venda. Contra: pelo preço, rede pequena.
 
-Se consultor recomendou operadora INADEQUADA pra dor específica (ex: cliente com dor "não consigo marcar exame" e consultor sugeriu Hapvida/Nossa Saúde), penalize com evidência.
-Se consultor recomendou operadora ADEQUADA com justificativa correta, valorize.
-NÃO existe Select ou Leve Saúde vendida em Curitiba pela MV — se consultor mencionou, é erro grave.
+REGRA CRÍTICA — como USAR essa base na avaliação:
+1. Se o consultor recomendou uma operadora SEM ter sondado antes a dor específica do cliente (não perguntou sobre uso de rede, urgência, médicos de referência, filhos, hospitais específicos): aponte como FALHA DE SONDAGEM/DIAGNÓSTICO — o problema é ele não ter perguntado, NÃO a operadora escolhida.
+   - ERRADO dizer: "Consultor ofereceu Hapvida pra cliente que precisa marcar exame rápido — operadora inadequada".
+   - CERTO dizer: "Consultor recomendou operadora sem SONDAR a rotina do cliente com médicos/exames. Deveria ter perguntado 'com que frequência você marca exame/consulta?' ou 'tem médico de referência que você segue?' antes de sugerir plano."
+2. Se o consultor DEMONSTROU CONHECIMENTO da operadora (citou prós/contras corretos, comparou com outra, justificou pela dor específica do cliente): VALORIZE — mostra que ele domina o portfólio MV.
+3. Se o cliente-IA levantou uma característica negativa da operadora como objeção ("meu vizinho falou que a Hapvida demora pra marcar") e o consultor lidou bem (não negou, validou, ofereceu alternativa ou mostrou como funciona hoje): VALORIZE.
+4. NÃO existe Select ou Leve Saúde vendida em Curitiba pela MV — se consultor mencionou, é erro grave de conhecimento de portfólio.
 
 REGRAS DE OURO DA AVALIAÇÃO:
 1. Se o consultor não fez SPIN completo (S+P+I+N), nota MÁXIMA é 6.
@@ -5967,7 +5971,8 @@ async function loadSvRoleplay(){
   el.innerHTML='<div class="loading">Carregando…</div>'
   if(!CU.equipe_id){el.innerHTML='<div class="empty">Você não tem equipe associada.</div>';return}
   // Consultores da equipe (perfil consultor + supervisor não conta ele mesmo por ora)
-  const{data:cons}=await sb.from('usuarios').select('id,nome,foto_url,foto_ver,roleplay_liberado').eq('equipe_id',CU.equipe_id).eq('perfil','consultor').order('nome')
+  const{data:cons,error:consErr}=await sb.from('usuarios').select('id,nome,foto_url,roleplay_liberado').eq('equipe_id',CU.equipe_id).eq('perfil','consultor').order('nome')
+  if(consErr){console.error('loadSvRoleplay usuarios:',consErr);el.innerHTML=`<div class="empty">Erro ao carregar equipe: ${_esc(consErr.message||'')}</div>`;return}
   const ids=(cons||[]).map(c=>c.id)
   // Sessões dos últimos 60 dias
   const dtLim=new Date(Date.now()-60*86400000).toISOString()
