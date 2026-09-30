@@ -5027,7 +5027,7 @@ const ROLEPLAY_OBJECOES=[
 // Configuração de cada módulo — cenário inicial, duração, rótulos, critérios
 const ROLEPLAY_MODULO_CFG={
   completa:{
-    duracaoMax:40,
+    duracaoMax:0,  // 0 = sem limite — rodada roda até consultor encerrar manualmente
     rotuloOk:'Fechei venda',rotuloFail:'Perdi cliente',
     contextoInicial:'primeiro_contato',
     escopoAvaliacao:['SPIN completo (S+P+I+N)?','Ancoragem em números concretos?','Diagnóstico antes de responder objeção?','Palavra reforço + nome usado?','Fechamento aplicado no momento certo?','Tom MV aderente?','Blacklist evitada?']
@@ -5609,9 +5609,9 @@ Se inicio=false: RESPONDA a última mensagem do consultor mantendo tudo acima.`
     _RP.mensagens.push({role:'cliente',texto:parsed.mensagem||'…',ts:Date.now()})
     _RP.score=Math.max(0,Math.min(100,_RP.score+Number(parsed.score_delta||0)))
     _rpRenderMsgs()
-    // Limite de mensagens por módulo — força encerramento
-    const durMax=(ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).duracaoMax||30
-    if(_RP.mensagens.length>=durMax){
+    // Limite de mensagens por módulo — força encerramento (0 = sem limite)
+    const durMax=(ROLEPLAY_MODULO_CFG[_RP.modulo]||ROLEPLAY_MODULO_CFG.completa).duracaoMax
+    if(durMax>0&&_RP.mensagens.length>=durMax){
       mostrarToast('Rodada estourou',`Limite de ${durMax} mensagens atingido pro módulo ${_RP.modulo}.`,'info')
       setTimeout(()=>_rpEncerrar('cliente_sumiu'),1500)
       return
