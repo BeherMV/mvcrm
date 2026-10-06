@@ -4457,6 +4457,18 @@ window.salvarLead=async()=>{
   $('ml-err').style.display='none'
   if(!nome){$('ml-err').textContent='Informe o nome do lead.';$('ml-err').style.display='block';_salvandoLead=false;return}
   if(status==='Negativa'&&!$('ml-motivo-sel').value){$('ml-err').textContent='Selecione o motivo da negativa.';$('ml-err').style.display='block';_salvandoLead=false;return}
+  // Trava anti-duplicata: se o próprio consultor já tem lead com esse telefone, bloqueia
+  const telefoneRaw=$('ml-tel').value.trim()
+  if(telefoneRaw.replace(/\D/g,'').length>=8){
+    const{data:dup,error:dupErr}=await sb.rpc('lead_duplicado_meu',{p_telefone:telefoneRaw,p_excluir_lead_id:id||null})
+    if(dupErr){console.warn('dup check:',dupErr)}
+    if(dup&&dup.length>0){
+      const d=dup[0]
+      const periodo=(d.mes_cotacao&&d.ano_cotacao)?`${String(d.mes_cotacao).padStart(2,'0')}/${d.ano_cotacao}`:'—'
+      $('ml-err').innerHTML=`Telefone já cadastrado no seu funil: <b>${_esc(d.lead_nome||'(sem nome)')}</b> — ${_esc(d.status||'')} · ${periodo}`
+      $('ml-err').style.display='block';_salvandoLead=false;return
+    }
+  }
   const m=mesAtual(),a=anoAtual()
   let motivo=$('ml-motivo-sel').value
   if(motivo==='Outro') motivo='Outro: '+($('ml-motivo-detalhe').value||'')
