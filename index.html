@@ -8843,6 +8843,12 @@ async function loadMaUsuarios(){
     sb.from('equipes').select('id,nome').order('nome')
   ])
   const users=usRes.data||[];const equipes=eqRes.data||[]
+  // equipe_id → nome do supervisor (gestor), pro master enxergar pra quem está movendo
+  const gestorEq={}
+  users.forEach(u=>{if(u.perfil==='supervisor'&&u.equipe_id&&!gestorEq[u.equipe_id])gestorEq[u.equipe_id]=u.nome})
+  _maUsuEquipes=equipes;_maUsuGestores=gestorEq
+  const optsEquipe=atual=>`<option value="">Sem equipe</option>`+equipes.map(e=>
+    `<option value="${e.id}" ${e.id===atual?'selected':''}>${_esc(e.nome)}${gestorEq[e.id]?' · '+_esc(gestorEq[e.id]):''}</option>`).join('')
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
       <div>
@@ -8858,7 +8864,7 @@ async function loadMaUsuarios(){
           <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:30px;height:30px;font-size:11px">${ini(u.nome)}</div><span style="font-weight:600">${_esc(u.nome)}</span></div></td>
           <td style="color:var(--text3);font-size:13px">${_esc(u.email||'—')}</td>
           <td><span class="pill ${u.perfil==='supervisor'?'p-wn':'p-ok'}" style="font-size:11px">${u.perfil}</span></td>
-          <td style="font-size:13px">${_esc(u.equipes?.nome||'—')}</td>
+          <td><select class="ma-usu-equipe" data-atual="${u.equipe_id||''}" onchange="_moverUsuarioEquipe('${u.id}',${_js(u.nome)},'${u.perfil}',this)" title="Mover para outra equipe / gestor" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);max-width:240px">${optsEquipe(u.equipe_id)}</select></td>
           <td style="text-align:center"><label class="rp-toggle"><input type="checkbox" ${u.roleplay_liberado?'checked':''} onchange="_toggleRoleplayLiberado('${u.id}',this.checked,this)"><span class="rp-toggle-slider"></span></label></td>
           <td><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}',${_js(u.nome)})">🗑 Excluir</button></td>
         </tr>`).join('')}
@@ -8924,6 +8930,34 @@ async function loadMaUsuarios(){
       </div>
     </div>
   `
+}
+// Master move consultor/supervisor para outra equipe (= outro gestor).
+// Meses já fechados não mudam (snapshot em metas_mensais.equipe_id); leads continuam com o usuário.
+let _maUsuEquipes=[],_maUsuGestores={}
+window._moverUsuarioEquipe=async(id,nome,perfil,sel)=>{
+  const de=sel.dataset.atual||'',para=sel.value||''
+  if(de===para)return
+  const rotulo=eqId=>{
+    if(!eqId)return 'Sem equipe'
+    const eq=_maUsuEquipes.find(e=>e.id===eqId)
+    const g=_maUsuGestores[eqId]
+    return (eq?.nome||'Equipe')+(g?` (gestor: ${g})`:' (sem gestor)')
+  }
+  let msg=`Mover ${nome}\n\nDe: ${rotulo(de)}\nPara: ${rotulo(para)}\n\nOs leads continuam com ${nome}. Meses já fechados não mudam; o mês atual passa a contar na nova equipe.`
+  if(perfil==='supervisor'&&para&&_maUsuGestores[para]&&_maUsuGestores[para]!==nome)
+    msg+=`\n\n⚠️ A equipe de destino já tem o gestor ${_maUsuGestores[para]}.`
+  if(!confirm(msg)){sel.value=de;return}
+  sel.disabled=true
+  const{data,error}=await sb.from('usuarios').update({equipe_id:para||null}).eq('id',id).select('id')
+  sel.disabled=false
+  // RLS bloqueando não dá erro — só volta 0 linhas
+  if(error||!data?.length){
+    sel.value=de
+    mostrarToast('Erro',error?.message||'Sem permissão para alterar este usuário.','erro')
+    return
+  }
+  mostrarToast('Equipe alterada',`${nome} → ${rotulo(para)}`,'sucesso')
+  loadMaUsuarios()
 }
 window.abrirModalNovoUsuario=()=>{
   const m=$('modal-novo-usu');if(!m)return
