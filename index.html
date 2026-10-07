@@ -820,12 +820,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           </button>
           <div class="topbar-title" id="topbar-title">Dashboard</div>
         </div>
-        <button class="feed-cta" onclick="abrirFeed()" title="Feed da equipe">
-          <span class="feed-cta-dot" aria-hidden="true"></span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
-          <span>Feed da equipe</span>
-          <span class="feed-cta-badge">novo</span>
-        </button>
         <div style="display:flex;align-items:center;gap:10px">
           <button class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro" aria-label="Alternar tema">
             <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -2388,9 +2382,6 @@ async function iniciarApp(){
   if(CU.perfil==='master') setupMaster()
   else if(CU.perfil==='supervisor') setupSupervisor()
   else setupConsultor()
-  // Automações do Feed (aniversário pessoal + aniversário na empresa) — dispara 1x por sessão
-  _rodarAutomacoesFeed()
-  // Realtime do Feed: lazy — só assina quando o usuário ABRIR o feed (loadFeed).
   // Auto-fechamento do mês anterior — congela metas do mês passado no 1º login do mês novo
   _autoFecharMesAnterior()
   // Follow-ups: badge + banner persistente + modal de boas-vindas 1x por sessão
@@ -2584,30 +2575,8 @@ async function carregarNotificacoes(){
   }).join(''):'<div class="empty">Nenhuma notificação</div>'
 }
 window.lerNotif=async id=>{
-  const{data:notif}=await sb.from('notificacoes').select('link_post_id').eq('id',id).maybeSingle()
   await sb.from('notificacoes').update({lida:true}).eq('id',id)
   await carregarNotificacoes()
-  if(notif?.link_post_id){
-    // Fecha painel de notificações
-    notifOpen=false
-    $('notif-panel')?.classList.remove('open')
-    // Navega pro Feed
-    abrirFeed()
-    // Espera o feed carregar e scrolla até o post com highlight
-    const postId=notif.link_post_id
-    let tentativas=0
-    const scroll=()=>{
-      const el=document.querySelector(`[data-post-id="${postId}"]`)
-      if(el){
-        el.scrollIntoView({behavior:'smooth',block:'center'})
-        el.classList.add('highlight')
-        setTimeout(()=>el.classList.remove('highlight'),2600)
-      }else if(tentativas++<10){
-        setTimeout(scroll,300)
-      }
-    }
-    setTimeout(scroll,600)
-  }
 }
 window.marcarTodasLidas=async()=>{await sb.from('notificacoes').update({lida:true}).eq('para_usuario',CU.id);await carregarNotificacoes()}
 window.limparNotificacoes=async()=>{
@@ -3814,8 +3783,6 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
     if(!jaNotif?.length){
       await notificarTodos(tituloIndiv,`${consultorNome} atingiu ${fmt(real)} — meta de ${fmt(meta)}!`,'sucesso',consultorId)
     }
-    // Post automático no feed (dedup por mês)
-    _postarConquistaMeta(consultorId,consultorNome).catch(e=>console.warn('post conquista:',e))
   }
 
   // Checar meta da EQUIPE — usa RPC para realizado (contorna RLS) + metas_mensais para meta
@@ -3838,8 +3805,6 @@ async function verificarMetas(consultorId,consultorNome,equipeId,equipeNome){
         if(!jaNotifEq?.length){
           const{data:sup}=await sb.from('usuarios').select('id').eq('perfil','supervisor').eq('equipe_id',equipeId).limit(1).maybeSingle()
           await notificarTodos(tituloEq,`A equipe ${equipeNome} atingiu ${fmt(realTotal)} de ${fmt(metaTotal)}! Parabéns a todos!`,'sucesso',sup?.id||null)
-          // Post automático no feed (dedup por mês por supervisor)
-          _postarConquistaEquipe(sup?.id||null,equipeNome).catch(e=>console.warn('post equipe:',e))
         }
       }
     }
@@ -3861,8 +3826,6 @@ function setupConsultor(){
     <button class="sb-btn" onclick="navTo('p-drives',this,'Drives')">📁 Drives</button>
     <button class="sb-btn" onclick="navTo('p-historico',this,'Histórico')">📋 Histórico</button>
     ${roleplayItem?`<div class="sb-section">Treino</div>${roleplayItem}`:''}
-    <div class="sb-section">Rede social</div>
-    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
     <div class="sb-section">Financeiro</div>
     <button class="sb-btn" onclick="navTo('p-comissao',this,'Minha comissão')">💰 Minha comissão</button>
   `
@@ -3874,7 +3837,6 @@ function setupConsultor(){
     <div id="p-drives" class="page"></div>
     <div id="p-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
-    <div id="p-feed" class="page"></div>
     <div id="p-comissao" class="page"></div>
     <div id="p-roleplay" class="page"></div>
   `
@@ -3902,8 +3864,6 @@ function setupSupervisor(){
     <button class="sb-btn" onclick="navTo('p-sv-engajamento',this,'Engajamento')">📊 Engajamento</button>
     <button class="sb-btn" onclick="navTo('p-sv-historico',this,'Histórico mensal')">📋 Histórico</button>
     ${roleplayEquipe}
-    <div class="sb-section">Rede social</div>
-    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
     <div class="sb-section">Financeiro</div>
     <button class="sb-btn" onclick="navTo('p-comissao',this,'Minha comissão')">💰 Minha comissão</button>
     <button class="sb-btn" onclick="navTo('p-com-eq',this,'Comissão da equipe')">👥 Comissão da equipe</button>
@@ -3924,7 +3884,6 @@ function setupSupervisor(){
     <div id="p-sv-engajamento" class="page"></div>
     <div id="p-sv-historico" class="page"></div>
     <div id="p-perfil" class="page"></div>
-    <div id="p-feed" class="page"></div>
     <div id="p-roleplay" class="page"></div>
     <div id="p-sv-roleplay" class="page"></div>
   `
@@ -3952,8 +3911,6 @@ function setupMaster(){
     <button class="sb-btn" onclick="navTo('p-ma-contest',this,'Contestações Roleplay')">⚖ Contestações IA <span id="badge-contest" class="pill-fup" style="display:none"></span></button>
     <div class="sb-section">Financeiro</div>
     <button class="sb-btn" onclick="navTo('p-com-eq',this,'Provisionamento geral')">💰 Provisionamento</button>
-    <div class="sb-section">Rede social</div>
-    <button class="sb-btn" data-feed-nav="1" onclick="navTo('p-feed',this,'Feed da equipe')">📣 Feed <span class="pill-new">novo</span></button>
   `
   $('pages-wrap').innerHTML=`
     <div id="p-ma-home" class="page active"></div>
@@ -3971,7 +3928,6 @@ function setupMaster(){
     <div id="p-ma-equipe" class="page"></div>
     <div id="p-ma-perfil" class="page"></div>
     <div id="p-ma-contest" class="page"></div>
-    <div id="p-feed" class="page"></div>
     <div id="p-com-eq" class="page"></div>
   `
   loadMaHome()
@@ -3992,7 +3948,7 @@ window.navTo=(id,btn,title)=>{
     'p-ma-home':loadMaHome,'p-ma-equipes':loadMaEquipes,'p-ma-funil':loadMaFunil,
     'p-ma-ranking':loadMaRanking,'p-ma-curvas':loadMaCurvas,'p-ma-prov':loadMaProv,'p-ma-historico':loadMaHistorico,'p-ma-operadoras':loadMaOperadoras,'p-ma-recusas':loadMaRecusas,'p-ma-metas':loadMaMetas,'p-ma-drives':loadMaDrives,'p-ma-usuarios':loadMaUsuarios,'p-ma-contest':loadMaContestacoes,
     'p-perfil':()=>loadMeuPerfil(),'p-ma-equipe':loadMaEquipe,
-    'p-feed':loadFeed,'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe,
+    'p-comissao':loadMinhaComissao,'p-com-eq':loadComissaoEquipe,
     'p-roleplay':loadRoleplay,'p-sv-roleplay':loadSvRoleplay
   }
   if(map[id]) map[id]()
