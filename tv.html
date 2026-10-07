@@ -189,6 +189,8 @@ const sb=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false}})
 // Sons específicos por equipe (bucket sons-equipes do Supabase)
 const SONS_EQUIPES_EXT={'a-elite':'mp3','aguias':'ogg','dracarys':'mp3','hunters':'mp3','tigers':'mp3'}
 const SONS_URL_BASE=`${SB_URL}/storage/v1/object/public/sons-equipes`
+// Equipes que não aparecem mais na TV (slug do nome). A Elite: consultores redistribuídos.
+const EQUIPES_OCULTAS_TV=['a-elite']
 function slugEquipe(nome){return String(nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().replace(/\s+/g,'-')}
 function tocarSomEquipe(equipeNome){
   const slug=slugEquipe(equipeNome)
@@ -314,6 +316,11 @@ const ANO_ATUAL=new Date().getFullYear()
 function renderEquipes(equipes){
   const esp=getDiasUteisAte(ANO_ATUAL,MES_ATUAL,new Date().getDate())/getDiasUteisDoMes(ANO_ATUAL,MES_ATUAL)*100
   const grid=document.getElementById('tv-equipes')
+  // Menos de 5 equipes: cards mantêm a largura do layout de 5; pontas alinhadas aos painéis de baixo e lacunas iguais entre eles
+  const n=Math.max(equipes.length,1)
+  grid.style.gridTemplateColumns=n>=5?`repeat(${n},1fr)`:`repeat(${n},calc((100% - 56px)/5))`
+  grid.style.justifyContent=n>=5?'':'space-between'
+  grid.style.columnGap=n>=5?'':'0'
   grid.innerHTML=equipes.map((e,i)=>{
     const pct=e.meta>0?Math.min(Math.round(e.real/e.meta*100),100):0
     const cor=corPct(pct,Math.round(esp))
@@ -393,7 +400,10 @@ async function buscarDados(){
     if(error)return null
     // RPC retorna json — pode vir como string ou objeto dependendo da versão do client
     if(!data)return null
-    return typeof data==='string'?JSON.parse(data):data
+    const dados=typeof data==='string'?JSON.parse(data):data
+    // Equipes desativadas somem da TV (cards, totais e contagem de equipes)
+    if(Array.isArray(dados.equipes)) dados.equipes=dados.equipes.filter(e=>!EQUIPES_OCULTAS_TV.includes(slugEquipe(e.nome)))
+    return dados
   }catch(e){return null}
 }
 
