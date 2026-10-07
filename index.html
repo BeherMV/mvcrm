@@ -8822,7 +8822,7 @@ async function loadMaUsuarios(){
           <td><span class="pill ${u.perfil==='supervisor'?'p-wn':'p-ok'}" style="font-size:11px">${u.perfil}</span></td>
           <td><select class="ma-usu-equipe" data-atual="${u.equipe_id||''}" onchange="_moverUsuarioEquipe('${u.id}',${_js(u.nome)},'${u.perfil}',this)" title="Mover para outra equipe / gestor" style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2);max-width:240px">${optsEquipe(u.equipe_id)}</select></td>
           <td style="text-align:center"><label class="rp-toggle"><input type="checkbox" ${u.roleplay_liberado?'checked':''} onchange="_toggleRoleplayLiberado('${u.id}',this.checked,this)"><span class="rp-toggle-slider"></span></label></td>
-          <td><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}',${_js(u.nome)})">🗑 Excluir</button></td>
+          <td style="white-space:nowrap"><button class="btn btn-sm" style="margin-right:6px" onclick="abrirModalSenhaUsuario('${u.id}',${_js(u.nome)})">🔑 Senha</button><button class="btn btn-sm" style="background:#FEE2E2;color:#DC2626;border:none" onclick="confirmarExclusaoUsuario('${u.id}',${_js(u.nome)})">🗑 Excluir</button></td>
         </tr>`).join('')}
       </tbody>
     </table></div></div>
@@ -8863,6 +8863,20 @@ async function loadMaUsuarios(){
         <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
           <button class="btn" onclick="fecharModalNovoUsuario()">Cancelar</button>
           <button class="btn btn-pri" id="nu-btn-salvar" onclick="criarNovoUsuario()">Criar usuário</button>
+        </div>
+      </div>
+    </div>
+    <!-- Modal alterar senha -->
+    <div id="modal-senha-usu" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+      <div class="card" style="width:100%;max-width:420px;margin:20px">
+        <div style="font-size:17px;font-weight:800;margin-bottom:6px">🔑 Alterar senha</div>
+        <div id="su-descricao" style="font-size:13px;color:var(--text3);margin-bottom:14px"></div>
+        <label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">NOVA SENHA</label>
+        <input id="su-senha" type="text" placeholder="Mínimo 8 caracteres" autocomplete="off" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;margin-bottom:12px">
+        <div id="su-erro" style="display:none;background:#FEE2E2;color:#DC2626;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn" onclick="fecharModalSenhaUsuario()">Cancelar</button>
+          <button class="btn btn-pri" id="su-btn-salvar" onclick="salvarSenhaUsuario()">Salvar senha</button>
         </div>
       </div>
     </div>
@@ -8952,6 +8966,29 @@ window.criarNovoUsuario=async()=>{
     btn.disabled=false;btn.textContent='Criar usuário'
     erroEl.textContent='Erro: '+(e.message||JSON.stringify(e));erroEl.style.display='block'
   }
+}
+// Master altera senha de usuário — RPC admin_alterar_senha (sql/2026-10-07-master-alterar-senha.sql)
+let _suId=null,_suNome=null
+window.abrirModalSenhaUsuario=(id,nome)=>{
+  _suId=id;_suNome=nome
+  $('su-descricao').innerHTML=`Nova senha para <strong>${_esc(nome)}</strong>. As sessões abertas desse usuário serão encerradas.`
+  $('su-senha').value='';$('su-erro').style.display='none'
+  $('su-btn-salvar').disabled=false;$('su-btn-salvar').textContent='Salvar senha'
+  $('modal-senha-usu').style.display='flex';$('su-senha').focus()
+}
+window.fecharModalSenhaUsuario=()=>{$('modal-senha-usu').style.display='none';_suId=null;_suNome=null}
+window.salvarSenhaUsuario=async()=>{
+  const senha=$('su-senha').value.trim(),erroEl=$('su-erro')
+  erroEl.style.display='none'
+  if(senha.length<8){erroEl.textContent='A senha deve ter no mínimo 8 caracteres.';erroEl.style.display='block';return}
+  const btn=$('su-btn-salvar');btn.disabled=true;btn.textContent='Salvando...'
+  const{error}=await sb.rpc('admin_alterar_senha',{p_user_id:_suId,p_senha:senha})
+  if(error){
+    btn.disabled=false;btn.textContent='Salvar senha'
+    erroEl.textContent='Erro: '+error.message;erroEl.style.display='block';return
+  }
+  const nome=_suNome;fecharModalSenhaUsuario()
+  mostrarToast('Senha alterada',`${nome} já pode entrar com a nova senha`,'sucesso')
 }
 let _euId=null,_euNome=null
 window.confirmarExclusaoUsuario=async(id,nome)=>{
